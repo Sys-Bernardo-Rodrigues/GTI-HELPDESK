@@ -31,6 +31,14 @@ O script `predev` faz:
 
 Acesse `http://localhost:3000`.
 
+### Usuário padrão (login)
+- Configure no `.env`:
+  - `DEFAULT_USER_EMAIL`
+  - `DEFAULT_USER_PASSWORD`
+  - `DEFAULT_USER_NAME`
+- O script de seed roda automaticamente no `npm run dev` e garante o usuário padrão.
+- Depois, use esses dados na tela de login (raiz do site).
+
 ## Banco de Dados
 - Serviço MariaDB definido em `docker-compose.yml` com volume persistente e variáveis `.env`.
 - Usuário de app: `DB_USER` com acesso ao banco `DB_NAME`.

@@ -1,0 +1,48 @@
+@use "./_variables" as v;
+
+// Centraliza conteúdo vertical e horizontal
+@mixin center-flex {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+// Gradiente de acento
+@mixin accent-gradient {
+  background-image: linear-gradient(90deg, v.$accent-start, v.$accent-end);
+}
+
+// Fundo noturno semelhante ao mock
+@mixin night-bg {
+  background-image:
+    radial-gradient(1200px 600px at 80% 30%, rgba(122,92,255,0.25), transparent 60%),
+    radial-gradient(800px 500px at 70% 70%, rgba(255,139,167,0.18), transparent 65%),
+    linear-gradient(135deg, v.$color-bg-dark 0%, v.$color-bg-night 45%, v.$color-bg-plum 100%);
+}
+
+// Stars overlay
+@mixin stars {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  &::before,
+  &::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background-image:
+      radial-gradient(2px 2px at 20% 30%, rgba(255,255,255,0.6), transparent 40%),
+      radial-gradient(1.5px 1.5px at 40% 60%, rgba(255,255,255,0.5), transparent 40%),
+      radial-gradient(1.5px 1.5px at 65% 20%, rgba(255,255,255,0.6), transparent 40%),
+      radial-gradient(1px 1px at 80% 55%, rgba(255,255,255,0.6), transparent 40%),
+      radial-gradient(1px 1px at 90% 80%, rgba(255,255,255,0.5), transparent 40%);
+    animation: twinkle 8s ease-in-out infinite;
+    opacity: 0.6;
+  }
+  &::after { animation-duration: 10s; opacity: 0.4; }
+}
+
+@keyframes twinkle {
+  0%, 100% { opacity: 0.2; transform: translateY(0); }
+  50% { opacity: 0.7; transform: translateY(-2px); }
+}

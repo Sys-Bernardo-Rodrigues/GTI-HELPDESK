@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "predev": "prisma generate && tsx scripts/check-db.ts && prisma db push",
+    "predev": "prisma generate && tsx scripts/check-db.ts && prisma db push && tsx scripts/seed-default-user.ts",
     "dev": "next dev",
     "dev:watch": "concurrently \"npm run docker:logs\" \"npm run dev\"",
     "build": "next build",
@@ -20,11 +20,14 @@
   },
   "dependencies": {
     "@prisma/client": "^6.18.0",
+    "bcryptjs": "^3.0.2",
+    "jsonwebtoken": "^9.0.2",
     "next": "16.0.0",
     "react": "19.2.0",
     "react-dom": "19.2.0"
   },
   "devDependencies": {
+    "@types/jsonwebtoken": "^9.0.10",
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
@@ -33,7 +36,20 @@
     "eslint": "^9",
     "eslint-config-next": "16.0.0",
     "prisma": "^6.18.0",
+    "sass": "^1.93.2",
     "tsx": "^4.20.6",
     "typescript": "^5"
+  },
+  "browserslist": {
+    "production": [
+      ">0.5%",
+      "last 2 versions",
+      "not dead"
+    ],
+    "development": [
+      "last 1 chrome version",
+      "last 1 firefox version",
+      "last 1 safari version"
+    ]
   }
 }

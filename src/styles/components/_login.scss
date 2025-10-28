@@ -1,0 +1,101 @@
+@use "../_variables" as v;
+@use "../_mixins" as m;
+
+.login-page {
+  min-height: 100vh;
+  display: grid;
+  grid-template-columns: 1fr;
+  background: #000;
+  color: v.$color-text;
+
+  @media (min-width: 768px) {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+.login-left {
+  @include m.center-flex;
+  padding: 4rem 1.5rem;
+  justify-content: flex-start;
+  @media (min-width: 768px) { padding: 4rem 4rem; }
+}
+
+.login-container {
+  width: 100%;
+  max-width: v.$container-sm;
+}
+
+.login-title {
+  font-weight: 600;
+  line-height: 1.1;
+  letter-spacing: -0.02em;
+  font-size: clamp(1.75rem, 3vw, 2.5rem);
+  margin-bottom: 2rem;
+  .dot { @include m.accent-gradient; width: 8px; height: 8px; border-radius: 999px; display: inline-block; margin-left: 4px; }
+  .gradient { @include m.accent-gradient; -webkit-background-clip: text; background-clip: text; color: transparent; }
+}
+
+.login-form {
+  display: grid;
+  gap: 1rem;
+}
+
+.field-label {
+  font-size: 0.875rem;
+  color: rgba(255,255,255,0.8);
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.5rem;
+}
+
+.field-input {
+  width: 100%;
+  padding: 0.5rem 0.75rem;
+  font-size: 0.875rem;
+  border-radius: v.$radius-md;
+  border: 1px solid v.$color-border;
+  background: rgba(255,255,255,0.05);
+  color: v.$color-text;
+  outline: none;
+  transition: border-color 200ms ease, box-shadow 200ms ease;
+}
+.field-input:focus {
+  border-color: v.$accent-start;
+  box-shadow: 0 0 0 3px rgba(122,92,255,0.35);
+}
+
+.forgot {
+  text-align: right;
+  margin-top: -0.25rem;
+}
+.forgot a { font-size: 0.75rem; color: rgba(255,255,255,0.7); text-decoration: underline; text-underline-offset: 4px; }
+.forgot a:hover { color: #fff; }
+
+.login-button {
+  width: 100%;
+  padding: 0.65rem 1rem;
+  border-radius: v.$radius-md;
+  border: none;
+  font-weight: 500;
+  color: #fff;
+  @include m.accent-gradient;
+  box-shadow: v.$shadow-glow;
+  transition: filter 200ms ease, transform 80ms ease;
+}
+.login-button:hover { filter: brightness(1.08); }
+.login-button:active { transform: scale(0.99); }
+.login-button:disabled { opacity: 0.6; cursor: not-allowed; }
+
+.login-message { margin-top: 1rem; text-align: center; font-size: 0.875rem; }
+
+.login-footer { text-align: center; font-size: 0.75rem; color: rgba(255,255,255,0.7); }
+
+.login-right {
+  position: relative;
+  display: none;
+  @media (min-width: 768px) { display: block; }
+  @include m.night-bg;
+}
+.login-right .stars { @include m.stars; }
+.login-right .overlay { position: absolute; inset: 0; background: linear-gradient(0deg, rgba(0,0,0,0.45), transparent); }
