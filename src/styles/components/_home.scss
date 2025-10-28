@@ -17,6 +17,9 @@
   --nav-accent: #7a5cff;
   --nav-shadow: 0 10px 24px rgba(0,0,0,0.25);
 
+  position: sticky;
+  top: 0;
+  z-index: 50;
   display: grid;
   grid-template-columns: 1fr auto auto;
   gap: 1rem;
@@ -52,6 +55,7 @@
   @include m.accent-gradient;
   display: inline-flex; align-items: center; justify-content: center;
   color: #fff; font-weight: 700;
+  cursor: pointer;
 }
 .home-profile .details { line-height: 1; }
 .home-profile .details small { color: v.$color-muted; }

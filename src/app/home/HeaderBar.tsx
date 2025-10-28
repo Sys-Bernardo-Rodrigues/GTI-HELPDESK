@@ -1,6 +1,8 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
+import { useRouter } from "next/navigation";
+import Link from "next/link";
 import LogoutButton from "./LogoutButton";
 import type { AuthUser } from "@/lib/auth";
 
@@ -8,6 +10,7 @@ type Props = { user: AuthUser };
 
 export default function HeaderBar({ user }: Props) {
   const [open, setOpen] = useState(false);
+  const router = useRouter();
 
   const toggle = useCallback(() => setOpen((v) => !v), []);
   const close = useCallback(() => setOpen(false), []);
@@ -33,7 +36,7 @@ export default function HeaderBar({ user }: Props) {
       <div className="home-brand">GTI Helpdesk</div>
 
       <nav className="home-menu" aria-label="Navegação principal">
-        <a href="#" className="active" onClick={close}>Início</a>
+        <Link href="/home" className="active" onClick={close}>Início</Link>
         <a href="#" onClick={close}>Tickets</a>
         <a href="#" onClick={close}>Relatórios</a>
         <a href="#" onClick={close}>Configurações</a>
@@ -52,13 +55,24 @@ export default function HeaderBar({ user }: Props) {
       </button>
 
       <div className="home-profile">
-        <span className="avatar" aria-hidden>{user.name?.[0] ?? user.email[0]}</span>
+        <span
+          className="avatar"
+          role="button"
+          tabIndex={0}
+          aria-label="Abrir perfil"
+          onClick={() => router.push("/profile")}
+          onKeyDown={(e) => {
+            if (e.key === "Enter" || e.key === " ") router.push("/profile");
+          }}
+        >
+          {user.name?.[0] ?? user.email[0]}
+        </span>
         <div className="details" />
         <LogoutButton />
       </div>
 
       <nav id="mobile-nav" className="mobile-nav" aria-label="Navegação principal (mobile)">
-        <a href="#" className="active" onClick={close}>Início</a>
+        <Link href="/home" className="active" onClick={close}>Início</Link>
         <a href="#" onClick={close}>Tickets</a>
         <a href="#" onClick={close}>Relatórios</a>
         <a href="#" onClick={close}>Configurações</a>

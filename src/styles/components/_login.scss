@@ -13,6 +13,14 @@
   }
 }
 
+// When the right panel is removed, collapse to a single column on wide screens
+@media (min-width: 768px) {
+  .login-page.no-right {
+    grid-template-columns: 1fr;
+    transition: grid-template-columns 0.25s ease;
+  }
+}
+
 .login-left {
   @include m.center-flex;
   padding: 4rem 1.5rem;
@@ -34,6 +42,9 @@
   .dot { @include m.accent-gradient; width: 8px; height: 8px; border-radius: 999px; display: inline-block; margin-left: 4px; }
   .gradient { @include m.accent-gradient; -webkit-background-clip: text; background-clip: text; color: transparent; }
 }
+.login-title.removing { opacity: 0; transform: translateY(-4px); transition: opacity 0.2s ease, transform 0.2s ease; }
+
+.login-container.no-title .login-form { margin-top: 1rem; }
 
 .login-form {
   display: grid;
@@ -97,5 +108,10 @@
   @media (min-width: 768px) { display: block; }
   @include m.night-bg;
 }
+.login-right.removing {
+  opacity: 0;
+  transform: translateX(8px);
+  transition: opacity 0.25s ease, transform 0.25s ease;
+  pointer-events: none;
+}
 .login-right .stars { @include m.stars; }
-.login-right .overlay { position: absolute; inset: 0; background: linear-gradient(0deg, rgba(0,0,0,0.45), transparent); }

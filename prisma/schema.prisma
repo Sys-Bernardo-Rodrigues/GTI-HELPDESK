@@ -22,6 +22,17 @@ model User {
   email        String   @unique
   name         String
   passwordHash String?
+  phone        String?
+  jobTitle     String?
+  company      String?
+  avatarUrl    String?
+  twoFactor    Boolean  @default(false)
+  newsletter   Boolean  @default(false)
+  phoneVerified Boolean  @default(false)
+  discordTag    String?  @unique
+  pendingEmail  String?
+  emailVerificationToken String?
+  emailVerifiedAt DateTime?
   createdAt    DateTime @default(now())
   tickets      Ticket[]
 }
