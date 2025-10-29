@@ -1,6 +1,7 @@
 {
   "/_not-found/page": "app/_not-found/page.js",
   "/api/forms/[id]/route": "app/api/forms/[id]/route.js",
+  "/api/forms/[id]/submit/route": "app/api/forms/[id]/submit/route.js",
   "/api/forms/by-slug/route": "app/api/forms/by-slug/route.js",
   "/api/forms/route": "app/api/forms/route.js",
   "/api/profile/route": "app/api/profile/route.js",

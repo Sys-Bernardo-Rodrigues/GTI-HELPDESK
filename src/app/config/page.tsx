@@ -23,6 +23,7 @@ export default function ConfigPage() {
   const [error, setError] = useState<string>("");
   const [menuOpen, setMenuOpen] = useState<boolean>(false);
   const [confirmOpen, setConfirmOpen] = useState<boolean>(false);
+  const [deleteConfirm, setDeleteConfirm] = useState<{ id: number; title: string } | null>(null);
   // Estado do builder de formulários
   type BuilderField = { tempId: string; label: string; type: "TEXT"|"TEXTAREA"|"SELECT"|"RADIO"|"CHECKBOX"|"FILE"; options?: string; required: boolean };
   const [formsList, setFormsList] = useState<Array<{ id: number; title: string; slug: string; link: string; createdAt?: string }>>([]);
@@ -197,7 +198,14 @@ export default function ConfigPage() {
   async function deleteForm(id: number) {
     try {
       const res = await fetch(`/api/forms/${id}`, { method: "DELETE" });
-      if (!res.ok) throw new Error("Falha ao excluir");
+      if (!res.ok) {
+        let msg = "Falha ao excluir";
+        try {
+          const data = await res.json();
+          if (data?.error) msg = String(data.error);
+        } catch {}
+        throw new Error(msg);
+      }
       await loadForms();
     } catch (e: any) {
       setError(e?.message || "Erro ao excluir");
@@ -227,14 +235,29 @@ export default function ConfigPage() {
     }
   }
 
-  async function onDeleteForm(id: number) {
+  async function onDeleteForm(id: number, title?: string) {
+    if (deletingId) return;
+    setDeleteConfirm({ id, title: title || "" });
+  }
+
+  async function confirmDeleteForm() {
+    if (!deleteConfirm) return;
+    const id = deleteConfirm.id;
     if (deletingId) return;
     setDeletingId(id);
     try {
       await deleteForm(id);
+      setDeleteConfirm(null);
+    } catch (e: any) {
+      setError(e?.message || "Erro ao excluir");
     } finally {
       setDeletingId(null);
     }
+  }
+
+  function cancelDeleteForm() {
+    if (deletingId) return;
+    setDeleteConfirm(null);
   }
 
   useEffect(() => {
@@ -512,7 +535,7 @@ export default function ConfigPage() {
                         type="button"
                         title="Excluir formulário"
                         aria-label={`Excluir ${f.title}`}
-                        onClick={() => onDeleteForm(f.id)}
+                        onClick={() => onDeleteForm(f.id, f.title)}
                         disabled={deletingId === f.id}
                       >
                         {deletingId === f.id ? "Excluindo..." : "Excluir"}
@@ -646,7 +669,30 @@ export default function ConfigPage() {
           </ModalDialog>
         </>
       )}
-    </Page>
+      {deleteConfirm && (
+        <>
+          <ConfirmBackdrop $open={true} onClick={cancelDeleteForm} aria-hidden={false} />
+          <ConfirmDialog
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="confirm-delete-title"
+            $open={true}
+            onKeyDown={(e) => { if (e.key === "Escape") cancelDeleteForm(); }}
+          >
+            <ConfirmTitle id="confirm-delete-title">Excluir formulário</ConfirmTitle>
+            <p>
+              Tem certeza que deseja excluir <strong>{deleteConfirm.title || "este formulário"}</strong>? Esta ação não pode ser desfeita.
+            </p>
+            <ConfirmActions>
+              <CancelButton type="button" onClick={cancelDeleteForm} disabled={!!deletingId}>Cancelar</CancelButton>
+              <ConfirmButton type="button" onClick={confirmDeleteForm} disabled={!!deletingId}>
+                {deletingId === deleteConfirm.id ? "Excluindo..." : "Excluir"}
+              </ConfirmButton>
+            </ConfirmActions>
+          </ConfirmDialog>
+        </>
+      )}
+      </Page>
   );
 }
 
