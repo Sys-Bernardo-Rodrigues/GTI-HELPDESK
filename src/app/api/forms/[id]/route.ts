@@ -39,29 +39,63 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
   return NextResponse.json(updated);
 }
 
-export async function DELETE(_: NextRequest, { params }: { params: { id: string } }) {
+export async function DELETE(req: NextRequest, { params }: { params: { id: string } }) {
   const user = await getAuthenticatedUser();
   if (!user) return NextResponse.json({ error: "Não autenticado" }, { status: 401 });
-  const idStr = (params.id || "").trim();
-  const id = Number.parseInt(idStr, 10);
-  if (!Number.isFinite(id) || id <= 0) {
+  const raw = (params.id || "").trim();
+  let id = Number.parseInt(raw, 10);
+  let formId: number | null = Number.isFinite(id) && id > 0 ? id : null;
+
+  // Fallback 1: tentar por slug se não for número
+  if (formId === null && raw) {
+    const bySlug = await prisma.form.findFirst({ where: { slug: raw, userId: user.id }, select: { id: true } });
+    if (bySlug?.id) formId = bySlug.id;
+  }
+
+  // Fallback 2: tentar id no corpo JSON { id }
+  if (formId === null) {
+    try {
+      const body = await req.json();
+      const bodyId = Number.parseInt(String(body?.id ?? ""), 10);
+      if (Number.isFinite(bodyId) && bodyId > 0) formId = bodyId;
+    } catch {}
+  }
+
+  if (formId === null) {
     return NextResponse.json({ error: "ID inválido" }, { status: 400 });
   }
   // Validar propriedade do formulário
-  const owned = await prisma.form.findFirst({ where: { id, userId: user.id }, select: { id: true } });
+  const owned = await prisma.form.findFirst({ where: { id: formId, userId: user.id }, select: { id: true } });
   if (!owned) {
     return NextResponse.json({ error: "Formulário não encontrado" }, { status: 404 });
   }
-  // Remover/soltar dependências para evitar erro de restrição de chave estrangeira
-  // 1) Desassociar tickets que referenciam submissões deste formulário
-  const submissions = await prisma.formSubmission.findMany({ where: { formId: id }, select: { id: true } });
-  const submissionIds = submissions.map((s) => s.id);
-  if (submissionIds.length > 0) {
-    await prisma.ticket.updateMany({ where: { submissionId: { in: submissionIds } }, data: { submissionId: null } });
+  const url = new URL(req.url);
+  const hard = url.searchParams.get("hard") === "true";
+
+  if (!hard) {
+    // Soft delete: desativar o formulário (oculta link público e bloqueia acesso)
+    try {
+      await prisma.form.update({ where: { id: formId }, data: { isPublic: false } });
+      return NextResponse.json({ success: true, disabled: true });
+    } catch (e: any) {
+      return NextResponse.json({ error: "Falha ao desativar formulário", detail: e?.message || String(e) }, { status: 500 });
+    }
   }
-  // 2) Excluir campos e submissões do formulário, depois o formulário
-  await prisma.formField.deleteMany({ where: { formId: id } });
-  await prisma.formSubmission.deleteMany({ where: { formId: id } });
-  await prisma.form.delete({ where: { id } });
-  return NextResponse.json({ success: true });
+
+  // Hard delete: remover registros relacionados e o formulário
+  try {
+    await prisma.$transaction(async (tx) => {
+      const submissions = await tx.formSubmission.findMany({ where: { formId: formId! }, select: { id: true } });
+      const submissionIds = submissions.map((s) => s.id);
+      if (submissionIds.length > 0) {
+        await tx.ticket.updateMany({ where: { submissionId: { in: submissionIds } }, data: { submissionId: null } });
+      }
+      await tx.formField.deleteMany({ where: { formId: formId! } });
+      await tx.formSubmission.deleteMany({ where: { formId: formId! } });
+      await tx.form.delete({ where: { id: formId! } });
+    });
+    return NextResponse.json({ success: true, deleted: true });
+  } catch (e: any) {
+    return NextResponse.json({ error: "Falha ao excluir formulário", detail: e?.message || String(e) }, { status: 500 });
+  }
 }

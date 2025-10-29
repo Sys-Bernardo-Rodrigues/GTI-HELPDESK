@@ -7,7 +7,11 @@ export async function GET() {
   const user = await getAuthenticatedUser();
   if (!user) return NextResponse.json({ error: "Não autenticado" }, { status: 401 });
 
-  const forms = await prisma.form.findMany({ where: { userId: user.id }, orderBy: { createdAt: "desc" } });
+  // Retorna todos os formulários (de todos os usuários) para a tela de gestão
+  const forms = await prisma.form.findMany({
+    orderBy: { createdAt: "desc" },
+    include: { user: { select: { id: true, name: true, email: true } } },
+  });
   const items = forms.map((f) => ({
     id: f.id,
     title: f.title,
@@ -15,6 +19,9 @@ export async function GET() {
     isPublic: f.isPublic,
     link: `${process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"}/forms/${f.slug}`,
     createdAt: f.createdAt,
+    createdById: f.user?.id ?? null,
+    createdByName: f.user?.name ?? null,
+    createdByEmail: f.user?.email ?? null,
   }));
   return NextResponse.json({ items });
 }

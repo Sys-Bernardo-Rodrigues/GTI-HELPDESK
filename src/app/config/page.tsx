@@ -23,17 +23,46 @@ export default function ConfigPage() {
   const [error, setError] = useState<string>("");
   const [menuOpen, setMenuOpen] = useState<boolean>(false);
   const [confirmOpen, setConfirmOpen] = useState<boolean>(false);
-  const [deleteConfirm, setDeleteConfirm] = useState<{ id: number; title: string } | null>(null);
   // Estado do builder de formulários
   type BuilderField = { tempId: string; label: string; type: "TEXT"|"TEXTAREA"|"SELECT"|"RADIO"|"CHECKBOX"|"FILE"; options?: string; required: boolean };
-  const [formsList, setFormsList] = useState<Array<{ id: number; title: string; slug: string; link: string; createdAt?: string }>>([]);
+  const [formsList, setFormsList] = useState<Array<{ id: number; title: string; slug: string; link: string; createdAt?: string; isPublic?: boolean; createdByName?: string | null; createdByEmail?: string | null }>>([]);
   const [formTitle, setFormTitle] = useState<string>("");
   const [formDesc, setFormDesc] = useState<string>("");
   const [builderFields, setBuilderFields] = useState<BuilderField[]>([]);
   const [savingForm, setSavingForm] = useState<boolean>(false);
   const [createOpen, setCreateOpen] = useState<boolean>(false);
   const [copiedId, setCopiedId] = useState<number | null>(null);
-  const [deletingId, setDeletingId] = useState<number | null>(null);
+  
+  // Modal de remoção da lista por ID
+  const [deleteOpen, setDeleteOpen] = useState<boolean>(false);
+  const [deleteInputId, setDeleteInputId] = useState<string>("");
+  const [deleteConfirm, setDeleteConfirm] = useState<boolean>(false);
+  const [isDeleting, setIsDeleting] = useState<boolean>(false);
+  // Modal de itens removidos
+  const [removedOpen, setRemovedOpen] = useState<boolean>(false);
+  // Ocultar formulários localmente (apenas na lista)
+  const [hiddenFormIds, setHiddenFormIds] = useState<number[]>([]);
+  const [allForms, setAllForms] = useState<Array<{ id: number; title: string; slug: string; link: string; createdAt?: string; isPublic?: boolean }>>([]);
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem("hidden_form_ids");
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (Array.isArray(parsed)) setHiddenFormIds(parsed.filter((n: any) => Number.isFinite(Number(n))).map((n: any) => Number(n)));
+      }
+    } catch {}
+  }, []);
+  useEffect(() => {
+    try {
+      localStorage.setItem("hidden_form_ids", JSON.stringify(hiddenFormIds));
+    } catch {}
+  }, [hiddenFormIds]);
+
+  // Refiltra a lista visível sempre que ocultos ou a lista completa mudarem
+  useEffect(() => {
+    setFormsList(allForms.filter((i) => !hiddenFormIds.includes(i.id)));
+  }, [hiddenFormIds, allForms]);
+
 
   // Fechar modal com ESC e gerenciar foco básico
   useEffect(() => {
@@ -126,13 +155,18 @@ export default function ConfigPage() {
       const res = await fetch("/api/forms");
       if (res.ok) {
         const json = await res.json();
-        setFormsList((json.items || []).map((i: any) => ({
+        const items = (json.items || []).map((i: any) => ({
           id: i.id,
           title: i.title,
           slug: i.slug,
           link: i.link,
           createdAt: i.createdAt,
-        })));
+          isPublic: i.isPublic,
+          createdByName: i.createdByName ?? null,
+          createdByEmail: i.createdByEmail ?? null,
+        }));
+        setAllForms(items);
+        setFormsList(items.filter((i: any) => !hiddenFormIds.includes(i.id)));
       }
     } catch {}
   }
@@ -195,22 +229,7 @@ export default function ConfigPage() {
       setSavingForm(false);
     }
   }
-  async function deleteForm(id: number) {
-    try {
-      const res = await fetch(`/api/forms/${id}`, { method: "DELETE" });
-      if (!res.ok) {
-        let msg = "Falha ao excluir";
-        try {
-          const data = await res.json();
-          if (data?.error) msg = String(data.error);
-        } catch {}
-        throw new Error(msg);
-      }
-      await loadForms();
-    } catch (e: any) {
-      setError(e?.message || "Erro ao excluir");
-    }
-  }
+  
 
   function copyFormLink(id: number, slug: string) {
     try {
@@ -235,30 +254,7 @@ export default function ConfigPage() {
     }
   }
 
-  async function onDeleteForm(id: number, title?: string) {
-    if (deletingId) return;
-    setDeleteConfirm({ id, title: title || "" });
-  }
-
-  async function confirmDeleteForm() {
-    if (!deleteConfirm) return;
-    const id = deleteConfirm.id;
-    if (deletingId) return;
-    setDeletingId(id);
-    try {
-      await deleteForm(id);
-      setDeleteConfirm(null);
-    } catch (e: any) {
-      setError(e?.message || "Erro ao excluir");
-    } finally {
-      setDeletingId(null);
-    }
-  }
-
-  function cancelDeleteForm() {
-    if (deletingId) return;
-    setDeleteConfirm(null);
-  }
+  
 
   useEffect(() => {
     if (open && firstLinkRef.current) {
@@ -505,7 +501,7 @@ export default function ConfigPage() {
                   <HeaderIcon aria-hidden>📂</HeaderIcon>
                   <div>
                     <CardTitle>Meus formulários</CardTitle>
-                    <Muted>Editar, excluir e compartilhar.</Muted>
+                    <Muted>Gerencie e compartilhe seus formulários.</Muted>
                   </div>
                 </CardHeader>
                 {error && (
@@ -513,33 +509,25 @@ export default function ConfigPage() {
                 )}
                 <div style={{ display: "grid", gap: 10 }}>
                   {formsList.map((f) => (
-                    <div key={f.id} style={{ display: "grid", gridTemplateColumns: "1fr auto auto", gap: 10, alignItems: "center" }}>
+                    <div key={f.id} style={{ display: "grid", gridTemplateColumns: "1fr auto", gap: 10, alignItems: "center" }}>
                       <div>
-                        <strong>{f.title}</strong>
-                        <div><small>Link: <a href={`/forms/${f.slug}`} target="_blank" rel="noreferrer">/forms/{f.slug}</a></small></div>
+                        <strong>{f.title} {!f.isPublic && (<span style={{ marginLeft: 8, color: "#b45309", fontSize: 12 }}>(Desativado)</span>)}</strong>
+                        <div style={{ marginTop: 2 }}><small>ID: <code>{f.id}</code></small></div>
+                        <div><small>Link: {f.isPublic ? (<a href={`/forms/${f.slug}`} target="_blank" rel="noreferrer">/forms/{f.slug}</a>) : (<span style={{ color: "#6b7280" }}>Desativado</span>)}</small></div>
                         <Meta>
-                          <span>Criado por: <strong>{user?.name ?? user?.email ?? "Usuário"}</strong></span>
+                          <span>Criado por: <strong>{(f.createdByName || f.createdByEmail || "Usuário")}</strong></span>
                           <span>Em: <strong>{formatDateTime(f.createdAt)}</strong></span>
                         </Meta>
                       </div>
                       <ActionButton
                         type="button"
-                        title="Copiar link do formulário"
+                        title={f.isPublic ? "Copiar link do formulário" : "Link desativado"}
                         aria-label={`Copiar link de ${f.title}`}
-                        onClick={() => copyFormLink(f.id, f.slug)}
-                        disabled={!!deletingId}
+                        onClick={() => f.isPublic ? copyFormLink(f.id, f.slug) : null}
+                        disabled={!f.isPublic}
                       >
-                        {copiedId === f.id ? "Copiado!" : "Copiar link"}
+                        {f.isPublic ? (copiedId === f.id ? "Copiado!" : "Copiar link") : "Desativado"}
                       </ActionButton>
-                      <DangerButton
-                        type="button"
-                        title="Excluir formulário"
-                        aria-label={`Excluir ${f.title}`}
-                        onClick={() => onDeleteForm(f.id, f.title)}
-                        disabled={deletingId === f.id}
-                      >
-                        {deletingId === f.id ? "Excluindo..." : "Excluir"}
-                      </DangerButton>
                     </div>
                   ))}
                   {formsList.length === 0 && <Muted>Nenhum formulário criado ainda.</Muted>}
@@ -556,6 +544,20 @@ export default function ConfigPage() {
                 </CardHeader>
                 <Actions>
                   <PrimaryButton type="button" onClick={() => setCreateOpen(true)}>Novo formulário</PrimaryButton>
+                </Actions>
+              </Card>
+
+              <Card>
+                <CardHeader>
+                  <HeaderIcon aria-hidden>🗑️</HeaderIcon>
+                  <div>
+                    <CardTitle>Remover da lista</CardTitle>
+                    <Muted>Oculta um formulário da lista localmente, via ID.</Muted>
+                  </div>
+                </CardHeader>
+                <Actions>
+                  <DangerButton type="button" onClick={() => { setDeleteOpen(true); setDeleteInputId(""); setDeleteConfirm(false); }}>Remover da lista</DangerButton>
+                  <ActionButton type="button" onClick={() => setRemovedOpen(true)}>Ver removidos</ActionButton>
                 </Actions>
               </Card>
             </RightCol>
@@ -669,29 +671,110 @@ export default function ConfigPage() {
           </ModalDialog>
         </>
       )}
-      {deleteConfirm && (
+
+      {deleteOpen && (
         <>
-          <ConfirmBackdrop $open={true} onClick={cancelDeleteForm} aria-hidden={false} />
-          <ConfirmDialog
+          <ModalBackdrop $open={deleteOpen} onClick={() => !isDeleting && setDeleteOpen(false)} aria-hidden={!deleteOpen} />
+          <ModalDialog
             role="dialog"
             aria-modal="true"
-            aria-labelledby="confirm-delete-title"
-            $open={true}
-            onKeyDown={(e) => { if (e.key === "Escape") cancelDeleteForm(); }}
+            aria-labelledby="delete-form-title"
+            $open={deleteOpen}
+            onKeyDown={(e) => { if (e.key === "Escape" && !isDeleting) setDeleteOpen(false); }}
           >
-            <ConfirmTitle id="confirm-delete-title">Excluir formulário</ConfirmTitle>
-            <p>
-              Tem certeza que deseja excluir <strong>{deleteConfirm.title || "este formulário"}</strong>? Esta ação não pode ser desfeita.
-            </p>
-            <ConfirmActions>
-              <CancelButton type="button" onClick={cancelDeleteForm} disabled={!!deletingId}>Cancelar</CancelButton>
-              <ConfirmButton type="button" onClick={confirmDeleteForm} disabled={!!deletingId}>
-                {deletingId === deleteConfirm.id ? "Excluindo..." : "Excluir"}
+            <ModalHeader>
+              <ModalIcon aria-hidden>🗑️</ModalIcon>
+              <div>
+                <ModalTitle id="delete-form-title">Remover da lista</ModalTitle>
+                <Muted>Informe o ID do formulário e confirme para ocultá-lo da lista.</Muted>
+              </div>
+            </ModalHeader>
+            <div>
+              <Field>
+                <Label htmlFor="delete-form-id">ID do formulário</Label>
+                <Input
+                  id="delete-form-id"
+                  type="number"
+                  placeholder="Ex.: 123"
+                  value={deleteInputId}
+                  onChange={(e) => setDeleteInputId(e.target.value)}
+                />
+              </Field>
+              <label style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                <input type="checkbox" checked={deleteConfirm} onChange={(e) => setDeleteConfirm(e.target.checked)} />
+                <span>Confirmo remover este formulário da lista</span>
+              </label>
+            </div>
+            <ModalActions>
+              <CancelButton type="button" onClick={() => !isDeleting && setDeleteOpen(false)} disabled={isDeleting}>Cancelar</CancelButton>
+              <ConfirmButton
+                type="button"
+                onClick={async () => {
+                  if (isDeleting) return;
+                  const id = Number.parseInt(deleteInputId, 10);
+                  if (!Number.isFinite(id) || id <= 0) { setError("ID inválido"); return; }
+                  if (!deleteConfirm) { setError("Marque a confirmação para remover"); return; }
+                  setIsDeleting(true);
+                  try {
+                    setHiddenFormIds((prev) => {
+                      if (prev.includes(id)) return prev;
+                      const next = [...prev, id];
+                      setFormsList((cur) => cur.filter((f) => f.id !== id));
+                      return next;
+                    });
+                    setDeleteOpen(false);
+                  } catch (e: any) {
+                    setError(e?.message || "Erro ao remover da lista");
+                  } finally {
+                    setIsDeleting(false);
+                  }
+                }}
+                disabled={isDeleting || !deleteConfirm || !deleteInputId}
+                aria-label="Confirmar remoção da lista"
+              >
+                {isDeleting ? "Removendo..." : "Remover"}
               </ConfirmButton>
-            </ConfirmActions>
-          </ConfirmDialog>
+            </ModalActions>
+          </ModalDialog>
         </>
       )}
+
+      {removedOpen && (
+        <>
+          <ModalBackdrop $open={removedOpen} onClick={() => setRemovedOpen(false)} aria-hidden={!removedOpen} />
+          <ModalDialog
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="removed-list-title"
+            $open={removedOpen}
+            onKeyDown={(e) => { if (e.key === "Escape") setRemovedOpen(false); }}
+          >
+            <ModalHeader>
+              <ModalIcon aria-hidden>📁</ModalIcon>
+              <div>
+                <ModalTitle id="removed-list-title">Formulários removidos da lista</ModalTitle>
+                <Muted>Itens ocultos localmente (não foram excluídos no servidor).</Muted>
+              </div>
+            </ModalHeader>
+            <div style={{ display: "grid", gap: 10 }}>
+              {allForms.filter((f) => hiddenFormIds.includes(f.id)).map((f) => (
+                <div key={f.id} style={{ display: "grid", gap: 4 }}>
+                  <strong>{f.title}</strong>
+                  <small>ID: <code>{f.id}</code></small>
+                  <small>Slug: <code>{f.slug}</code></small>
+                </div>
+              ))}
+              {allForms.filter((f) => hiddenFormIds.includes(f.id)).length === 0 && (
+                <Muted>Nenhum formulário removido.</Muted>
+              )}
+            </div>
+            <ModalActions>
+              <ConfirmButton type="button" onClick={() => setRemovedOpen(false)}>Fechar</ConfirmButton>
+            </ModalActions>
+          </ModalDialog>
+        </>
+      )}
+      
       </Page>
   );
 }
