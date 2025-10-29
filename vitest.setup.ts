@@ -12,4 +12,22 @@ beforeAll(() => {
   // Mock window.location.assign to prevent navigation during tests
   // Not required for current tests (we don't trigger Confirmar)
 });
+
+// Mock dos hooks de navegação do Next para ambiente de teste
+vi.mock("next/navigation", async () => {
+  const actual = await vi.importActual<any>("next/navigation");
+  return {
+    ...actual,
+    useRouter: () => ({
+      push: vi.fn(),
+      replace: vi.fn(),
+    }),
+    useSearchParams: () => {
+      const params = new URLSearchParams(window.location.search || "");
+      return {
+        get: (key: string) => params.get(key),
+      } as any;
+    },
+  };
+});
 import "@testing-library/jest-dom";
