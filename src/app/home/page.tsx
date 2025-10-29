@@ -101,10 +101,10 @@ export default function HomePage() {
       <Shell>
         <Sidebar aria-label="Menu">
           <nav>
-            <NavItem href="#" aria-label="Início">🏠 Início</NavItem>
-            <NavItem href="#" aria-label="Tickets">🎫 Tickets</NavItem>
-            <NavItem href="#" aria-label="Usuários">👤 Usuários</NavItem>
-            <NavItem href="#" aria-label="Configurações">⚙️ Configurações</NavItem>
+            <NavItem href="#" aria-label="Início">Início</NavItem>
+            <NavItem href="#" aria-label="Tickets">Tickets</NavItem>
+            <NavItem href="#" aria-label="Usuários">Usuários</NavItem>
+            <NavItem href="#" aria-label="Configurações">Configurações</NavItem>
           </nav>
         </Sidebar>
         <Content>

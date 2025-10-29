@@ -1,26 +1,6 @@
-[00:00:02.773] Server  LOG     It looks like you're trying to use TypeScript but do not have the required package(s) installed.
-Installing dependencies
-
-If you are not trying to use TypeScript, please remove the tsconfig.json file from your package root (and any TypeScript files in your app and pages directories).
-
-[00:00:02.835] Server  LOG     
-[00:00:02.836] Server  LOG     Installing devDependencies (npm):
-[00:00:02.836] Server  LOG     - @types/react
-[00:00:02.837] Server  LOG     
-[00:00:07.396] Server  LOG     
-[00:00:08.433] Server  LOG      ✓ Ready in 7.4s
-[00:00:22.382] Server  LOG      ○ Compiling / ...
-[00:00:25.424] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
-[00:00:31.885] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
-[00:00:47.462] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
-[00:02:18.814] Server  LOG      ✓ Compiled in 23ms
-[00:02:27.581] Server  LOG      ✓ Compiled in 23ms
-[00:02:31.807] Server  LOG      ✓ Compiled in 23ms
-[00:02:36.090] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
-[00:02:44.848] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
-[00:02:50.797] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
-[00:02:55.415] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
-[00:03:52.422] Server  LOG      ✓ Compiled in 22ms
-[00:04:00.090] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
-[00:04:19.078] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
-[00:06:12.070] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
+[00:00:10.382] Server  LOG      ✓ Ready in 6.8s
+[00:00:22.024] Server  LOG      ○ Compiling / ...
+[00:00:30.801] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
+[00:01:53.699] Server  LOG      ✓ Compiled in 63ms
+[00:02:05.739] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
+[00:02:21.304] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
