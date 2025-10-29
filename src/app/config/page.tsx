@@ -5,7 +5,7 @@ import styled from "styled-components";
 import { useRouter, useSearchParams } from "next/navigation";
 // Remover header/aside custom e usar o mesmo padrão visual do /home
 
-type SectionKey = "general" | "appearance" | "notifications" | "security" | "integrations";
+type SectionKey = "general" | "appearance" | "notifications" | "security" | "integrations" | "forms";
 
 export default function ConfigPage() {
   const params = useSearchParams();
@@ -17,12 +17,41 @@ export default function ConfigPage() {
   const footerRef = useRef<HTMLElement | null>(null);
   const menuRef = useRef<HTMLDivElement | null>(null);
   const firstMenuItemRef = useRef<HTMLButtonElement | null>(null);
-  const initialSection = (params?.get("section") as SectionKey) || "general";
+  const initialSection = (params?.get("section") as SectionKey) || "forms";
   const [section, setSection] = useState<SectionKey>(initialSection);
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string>("");
   const [menuOpen, setMenuOpen] = useState<boolean>(false);
   const [confirmOpen, setConfirmOpen] = useState<boolean>(false);
+  // Estado do builder de formulários
+  type BuilderField = { tempId: string; label: string; type: "TEXT"|"TEXTAREA"|"SELECT"|"RADIO"|"CHECKBOX"|"FILE"; options?: string; required: boolean };
+  const [formsList, setFormsList] = useState<Array<{ id: number; title: string; slug: string; link: string; createdAt?: string }>>([]);
+  const [formTitle, setFormTitle] = useState<string>("");
+  const [formDesc, setFormDesc] = useState<string>("");
+  const [builderFields, setBuilderFields] = useState<BuilderField[]>([]);
+  const [savingForm, setSavingForm] = useState<boolean>(false);
+  const [createOpen, setCreateOpen] = useState<boolean>(false);
+  const [copiedId, setCopiedId] = useState<number | null>(null);
+  const [deletingId, setDeletingId] = useState<number | null>(null);
+
+  // Fechar modal com ESC e gerenciar foco básico
+  useEffect(() => {
+    function onKey(e: KeyboardEvent) {
+      if (e.key === "Escape") setCreateOpen(false);
+    }
+    if (createOpen) document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, [createOpen]);
+
+  // Garantir que a URL contenha ?section=forms quando acessado sem query
+  useEffect(() => {
+    const current = params?.get("section");
+    if (!current) {
+      const qs = new URLSearchParams(params?.toString());
+      qs.set("section", "forms");
+      router.replace(`/config?${qs.toString()}`);
+    }
+  }, [params, router]);
 
   useEffect(() => {
     const key = params?.get("section") as SectionKey | null;
@@ -90,6 +119,124 @@ export default function ConfigPage() {
     })();
   }, []);
 
+  // Utilitário para carregar lista de formulários
+  async function loadForms() {
+    try {
+      const res = await fetch("/api/forms");
+      if (res.ok) {
+        const json = await res.json();
+        setFormsList((json.items || []).map((i: any) => ({
+          id: i.id,
+          title: i.title,
+          slug: i.slug,
+          link: i.link,
+          createdAt: i.createdAt,
+        })));
+      }
+    } catch {}
+  }
+  // Carregar ao entrar na seção
+  useEffect(() => {
+    if (section === "forms") {
+      loadForms();
+    }
+  }, [section]);
+  // Atualizar automaticamente ao voltar o foco para a aba
+  useEffect(() => {
+    function onVisibility() {
+      if (document.visibilityState === "visible") {
+        // atualiza sessão (nome do criador) e formulários
+        (async () => {
+          try {
+            const res = await fetch("/api/session");
+            if (res.ok) {
+              const json = await res.json();
+              setUser(json.user);
+            }
+          } catch {}
+        })();
+        if (section === "forms") loadForms();
+      }
+    }
+    document.addEventListener("visibilitychange", onVisibility);
+    return () => document.removeEventListener("visibilitychange", onVisibility);
+  }, [section]);
+
+  function addField() {
+    setBuilderFields((prev) => [...prev, { tempId: Math.random().toString(36).slice(2), label: "Novo campo", type: "TEXT", options: "", required: true }]);
+  }
+  function removeField(tempId: string) {
+    setBuilderFields((prev) => prev.filter((f) => f.tempId !== tempId));
+  }
+  function updateField(tempId: string, patch: Partial<BuilderField>) {
+    setBuilderFields((prev) => prev.map((f) => (f.tempId === tempId ? { ...f, ...patch } : f)));
+  }
+  async function saveForm() {
+    if (!formTitle.trim()) {
+      setError("Informe um título para o formulário");
+      return;
+    }
+    setSavingForm(true);
+    try {
+      const payload = {
+        title: formTitle.trim(),
+        description: formDesc.trim(),
+        fields: builderFields.map((f) => ({ label: f.label, type: f.type, options: f.options, required: f.required })),
+      };
+      const res = await fetch("/api/forms", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) });
+      if (!res.ok) throw new Error("Falha ao salvar formulário");
+      await loadForms();
+      setFormTitle(""); setFormDesc(""); setBuilderFields([]);
+      setCreateOpen(false);
+    } catch (e: any) {
+      setError(e?.message || "Erro ao salvar");
+    } finally {
+      setSavingForm(false);
+    }
+  }
+  async function deleteForm(id: number) {
+    try {
+      const res = await fetch(`/api/forms/${id}`, { method: "DELETE" });
+      if (!res.ok) throw new Error("Falha ao excluir");
+      await loadForms();
+    } catch (e: any) {
+      setError(e?.message || "Erro ao excluir");
+    }
+  }
+
+  function copyFormLink(id: number, slug: string) {
+    try {
+      const link = `${window.location.origin}/forms/${slug}`;
+      const write = navigator.clipboard?.writeText(link);
+      if (write && typeof write.then === "function") {
+        write.then(() => {
+          setCopiedId(id);
+          setTimeout(() => setCopiedId((cur) => (cur === id ? null : cur)), 1500);
+        }).catch(() => {
+          setCopiedId(id);
+          setTimeout(() => setCopiedId((cur) => (cur === id ? null : cur)), 1500);
+        });
+      } else {
+        // Fallback: ainda atualiza feedback mesmo sem clipboard API
+        setCopiedId(id);
+        setTimeout(() => setCopiedId((cur) => (cur === id ? null : cur)), 1500);
+      }
+    } catch {
+      setCopiedId(id);
+      setTimeout(() => setCopiedId((cur) => (cur === id ? null : cur)), 1500);
+    }
+  }
+
+  async function onDeleteForm(id: number) {
+    if (deletingId) return;
+    setDeletingId(id);
+    try {
+      await deleteForm(id);
+    } finally {
+      setDeletingId(null);
+    }
+  }
+
   useEffect(() => {
     if (open && firstLinkRef.current) {
       firstLinkRef.current.focus();
@@ -130,6 +277,16 @@ export default function ConfigPage() {
       firstMenuItemRef.current.focus();
     }
   }, [menuOpen]);
+
+  function formatDateTime(value?: string): string {
+    if (!value) return "-";
+    try {
+      const d = new Date(value);
+      return new Intl.DateTimeFormat("pt-BR", { dateStyle: "short", timeStyle: "short" }).format(d);
+    } catch {
+      return String(value);
+    }
+  }
 
   const content = useMemo(() => {
     if (error) return <Muted role="alert">{error}</Muted>;
@@ -203,6 +360,14 @@ export default function ConfigPage() {
             </Field>
           </div>
         );
+      case "forms":
+        return (
+          <div>
+            <SectionTitle>Formulários Públicos</SectionTitle>
+            <Muted>Crie, gerencie e compartilhe formulários públicos.
+            </Muted>
+          </div>
+        );
     }
   }, [section, loading, error]);
 
@@ -226,7 +391,7 @@ export default function ConfigPage() {
               <NavItem href="http://localhost:3000/home" aria-label="Início" ref={firstLinkRef as any}>Início</NavItem>
               <NavItem href="#" aria-label="Tickets">Tickets</NavItem>
               <NavItem href="#" aria-label="Usuários">Usuários</NavItem>
-              <NavItem href="/config" aria-label="Configurações" aria-current="page">Configurações</NavItem>
+              <NavItem href="/config?section=forms" aria-label="Configurações" aria-current="page">Configurações</NavItem>
             </MenuScroll>
           </nav>
           <UserFooter
@@ -296,25 +461,196 @@ export default function ConfigPage() {
             </>
           )}
         </Sidebar>
-        <Overlay $show={!open} onClick={() => setOpen(true)} />
+        <Overlay $show={open} onClick={() => setOpen(false)} />
         <Content>
-          <Card aria-labelledby="config-title">
-            <CardHeader>
-              <HeaderIcon aria-hidden>⚙️</HeaderIcon>
-              <div>
-                <CardTitle id="config-title">Configurações</CardTitle>
-                <Muted>Gerencie as opções do sistema por seções.</Muted>
-              </div>
-            </CardHeader>
-            {content}
-          </Card>
+          {section !== "forms" && (
+            <Card aria-labelledby="config-title">
+              <CardHeader>
+                <HeaderIcon aria-hidden>⚙️</HeaderIcon>
+                <div>
+                  <CardTitle id="config-title">Configurações</CardTitle>
+                  <Muted>Gerencie as opções do sistema por seções.</Muted>
+                </div>
+              </CardHeader>
+              {content}
+            </Card>
+          )}
+          {section === "forms" && (
+            <RightCol aria-label="Ações de formulários">
+              <Card>
+                <CardHeader>
+                  <HeaderIcon aria-hidden>📂</HeaderIcon>
+                  <div>
+                    <CardTitle>Meus formulários</CardTitle>
+                    <Muted>Editar, excluir e compartilhar.</Muted>
+                  </div>
+                </CardHeader>
+                {error && (
+                  <Muted role="alert">{error}</Muted>
+                )}
+                <div style={{ display: "grid", gap: 10 }}>
+                  {formsList.map((f) => (
+                    <div key={f.id} style={{ display: "grid", gridTemplateColumns: "1fr auto auto", gap: 10, alignItems: "center" }}>
+                      <div>
+                        <strong>{f.title}</strong>
+                        <div><small>Link: <a href={`/forms/${f.slug}`} target="_blank" rel="noreferrer">/forms/{f.slug}</a></small></div>
+                        <Meta>
+                          <span>Criado por: <strong>{user?.name ?? user?.email ?? "Usuário"}</strong></span>
+                          <span>Em: <strong>{formatDateTime(f.createdAt)}</strong></span>
+                        </Meta>
+                      </div>
+                      <ActionButton
+                        type="button"
+                        title="Copiar link do formulário"
+                        aria-label={`Copiar link de ${f.title}`}
+                        onClick={() => copyFormLink(f.id, f.slug)}
+                        disabled={!!deletingId}
+                      >
+                        {copiedId === f.id ? "Copiado!" : "Copiar link"}
+                      </ActionButton>
+                      <DangerButton
+                        type="button"
+                        title="Excluir formulário"
+                        aria-label={`Excluir ${f.title}`}
+                        onClick={() => onDeleteForm(f.id)}
+                        disabled={deletingId === f.id}
+                      >
+                        {deletingId === f.id ? "Excluindo..." : "Excluir"}
+                      </DangerButton>
+                    </div>
+                  ))}
+                  {formsList.length === 0 && <Muted>Nenhum formulário criado ainda.</Muted>}
+                </div>
+              </Card>
+
+              <Card>
+                <CardHeader>
+                  <HeaderIcon aria-hidden>📝</HeaderIcon>
+                  <div>
+                    <CardTitle>Novo formulário</CardTitle>
+                    <Muted>Abra um popup para configurar e salvar.</Muted>
+                  </div>
+                </CardHeader>
+                <Actions>
+                  <PrimaryButton type="button" onClick={() => setCreateOpen(true)}>Novo formulário</PrimaryButton>
+                </Actions>
+              </Card>
+            </RightCol>
+          )}
         </Content>
       </Shell>
+      {createOpen && (
+        <>
+          <ModalBackdrop $open={createOpen} onClick={() => setCreateOpen(false)} aria-hidden={!createOpen} />
+          <ModalDialog
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="create-form-title"
+            $open={createOpen}
+            onKeyDown={(e) => { if (e.key === "Escape") setCreateOpen(false); }}
+          >
+            <ModalHeader>
+              <ModalIcon aria-hidden>📝</ModalIcon>
+              <div>
+                <ModalTitle id="create-form-title">Criar novo formulário</ModalTitle>
+                <Muted>Defina título, descrição e campos. Salvar tornará público.</Muted>
+              </div>
+            </ModalHeader>
+            <div>
+              <Field>
+                <Label htmlFor="new-form-title">Título</Label>
+                <Input
+                  id="new-form-title"
+                  type="text"
+                  placeholder="Ex.: Solicitação de suporte"
+                  value={formTitle}
+                  onChange={(e) => setFormTitle(e.target.value)}
+                />
+              </Field>
+              <Field>
+                <Label htmlFor="new-form-desc">Descrição</Label>
+                <Input
+                  id="new-form-desc"
+                  type="text"
+                  placeholder="Breve descrição"
+                  value={formDesc}
+                  onChange={(e) => setFormDesc(e.target.value)}
+                />
+              </Field>
+
+              <SectionTitle>Campos</SectionTitle>
+              <div style={{ display: "grid", gap: 12 }}>
+                {builderFields.map((bf) => (
+                  <div key={bf.tempId} style={{ display: "grid", gap: 8, gridTemplateColumns: "1fr auto", alignItems: "end" }}>
+                    <div>
+                      <Field>
+                        <Label>Rótulo</Label>
+                        <Input
+                          type="text"
+                          value={bf.label}
+                          onChange={(e) => updateField(bf.tempId, { label: e.target.value })}
+                        />
+                      </Field>
+                      <Field>
+                        <Label>Tipo</Label>
+                        <select
+                          value={bf.type}
+                          onChange={(e) => updateField(bf.tempId, { type: e.target.value as any })}
+                          style={{ width: "100%", padding: "10px", borderRadius: 10, border: "1px solid var(--border)", background: "#fff" }}
+                        >
+                          <option value="TEXT">Texto</option>
+                          <option value="TEXTAREA">Texto longo</option>
+                          <option value="SELECT">Selecionar</option>
+                          <option value="RADIO">Opções (única)</option>
+                          <option value="CHECKBOX">Marcar</option>
+                          <option value="FILE">Foto/Imagem</option>
+                        </select>
+                      </Field>
+                      {(bf.type === "SELECT" || bf.type === "RADIO") && (
+                        <Field>
+                          <Label>Opções (separadas por vírgula)</Label>
+                          <Input
+                            type="text"
+                            placeholder="Ex.: Suporte, Comercial, Financeiro"
+                            value={bf.options || ""}
+                            onChange={(e) => updateField(bf.tempId, { options: e.target.value })}
+                          />
+                        </Field>
+                      )}
+                      {bf.type === "FILE" && (
+                        <Muted>Este campo aceitará upload de imagem (jpeg, png, webp).</Muted>
+                      )}
+                      <label style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                        <input
+                          type="checkbox"
+                          checked={bf.required}
+                          onChange={(e) => updateField(bf.tempId, { required: e.target.checked })}
+                        />
+                        <span>Obrigatório</span>
+                      </label>
+                    </div>
+                    <DangerButton type="button" onClick={() => removeField(bf.tempId)}>Remover</DangerButton>
+                  </div>
+                ))}
+              </div>
+              <Actions style={{ marginTop: 10 }}>
+                <ActionButton type="button" onClick={addField}>Adicionar campo</ActionButton>
+              </Actions>
+            </div>
+            <ModalActions>
+              <CancelButton type="button" onClick={() => setCreateOpen(false)}>Cancelar</CancelButton>
+              <ConfirmButton type="button" onClick={saveForm} disabled={savingForm} aria-label="Salvar novo formulário">
+                {savingForm ? "Salvando..." : "Salvar"}
+              </ConfirmButton>
+            </ModalActions>
+          </ModalDialog>
+        </>
+      )}
     </Page>
   );
 }
 
-const SECTIONS: SectionKey[] = ["general", "appearance", "notifications", "security", "integrations"];
+const SECTIONS: SectionKey[] = ["general", "appearance", "notifications", "security", "integrations", "forms"];
 
 const Page = styled.div`
   min-height: 100dvh;
@@ -461,7 +797,7 @@ const Content = styled.main`
   gap: 16px;
 `;
 
-const Card = styled.section`
+const Card = styled.div`
   --card-radius: 18px;
   grid-column: span 12;
   position: relative;
@@ -484,6 +820,59 @@ const Card = styled.section`
     pointer-events: none;
   }
   @media (min-width: 960px) { grid-column: span 8; }
+`;
+
+// Layout em duas colunas com espaçamento de 15px, responsivo.
+// Usa CSS Grid e aplica Flexbox como fallback para navegadores mais antigos.
+const TwoCol = styled.div`
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 15px;
+  align-items: start;
+
+  @media (min-width: 960px) {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  /* Neutraliza o grid-column do Card dentro deste container */
+  > ${Card} { grid-column: auto; }
+
+  @supports not (display: grid) {
+    display: flex;
+    gap: 15px;
+    flex-direction: column;
+    @media (min-width: 960px) {
+      flex-direction: row;
+      align-items: stretch;
+    }
+  }
+`;
+
+// Coluna lateral à direita para ações de formulários
+const RightCol = styled.div`
+  grid-column: span 12;
+  display: grid;
+  gap: 15px;
+  align-items: start;
+  grid-template-columns: 1fr;
+
+  @media (min-width: 960px) {
+    grid-column: span 12; /* ocupa toda a largura da main */
+    grid-template-columns: repeat(2, 1fr); /* sempre 2 cards por linha */
+  }
+
+  > ${Card} { grid-column: auto; }
+
+  /* Fallback para navegadores sem Grid */
+  @supports not (display: grid) {
+    display: flex;
+    gap: 15px;
+    flex-direction: column;
+    @media (min-width: 960px) {
+      flex-direction: row;
+      align-items: stretch;
+    }
+  }
 `;
 
 const CardHeader = styled.div`
@@ -514,6 +903,15 @@ const CardTitle = styled.h1`
 const Muted = styled.p`
   color: var(--muted);
   margin: 0 0 12px;
+`;
+
+const Meta = styled.div`
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  color: var(--muted);
+  font-size: 0.9rem;
+  margin-top: 4px;
 `;
 
 const Field = styled.div`
@@ -555,6 +953,36 @@ const PrimaryButton = styled.button`
   cursor: pointer;
   background: linear-gradient(135deg, var(--primary-600), var(--primary-800));
   box-shadow: 0 6px 12px rgba(20, 93, 191, 0.2);
+`;
+
+// Botão de ação pequeno e discreto
+const ActionButton = styled.button`
+  padding: 8px 10px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: #fff;
+  cursor: pointer;
+  font-size: 0.9rem;
+  color: var(--primary-800);
+  transition: background .15s ease, transform .05s ease;
+  &:hover { background: #f8fafc; }
+  &:active { transform: translateY(1px); }
+  &:disabled { opacity: .6; cursor: default; }
+`;
+
+// Botão de ação perigosa (excluir)
+const DangerButton = styled.button`
+  padding: 8px 10px;
+  border-radius: 8px;
+  border: 1px solid #ffd0d0;
+  background: #fff5f5;
+  color: #B00000;
+  cursor: pointer;
+  font-size: 0.9rem;
+  transition: background .15s ease, transform .05s ease;
+  &:hover { background: #ffecec; }
+  &:active { transform: translateY(1px); }
+  &:disabled { opacity: .6; cursor: default; }
 `;
 
 const SectionTitle = styled.h2`
@@ -663,4 +1091,64 @@ const ConfirmButton = styled.button`
   color: #fff;
   cursor: pointer;
   background: linear-gradient(135deg, #B00000, #8A0000);
+`;
+
+// Estilos do modal de criação de formulário
+const ModalBackdrop = styled.div<{ $open: boolean }>`
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.25);
+  opacity: ${(p) => (p.$open ? 1 : 0)};
+  pointer-events: ${(p) => (p.$open ? "auto" : "none")};
+  transition: opacity .18s ease;
+  z-index: 30;
+`;
+
+const ModalDialog = styled.div<{ $open: boolean }>`
+  position: fixed;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%) scale(${(p) => (p.$open ? 1 : 0.98)});
+  opacity: ${(p) => (p.$open ? 1 : 0)};
+  background: #fff;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  box-shadow: 0 12px 28px rgba(0,0,0,0.12);
+  width: min(680px, 96vw);
+  max-height: min(80vh, 720px);
+  overflow-y: auto;
+  padding: 18px;
+  transition: opacity .18s ease, transform .18s ease;
+  z-index: 35;
+`;
+
+const ModalHeader = styled.div`
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 12px;
+  align-items: center;
+  margin-bottom: 12px;
+`;
+
+const ModalIcon = styled.div`
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  background: linear-gradient(135deg, var(--primary-600), var(--primary-800));
+  display: grid;
+  place-items: center;
+  color: #fff;
+  font-weight: 800;
+`;
+
+const ModalTitle = styled.h2`
+  font-size: 1.2rem;
+  margin: 0;
+`;
+
+const ModalActions = styled.div`
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  justify-content: flex-end;
 `;

@@ -56,6 +56,15 @@ type RouteHandlerConfig<Route extends AppRouteHandlerRoutes = AppRouteHandlerRou
   type __Unused = __Check
 }
 
+// Validate ../../../src/app/forms/[slug]/page.tsx
+{
+  type __IsExpected<Specific extends AppPageConfig<"/forms/[slug]">> = Specific
+  const handler = {} as typeof import("../../../src/app/forms/[slug]/page.js")
+  type __Check = __IsExpected<typeof handler>
+  // @ts-ignore
+  type __Unused = __Check
+}
+
 // Validate ../../../src/app/home/page.tsx
 {
   type __IsExpected<Specific extends AppPageConfig<"/home">> = Specific
@@ -78,6 +87,42 @@ type RouteHandlerConfig<Route extends AppRouteHandlerRoutes = AppRouteHandlerRou
 {
   type __IsExpected<Specific extends AppPageConfig<"/profile">> = Specific
   const handler = {} as typeof import("../../../src/app/profile/page.js")
+  type __Check = __IsExpected<typeof handler>
+  // @ts-ignore
+  type __Unused = __Check
+}
+
+// Validate ../../../src/app/api/forms/[id]/route.ts
+{
+  type __IsExpected<Specific extends RouteHandlerConfig<"/api/forms/[id]">> = Specific
+  const handler = {} as typeof import("../../../src/app/api/forms/[id]/route.js")
+  type __Check = __IsExpected<typeof handler>
+  // @ts-ignore
+  type __Unused = __Check
+}
+
+// Validate ../../../src/app/api/forms/[id]/submit/route.ts
+{
+  type __IsExpected<Specific extends RouteHandlerConfig<"/api/forms/[id]/submit">> = Specific
+  const handler = {} as typeof import("../../../src/app/api/forms/[id]/submit/route.js")
+  type __Check = __IsExpected<typeof handler>
+  // @ts-ignore
+  type __Unused = __Check
+}
+
+// Validate ../../../src/app/api/forms/by-slug/route.ts
+{
+  type __IsExpected<Specific extends RouteHandlerConfig<"/api/forms/by-slug">> = Specific
+  const handler = {} as typeof import("../../../src/app/api/forms/by-slug/route.js")
+  type __Check = __IsExpected<typeof handler>
+  // @ts-ignore
+  type __Unused = __Check
+}
+
+// Validate ../../../src/app/api/forms/route.ts
+{
+  type __IsExpected<Specific extends RouteHandlerConfig<"/api/forms">> = Specific
+  const handler = {} as typeof import("../../../src/app/api/forms/route.js")
   type __Check = __IsExpected<typeof handler>
   // @ts-ignore
   type __Unused = __Check
