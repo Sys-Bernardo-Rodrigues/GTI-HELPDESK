@@ -1,5 +1,4 @@
-node_modules
-node_modules
-
-/src/generated/prisma
+node_modules/
+.next/
 .env
+/src/generated/prisma/

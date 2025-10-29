@@ -87,3 +87,9 @@ Definidos em `prisma/schema.prisma`:
 - Caso mude credenciais no `.env`, reinicie o container: `npm run docker:down && npm run docker:up`.
 - Se alterar o schema do Prisma, rode `npm run db:push` (ou `npm run db:migrate`).
 - Para testes locais, use `npm run db:studio` para visualizar dados.
+
+## Auditoria e Organização
+- `.next/` não deve ser versionada; adicionada ao `.gitignore` e removida do repositório.
+- Entradas duplicadas foram saneadas em `.gitignore` e `tsconfig.json`.
+- Dependência dev não utilizada (`cross-env`) removida.
+- Relatório completo da auditoria em `docs/system-audit.md`.

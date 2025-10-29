@@ -84,7 +84,8 @@ const NavItem = styled.a`
   text-decoration: none;
   &:hover { background: #f3f4f6; }
   &[aria-current="page"] { background: #eef2f7; font-weight: 600; }
-  &:focus { outline: 2px solid var(--focus-ring); outline-offset: 2px; }
+  &:focus { outline: none; }
+  &:focus-visible { outline: none; }
 `;
 
 const UserFooter = styled.footer`
@@ -176,10 +177,25 @@ export default function HomePage() {
   const [open, setOpen] = useState<boolean>(true);
   const [menuOpen, setMenuOpen] = useState<boolean>(false);
   const [user, setUser] = useState<{ id: number; email: string; name: string | null } | null>(null);
+  const [avatarUrl, setAvatarUrl] = useState<string>("");
   const firstLinkRef = useRef<HTMLAnchorElement | null>(null);
   const footerRef = useRef<HTMLElement | null>(null);
   const menuRef = useRef<HTMLDivElement | null>(null);
   const [confirmOpen, setConfirmOpen] = useState<boolean>(false);
+
+  // Normaliza URLs do avatar (data URI, http(s), caminhos relativos)
+  function resolveAvatarUrl(u?: string): string {
+    if (!u) return "";
+    const val = String(u);
+    if (val.startsWith("data:")) return val;
+    if (/^https?:\/\//i.test(val)) return val;
+    if (typeof window !== "undefined") {
+      const origin = window.location.origin;
+      if (val.startsWith("/")) return `${origin}${val}`;
+      return `${origin}/${val}`;
+    }
+    return val;
+  }
 
   useEffect(() => {
     const saved = localStorage.getItem("sidebar_open");
@@ -197,6 +213,19 @@ export default function HomePage() {
         if (res.ok) {
           const json = await res.json();
           setUser(json.user);
+        }
+      } catch {}
+    })();
+  }, []);
+
+  // Buscar perfil para obter avatar do usuário
+  useEffect(() => {
+    (async () => {
+      try {
+        const res = await fetch("/api/profile");
+        if (res.ok) {
+          const json = await res.json();
+          setAvatarUrl(resolveAvatarUrl(json?.avatarUrl || ""));
         }
       } catch {}
     })();
@@ -268,7 +297,7 @@ export default function HomePage() {
         >
           <nav role="navigation" aria-label="Navegação principal">
             <MenuScroll>
-              <NavItem ref={firstLinkRef} href="#" aria-label="Início" aria-current="page">Início</NavItem>
+              <NavItem ref={firstLinkRef} href="http://localhost:3000/home" aria-label="Início" aria-current="page">Início</NavItem>
               <NavItem href="#" aria-label="Tickets">Tickets</NavItem>
               <NavItem href="#" aria-label="Usuários">Usuários</NavItem>
               <NavItem href="#" aria-label="Configurações">Configurações</NavItem>
@@ -290,7 +319,11 @@ export default function HomePage() {
             ref={footerRef as any}
           >
             <Avatar aria-label="Foto do usuário" role="img">
-              {user?.name ? (user.name?.[0] || "U") : "U"}
+              {avatarUrl ? (
+                <img src={avatarUrl} alt="Avatar" decoding="async" />
+              ) : (
+                user?.name ? (user.name?.[0] || "U") : "U"
+              )}
             </Avatar>
             <UserName aria-label="Nome do usuário">{user?.name ?? user?.email ?? "Usuário"}</UserName>
           </UserFooter>
@@ -388,7 +421,8 @@ const UserMenuItem = styled.button<{ $variant?: "danger" }>`
   color: ${(p) => (p.$variant === "danger" ? "#B00000" : "inherit")};
   &:hover { background: ${(p) => (p.$variant === "danger" ? "#ffe5e5" : "#f3f4f6")}; }
   &:active { background: ${(p) => (p.$variant === "danger" ? "#ffcccc" : "#e9ecef")}; }
-  &:focus { outline: 2px solid ${(p) => (p.$variant === "danger" ? "#FF0000" : "var(--focus-ring)")}; outline-offset: 2px; }
+  &:focus { outline: none; }
+  &:focus-visible { outline: none; }
 `;
 
 const ConfirmBackdrop = styled.div<{ $open: boolean }>`
@@ -437,7 +471,8 @@ const ConfirmButton = styled.button`
   color: #fff;
   cursor: pointer;
   &:hover { filter: brightness(1.05); }
-  &:focus { outline: 2px solid #b00000; outline-offset: 2px; }
+  &:focus { outline: none; }
+  &:focus-visible { outline: none; }
 `;
 
 const CancelButton = styled.button`
@@ -447,5 +482,6 @@ const CancelButton = styled.button`
   background: #fff;
   cursor: pointer;
   &:hover { background: #f3f4f6; }
-  &:focus { outline: 2px solid var(--primary-700); outline-offset: 2px; }
+  &:focus { outline: none; }
+  &:focus-visible { outline: none; }
 `;

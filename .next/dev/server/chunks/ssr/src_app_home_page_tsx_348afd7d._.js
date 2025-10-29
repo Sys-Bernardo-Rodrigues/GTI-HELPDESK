@@ -109,7 +109,8 @@ const NavItem = __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$
   text-decoration: none;
   &:hover { background: #f3f4f6; }
   &[aria-current="page"] { background: #eef2f7; font-weight: 600; }
-  &:focus { outline: 2px solid var(--focus-ring); outline-offset: 2px; }
+  &:focus { outline: none; }
+  &:focus-visible { outline: none; }
 `;
 const UserFooter = __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$styled$2d$components$2f$dist$2f$styled$2d$components$2e$esm$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["default"].footer.withConfig({
     displayName: "page__UserFooter",
@@ -216,10 +217,21 @@ function HomePage() {
     const [open, setOpen] = (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["useState"])(true);
     const [menuOpen, setMenuOpen] = (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["useState"])(false);
     const [user, setUser] = (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["useState"])(null);
+    const [avatarUrl, setAvatarUrl] = (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["useState"])("");
     const firstLinkRef = (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["useRef"])(null);
     const footerRef = (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["useRef"])(null);
     const menuRef = (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["useRef"])(null);
     const [confirmOpen, setConfirmOpen] = (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["useState"])(false);
+    // Normaliza URLs do avatar (data URI, http(s), caminhos relativos)
+    function resolveAvatarUrl(u) {
+        if (!u) return "";
+        const val = String(u);
+        if (val.startsWith("data:")) return val;
+        if (/^https?:\/\//i.test(val)) return val;
+        if ("TURBOPACK compile-time falsy", 0) //TURBOPACK unreachable
+        ;
+        return val;
+    }
     (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["useEffect"])(()=>{
         const saved = localStorage.getItem("sidebar_open");
         if (saved !== null) setOpen(saved === "true");
@@ -236,6 +248,18 @@ function HomePage() {
                 if (res.ok) {
                     const json = await res.json();
                     setUser(json.user);
+                }
+            } catch  {}
+        })();
+    }, []);
+    // Buscar perfil para obter avatar do usuário
+    (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["useEffect"])(()=>{
+        (async ()=>{
+            try {
+                const res = await fetch("/api/profile");
+                if (res.ok) {
+                    const json = await res.json();
+                    setAvatarUrl(resolveAvatarUrl(json?.avatarUrl || ""));
                 }
             } catch  {}
         })();
@@ -293,7 +317,7 @@ function HomePage() {
                         children: "Helpdesk"
                     }, void 0, false, {
                         fileName: "[project]/src/app/home/page.tsx",
-                        lineNumber: 250,
+                        lineNumber: 279,
                         columnNumber: 9
                     }, this),
                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(MenuToggle, {
@@ -304,13 +328,13 @@ function HomePage() {
                         children: open ? "Fechar menu" : "Abrir menu"
                     }, void 0, false, {
                         fileName: "[project]/src/app/home/page.tsx",
-                        lineNumber: 251,
+                        lineNumber: 280,
                         columnNumber: 9
                     }, this)
                 ]
             }, void 0, true, {
                 fileName: "[project]/src/app/home/page.tsx",
-                lineNumber: 249,
+                lineNumber: 278,
                 columnNumber: 7
             }, this),
             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(Shell, {
@@ -332,13 +356,13 @@ function HomePage() {
                                     children: [
                                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(NavItem, {
                                             ref: firstLinkRef,
-                                            href: "#",
+                                            href: "http://localhost:3000/home",
                                             "aria-label": "Início",
                                             "aria-current": "page",
                                             children: "Início"
                                         }, void 0, false, {
                                             fileName: "[project]/src/app/home/page.tsx",
-                                            lineNumber: 271,
+                                            lineNumber: 300,
                                             columnNumber: 15
                                         }, this),
                                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(NavItem, {
@@ -347,7 +371,7 @@ function HomePage() {
                                             children: "Tickets"
                                         }, void 0, false, {
                                             fileName: "[project]/src/app/home/page.tsx",
-                                            lineNumber: 272,
+                                            lineNumber: 301,
                                             columnNumber: 15
                                         }, this),
                                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(NavItem, {
@@ -356,7 +380,7 @@ function HomePage() {
                                             children: "Usuários"
                                         }, void 0, false, {
                                             fileName: "[project]/src/app/home/page.tsx",
-                                            lineNumber: 273,
+                                            lineNumber: 302,
                                             columnNumber: 15
                                         }, this),
                                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(NavItem, {
@@ -365,18 +389,18 @@ function HomePage() {
                                             children: "Configurações"
                                         }, void 0, false, {
                                             fileName: "[project]/src/app/home/page.tsx",
-                                            lineNumber: 274,
+                                            lineNumber: 303,
                                             columnNumber: 15
                                         }, this)
                                     ]
                                 }, void 0, true, {
                                     fileName: "[project]/src/app/home/page.tsx",
-                                    lineNumber: 270,
+                                    lineNumber: 299,
                                     columnNumber: 13
                                 }, this)
                             }, void 0, false, {
                                 fileName: "[project]/src/app/home/page.tsx",
-                                lineNumber: 269,
+                                lineNumber: 298,
                                 columnNumber: 11
                             }, this),
                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(UserFooter, {
@@ -397,10 +421,18 @@ function HomePage() {
                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(Avatar, {
                                         "aria-label": "Foto do usuário",
                                         role: "img",
-                                        children: user?.name ? user.name?.[0] || "U" : "U"
+                                        children: avatarUrl ? /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("img", {
+                                            src: avatarUrl,
+                                            alt: "Avatar",
+                                            decoding: "async"
+                                        }, void 0, false, {
+                                            fileName: "[project]/src/app/home/page.tsx",
+                                            lineNumber: 323,
+                                            columnNumber: 17
+                                        }, this) : user?.name ? user.name?.[0] || "U" : "U"
                                     }, void 0, false, {
                                         fileName: "[project]/src/app/home/page.tsx",
-                                        lineNumber: 292,
+                                        lineNumber: 321,
                                         columnNumber: 13
                                     }, this),
                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(UserName, {
@@ -408,13 +440,13 @@ function HomePage() {
                                         children: user?.name ?? user?.email ?? "Usuário"
                                     }, void 0, false, {
                                         fileName: "[project]/src/app/home/page.tsx",
-                                        lineNumber: 295,
+                                        lineNumber: 328,
                                         columnNumber: 13
                                     }, this)
                                 ]
                             }, void 0, true, {
                                 fileName: "[project]/src/app/home/page.tsx",
-                                lineNumber: 277,
+                                lineNumber: 306,
                                 columnNumber: 11
                             }, this),
                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(UserMenu, {
@@ -435,7 +467,7 @@ function HomePage() {
                                         children: "Perfil"
                                     }, void 0, false, {
                                         fileName: "[project]/src/app/home/page.tsx",
-                                        lineNumber: 304,
+                                        lineNumber: 337,
                                         columnNumber: 13
                                     }, this),
                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(UserMenuItem, {
@@ -449,13 +481,13 @@ function HomePage() {
                                         children: "Sair"
                                     }, void 0, false, {
                                         fileName: "[project]/src/app/home/page.tsx",
-                                        lineNumber: 312,
+                                        lineNumber: 345,
                                         columnNumber: 13
                                     }, this)
                                 ]
                             }, void 0, true, {
                                 fileName: "[project]/src/app/home/page.tsx",
-                                lineNumber: 297,
+                                lineNumber: 330,
                                 columnNumber: 11
                             }, this),
                             confirmOpen && /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["Fragment"], {
@@ -466,7 +498,7 @@ function HomePage() {
                                         "aria-hidden": !confirmOpen
                                     }, void 0, false, {
                                         fileName: "[project]/src/app/home/page.tsx",
-                                        lineNumber: 324,
+                                        lineNumber: 357,
                                         columnNumber: 15
                                     }, this),
                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(ConfirmDialog, {
@@ -483,7 +515,7 @@ function HomePage() {
                                                 children: "Você deseja realmente sair?"
                                             }, void 0, false, {
                                                 fileName: "[project]/src/app/home/page.tsx",
-                                                lineNumber: 332,
+                                                lineNumber: 365,
                                                 columnNumber: 17
                                             }, this),
                                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(ConfirmActions, {
@@ -494,7 +526,7 @@ function HomePage() {
                                                         children: "Cancelar"
                                                     }, void 0, false, {
                                                         fileName: "[project]/src/app/home/page.tsx",
-                                                        lineNumber: 334,
+                                                        lineNumber: 367,
                                                         columnNumber: 19
                                                     }, this),
                                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(ConfirmButton, {
@@ -503,19 +535,19 @@ function HomePage() {
                                                         children: "Confirmar"
                                                     }, void 0, false, {
                                                         fileName: "[project]/src/app/home/page.tsx",
-                                                        lineNumber: 335,
+                                                        lineNumber: 368,
                                                         columnNumber: 19
                                                     }, this)
                                                 ]
                                             }, void 0, true, {
                                                 fileName: "[project]/src/app/home/page.tsx",
-                                                lineNumber: 333,
+                                                lineNumber: 366,
                                                 columnNumber: 17
                                             }, this)
                                         ]
                                     }, void 0, true, {
                                         fileName: "[project]/src/app/home/page.tsx",
-                                        lineNumber: 325,
+                                        lineNumber: 358,
                                         columnNumber: 15
                                     }, this)
                                 ]
@@ -523,7 +555,7 @@ function HomePage() {
                         ]
                     }, void 0, true, {
                         fileName: "[project]/src/app/home/page.tsx",
-                        lineNumber: 261,
+                        lineNumber: 290,
                         columnNumber: 9
                     }, this),
                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(Content, {
@@ -534,20 +566,20 @@ function HomePage() {
                                         children: "Tickets Abertos"
                                     }, void 0, false, {
                                         fileName: "[project]/src/app/home/page.tsx",
-                                        lineNumber: 343,
+                                        lineNumber: 376,
                                         columnNumber: 13
                                     }, this),
                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(Muted, {
                                         children: "Resumo de tickets abertos no momento."
                                     }, void 0, false, {
                                         fileName: "[project]/src/app/home/page.tsx",
-                                        lineNumber: 344,
+                                        lineNumber: 377,
                                         columnNumber: 13
                                     }, this)
                                 ]
                             }, void 0, true, {
                                 fileName: "[project]/src/app/home/page.tsx",
-                                lineNumber: 342,
+                                lineNumber: 375,
                                 columnNumber: 11
                             }, this),
                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(Card, {
@@ -556,20 +588,20 @@ function HomePage() {
                                         children: "Estatísticas"
                                     }, void 0, false, {
                                         fileName: "[project]/src/app/home/page.tsx",
-                                        lineNumber: 347,
+                                        lineNumber: 380,
                                         columnNumber: 13
                                     }, this),
                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(Muted, {
                                         children: "Métricas de atendimento recentes."
                                     }, void 0, false, {
                                         fileName: "[project]/src/app/home/page.tsx",
-                                        lineNumber: 348,
+                                        lineNumber: 381,
                                         columnNumber: 13
                                     }, this)
                                 ]
                             }, void 0, true, {
                                 fileName: "[project]/src/app/home/page.tsx",
-                                lineNumber: 346,
+                                lineNumber: 379,
                                 columnNumber: 11
                             }, this),
                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(Card, {
@@ -578,32 +610,32 @@ function HomePage() {
                                         children: "Atalhos"
                                     }, void 0, false, {
                                         fileName: "[project]/src/app/home/page.tsx",
-                                        lineNumber: 351,
+                                        lineNumber: 384,
                                         columnNumber: 13
                                     }, this),
                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(Muted, {
                                         children: "Ações rápidas e favoritos."
                                     }, void 0, false, {
                                         fileName: "[project]/src/app/home/page.tsx",
-                                        lineNumber: 352,
+                                        lineNumber: 385,
                                         columnNumber: 13
                                     }, this)
                                 ]
                             }, void 0, true, {
                                 fileName: "[project]/src/app/home/page.tsx",
-                                lineNumber: 350,
+                                lineNumber: 383,
                                 columnNumber: 11
                             }, this)
                         ]
                     }, void 0, true, {
                         fileName: "[project]/src/app/home/page.tsx",
-                        lineNumber: 341,
+                        lineNumber: 374,
                         columnNumber: 9
                     }, this)
                 ]
             }, void 0, true, {
                 fileName: "[project]/src/app/home/page.tsx",
-                lineNumber: 260,
+                lineNumber: 289,
                 columnNumber: 7
             }, this),
             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(Overlay, {
@@ -612,13 +644,13 @@ function HomePage() {
                 "aria-hidden": !open
             }, void 0, false, {
                 fileName: "[project]/src/app/home/page.tsx",
-                lineNumber: 356,
+                lineNumber: 389,
                 columnNumber: 7
             }, this)
         ]
     }, void 0, true, {
         fileName: "[project]/src/app/home/page.tsx",
-        lineNumber: 248,
+        lineNumber: 277,
         columnNumber: 5
     }, this);
 }
@@ -658,7 +690,8 @@ const UserMenuItem = __TURBOPACK__imported__module__$5b$project$5d2f$node_module
   color: ${(p)=>p.$variant === "danger" ? "#B00000" : "inherit"};
   &:hover { background: ${(p)=>p.$variant === "danger" ? "#ffe5e5" : "#f3f4f6"}; }
   &:active { background: ${(p)=>p.$variant === "danger" ? "#ffcccc" : "#e9ecef"}; }
-  &:focus { outline: 2px solid ${(p)=>p.$variant === "danger" ? "#FF0000" : "var(--focus-ring)"}; outline-offset: 2px; }
+  &:focus { outline: none; }
+  &:focus-visible { outline: none; }
 `;
 const ConfirmBackdrop = __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$styled$2d$components$2f$dist$2f$styled$2d$components$2e$esm$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["default"].div.withConfig({
     displayName: "page__ConfirmBackdrop",
@@ -717,7 +750,8 @@ const ConfirmButton = __TURBOPACK__imported__module__$5b$project$5d2f$node_modul
   color: #fff;
   cursor: pointer;
   &:hover { filter: brightness(1.05); }
-  &:focus { outline: 2px solid #b00000; outline-offset: 2px; }
+  &:focus { outline: none; }
+  &:focus-visible { outline: none; }
 `;
 const CancelButton = __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$styled$2d$components$2f$dist$2f$styled$2d$components$2e$esm$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["default"].button.withConfig({
     displayName: "page__CancelButton",
@@ -729,7 +763,8 @@ const CancelButton = __TURBOPACK__imported__module__$5b$project$5d2f$node_module
   background: #fff;
   cursor: pointer;
   &:hover { background: #f3f4f6; }
-  &:focus { outline: 2px solid var(--primary-700); outline-offset: 2px; }
+  &:focus { outline: none; }
+  &:focus-visible { outline: none; }
 `;
 }),
 ];

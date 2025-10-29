@@ -29,19 +29,18 @@
     "styled-components": "^6.1.8"
   },
   "devDependencies": {
+    "@testing-library/jest-dom": "^6.4.2",
+    "@testing-library/react": "^16.0.0",
+    "@testing-library/user-event": "^14.5.2",
     "@types/jsonwebtoken": "^9.0.10",
     "@types/node": "^20",
     "@types/react": "19.2.2",
     "concurrently": "^9.2.1",
-    "cross-env": "^10.1.0",
     "eslint": "^9",
+    "jsdom": "^24.0.0",
     "prisma": "^6.18.0",
     "tsx": "^4.20.6",
     "typescript": "^5",
-    "@testing-library/react": "^16.0.0",
-    "@testing-library/user-event": "^14.5.2",
-    "jsdom": "^24.0.0",
-    "@testing-library/jest-dom": "^6.4.2",
     "vitest": "^2.1.3"
   }
 }
