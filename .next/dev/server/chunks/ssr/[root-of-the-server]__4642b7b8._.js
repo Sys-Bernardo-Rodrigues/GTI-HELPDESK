@@ -80,9 +80,10 @@ const GlobalStyles = __TURBOPACK__imported__module__$5b$project$5d2f$node_module
   :root {
     --bg: #f7f9fc;
     --surface: #ffffff;
-    --primary-600: #05070aff; /* Facebook-like blue */
-    --primary-700: #070a0cff;
-    --primary-800: #0b0b0bff;
+    --primary-600: #0a0b0cff; /* blue 600 */
+    --primary-700: #08090aff; /* blue 700 */
+    --primary-800: #090a10ff; /* blue 800 */
+    --focus-ring: #080808ff; /* accessible focus color */
     --text: #1f2937;
     --muted: #6b7280;
     --border: #e5e7eb;
@@ -103,7 +104,7 @@ const GlobalStyles = __TURBOPACK__imported__module__$5b$project$5d2f$node_module
   a:hover { text-decoration: underline; }
 
   button { font: inherit; }
-  input, button { outline-color: var(--primary-700); }
+  input, button { outline-color: var(--focus-ring); }
 `;
 const __TURBOPACK__default__export__ = GlobalStyles;
 }),
