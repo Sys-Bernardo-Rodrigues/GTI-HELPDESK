@@ -541,6 +541,9 @@ export default function TicketsPage() {
               <NavItem href="/users" aria-label="Usuários">
                 Usuários
               </NavItem>
+              <NavItem href="/history" aria-label="Histórico">
+                Histórico
+              </NavItem>
               <NavItem href="/config?section=forms" aria-label="Configurações">
                 Configurações
               </NavItem>

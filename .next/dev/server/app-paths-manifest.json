@@ -10,6 +10,7 @@
   "/api/users/route": "app/api/users/route.js",
   "/config/page": "app/config/page.js",
   "/forms/[slug]/page": "app/forms/[slug]/page.js",
+  "/history/page": "app/history/page.js",
   "/home/page": "app/home/page.js",
   "/tickets/page": "app/tickets/page.js",
   "/users/page": "app/users/page.js"

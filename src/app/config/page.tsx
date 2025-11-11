@@ -547,10 +547,21 @@ export default function ConfigPage() {
         <Sidebar id="sidebar" aria-label="Menu lateral" aria-expanded={open} aria-hidden={!open} $open={open}>
           <nav role="navigation" aria-label="Navegação principal">
             <MenuScroll>
-              <NavItem href="http://localhost:3000/home" aria-label="Início" ref={firstLinkRef as any}>Início</NavItem>
-              <NavItem href="/tickets" aria-label="Tickets">Tickets</NavItem>
-              <NavItem href="/users" aria-label="Usuários">Usuários</NavItem>
-              <NavItem href="/config?section=forms" aria-label="Configurações" aria-current="page">Configurações</NavItem>
+              <NavItem ref={firstLinkRef} href="/home" aria-label="Início">
+                Início
+              </NavItem>
+              <NavItem href="/tickets" aria-label="Tickets">
+                Tickets
+              </NavItem>
+              <NavItem href="/users" aria-label="Usuários">
+                Usuários
+              </NavItem>
+              <NavItem href="/history" aria-label="Histórico">
+                Histórico
+              </NavItem>
+              <NavItem href="/config?section=forms" aria-label="Configurações" aria-current="page">
+                Configurações
+              </NavItem>
             </MenuScroll>
           </nav>
           <UserFooter

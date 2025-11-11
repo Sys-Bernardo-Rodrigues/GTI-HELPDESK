@@ -400,10 +400,21 @@ export default function UsersPage() {
         >
           <nav role="navigation" aria-label="Navegação principal">
             <MenuScroll>
-              <NavItem ref={firstLinkRef as any} href="http://localhost:3000/home" aria-label="Início">Início</NavItem>
-              <NavItem href="/tickets" aria-label="Tickets">Tickets</NavItem>
-              <NavItem href="/users" aria-label="Usuários" aria-current="page">Usuários</NavItem>
-              <NavItem href="/config?section=forms" aria-label="Configurações">Configurações</NavItem>
+              <NavItem ref={firstLinkRef} href="/home" aria-label="Início">
+                Início
+              </NavItem>
+              <NavItem href="/tickets" aria-label="Tickets">
+                Tickets
+              </NavItem>
+              <NavItem href="/users" aria-label="Usuários" aria-current="page">
+                Usuários
+              </NavItem>
+              <NavItem href="/history" aria-label="Histórico">
+                Histórico
+              </NavItem>
+              <NavItem href="/config?section=forms" aria-label="Configurações">
+                Configurações
+              </NavItem>
             </MenuScroll>
           </nav>
           <UserFooter
