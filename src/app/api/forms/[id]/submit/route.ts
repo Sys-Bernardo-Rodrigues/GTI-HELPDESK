@@ -52,6 +52,9 @@ function buildSummary(payload: Record<string, any>, formTitle: string, fields: {
       value = rawValue ? "Sim" : "Não";
     } else {
       value = String(rawValue);
+      if (info.type === "FILE" && value && value !== "-" && value !== "null") {
+        value = resolveFileUrl(value);
+      }
     }
     lines.push(`${info.label}: ${value}`);
   }
@@ -73,6 +76,21 @@ function buildSummary(payload: Record<string, any>, formTitle: string, fields: {
   }
 
   return lines.join("\n");
+}
+
+function resolveFileUrl(value: string): string {
+  const trimmed = value.trim();
+  if (!trimmed) return value;
+  const isAbsolute = /^https?:\/\//i.test(trimmed);
+  if (isAbsolute) return trimmed;
+  const base = process.env.NEXT_PUBLIC_APP_URL || process.env.APP_URL || process.env.PUBLIC_APP_URL || "";
+  if (!base) return trimmed;
+  try {
+    const url = new URL(trimmed.startsWith("/") ? trimmed : `/${trimmed}`, base);
+    return url.toString();
+  } catch {
+    return trimmed;
+  }
 }
 
 export async function POST(req: NextRequest, context: { params: ParamsPromise }) {
@@ -138,29 +156,35 @@ export async function POST(req: NextRequest, context: { params: ParamsPromise })
     }
   }
 
-  // Persistir submissão
-  const submission = await prisma.formSubmission.create({
-    data: { formId: id, data: payload },
-  });
-
-  // Converter em ticket automaticamente
-  const adminEmail = process.env.DEFAULT_USER_EMAIL || "admin@example.com";
-  const admin = await prisma.user.findUnique({ where: { email: adminEmail } });
-  const fallbackUser = admin ?? (await prisma.user.findFirst());
-  const userId = fallbackUser?.id ?? form.userId ?? null;
-
-  let ticketId: number | null = null;
-  if (userId) {
-    const summary = buildSummary(payload, form.title, form.fields);
-    const ticket = await prisma.ticket.create({
-      data: {
-        title: `Resposta: ${form.title}`,
-        description: summary,
-        userId,
-        submissionId: submission.id,
-      },
+  try {
+    // Persistir submissão
+    const submission = await prisma.formSubmission.create({
+      data: { formId: id, data: JSON.stringify(payload) },
     });
-    ticketId = ticket.id;
+
+    // Converter em ticket automaticamente
+    const adminEmail = process.env.DEFAULT_USER_EMAIL || "admin@example.com";
+    const admin = await prisma.user.findUnique({ where: { email: adminEmail } });
+    const fallbackUser = admin ?? (await prisma.user.findFirst());
+    const userId = fallbackUser?.id ?? form.userId ?? null;
+
+    let ticketId: number | null = null;
+    if (userId) {
+      const summary = buildSummary(payload, form.title, form.fields);
+      const ticket = await prisma.ticket.create({
+        data: {
+          title: `Resposta: ${form.title}`,
+          description: summary,
+          userId,
+          submissionId: submission.id,
+        },
+      });
+      ticketId = ticket.id;
+    }
+    return NextResponse.json({ success: true, ticketId, submissionId: submission.id, formId: form.id });
+  } catch (error) {
+    console.error("[forms:submit]", error);
+    const message = error instanceof Error ? error.message : "Falha ao registrar resposta";
+    return NextResponse.json({ error: message }, { status: 500 });
   }
-  return NextResponse.json({ success: true, ticketId, submissionId: submission.id, formId: form.id });
 }

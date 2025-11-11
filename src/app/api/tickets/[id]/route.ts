@@ -1,9 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
-import { TicketStatus } from "@prisma/client";
+import type { TicketStatus } from "@prisma/client";
 import { getAuthenticatedUser } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 
 type ParamsPromise = Promise<{ id: string }>;
+
+const VALID_STATUSES: TicketStatus[] = ["OPEN", "IN_PROGRESS", "RESOLVED", "CLOSED"];
 
 async function parseId(paramsPromise: ParamsPromise) {
   const params = await paramsPromise;
@@ -33,8 +35,7 @@ export async function PUT(req: NextRequest, context: { params: ParamsPromise }) 
   }
 
   if (statusProvided) {
-    const validStatuses = Object.values(TicketStatus);
-    if (!validStatuses.includes(status as TicketStatus)) {
+    if (!VALID_STATUSES.includes(status as TicketStatus)) {
       return NextResponse.json({ error: "Status inválido" }, { status: 400 });
     }
   }
@@ -101,7 +102,9 @@ export async function PUT(req: NextRequest, context: { params: ParamsPromise }) 
         : null,
     });
   } catch (error) {
-    return NextResponse.json({ error: "Falha ao atualizar ticket" }, { status: 500 });
+    console.error("[tickets:update]", error);
+    const message = error instanceof Error ? error.message : "Falha ao atualizar ticket";
+    return NextResponse.json({ error: message }, { status: 500 });
   }
 }
 

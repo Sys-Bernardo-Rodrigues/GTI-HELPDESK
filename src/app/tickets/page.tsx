@@ -1,6 +1,6 @@
 "use client";
 
-import { ChangeEvent, KeyboardEvent, useEffect, useMemo, useRef, useState } from "react";
+import { ChangeEvent, DragEvent, KeyboardEvent, useEffect, useMemo, useRef, useState } from "react";
 import styled, { keyframes } from "styled-components";
 
 type TicketStatus = "OPEN" | "IN_PROGRESS" | "RESOLVED" | "CLOSED";
@@ -19,6 +19,11 @@ type TicketItem = {
 };
 
 type UserOption = { id: number; name: string; email: string };
+
+type SummaryEntry =
+  | { type: "section"; label: string }
+  | { type: "field"; label: string; value: string; isLink: boolean; isPhone: boolean }
+  | { type: "text"; value: string };
 
 type FeedbackMessage = { type: "success" | "error"; message: string } | null;
 
@@ -52,13 +57,6 @@ const STATUS_DETAILS: Record<
     color: "#334155",
     background: "rgba(148, 163, 184, 0.16)",
   },
-};
-
-const NEXT_STATUS: Record<TicketStatus, TicketStatus | null> = {
-  OPEN: "IN_PROGRESS",
-  IN_PROGRESS: "RESOLVED",
-  RESOLVED: "CLOSED",
-  CLOSED: null,
 };
 
 function normalizeTicket(raw: any): TicketItem {
@@ -140,6 +138,17 @@ function getBrowserOrigin(): string {
   return "";
 }
 
+function openWhatsapp(raw: string) {
+  const win = getBrowserWindow();
+  const digits = raw.replace(/[^0-9+]/g, "");
+  if (!digits) return;
+  const normalized = digits.startsWith("+") ? digits.slice(1) : digits;
+  const url = new URL(`https://wa.me/${normalized}`);
+  if (win?.open) {
+    win.open(url.toString(), "_blank", "noopener,noreferrer");
+  }
+}
+
 export default function TicketsPage() {
   const [sidebarOpen, setSidebarOpen] = useState<boolean>(true);
   const [userMenuOpen, setUserMenuOpen] = useState<boolean>(false);
@@ -160,6 +169,8 @@ export default function TicketsPage() {
   const [drawerAssignee, setDrawerAssignee] = useState<string>("");
   const [drawerSaving, setDrawerSaving] = useState<boolean>(false);
   const [pendingTicketId, setPendingTicketId] = useState<number | null>(null);
+  const [draggedTicketId, setDraggedTicketId] = useState<number | null>(null);
+  const [dropTargetStatus, setDropTargetStatus] = useState<TicketStatus | null>(null);
   const firstLinkRef = useRef<any>(null);
   const footerRef = useRef<any>(null);
   const menuRef = useRef<any>(null);
@@ -312,8 +323,6 @@ export default function TicketsPage() {
       const content = [
         ticket.title,
         ticket.description,
-        ticket.requester?.name,
-        ticket.requester?.email,
         ticket.assignedTo?.name,
         ticket.assignedTo?.email,
         ticket.form?.title,
@@ -417,7 +426,85 @@ export default function TicketsPage() {
     mutateTicket(drawerTicket.id, updates, "drawer");
   }
 
+  function handleCardClick(ticket: TicketItem) {
+    if (draggedTicketId !== null) return;
+    openDrawer(ticket);
+  }
+
+  function handleDragStart(event: DragEvent<HTMLDivElement>, ticketId: number) {
+    const transfer = event.dataTransfer as any;
+    if (transfer?.setData) {
+      transfer.setData("text/plain", String(ticketId));
+    }
+    if (transfer) {
+      transfer.effectAllowed = "move";
+    }
+    setDraggedTicketId(ticketId);
+  }
+
+  function handleDragEnd() {
+    setDraggedTicketId(null);
+    setDropTargetStatus(null);
+  }
+
+  function handleDragOver(event: DragEvent<HTMLDivElement>, status: TicketStatus) {
+    if (!draggedTicketId) return;
+    const ticket = tickets.find((item) => item.id === draggedTicketId);
+    if (ticket && ticket.status === status) {
+      setDropTargetStatus(null);
+      return;
+    }
+    event.preventDefault();
+    const transfer = event.dataTransfer as any;
+    if (transfer) {
+      transfer.dropEffect = "move";
+    }
+    setDropTargetStatus(status);
+  }
+
+  function handleDragLeave(status: TicketStatus) {
+    setDropTargetStatus((current) => (current === status ? null : current));
+  }
+
+  function handleDrop(event: DragEvent<HTMLDivElement>, status: TicketStatus) {
+    const transfer = event.dataTransfer as any;
+    const ticketId = draggedTicketId ?? Number(transfer?.getData?.("text/plain"));
+    if (!ticketId) return;
+    event.preventDefault();
+    setDropTargetStatus(null);
+    setDraggedTicketId(null);
+    const ticket = tickets.find((item) => item.id === ticketId);
+    if (!ticket || ticket.status === status) return;
+    mutateTicket(ticketId, { status }, "card");
+  }
+
   const drawerFormUrl = drawerTicket?.form ? `${getBrowserOrigin()}/forms/${drawerTicket.form.slug}` : null;
+  const summaryEntries = useMemo<SummaryEntry[]>(() => {
+    if (!drawerTicket?.description) return [];
+    const lines = drawerTicket.description.split(/\r?\n/g);
+    const items: SummaryEntry[] = [];
+    for (const rawLine of lines) {
+      const line = rawLine.trim();
+      if (!line) continue;
+      if (/^campos adicionais:?$/i.test(line)) {
+        items.push({ type: "section", label: "Campos adicionais" });
+        continue;
+      }
+      const colonIndex = line.indexOf(":");
+      if (colonIndex > -1) {
+        const label = line.slice(0, colonIndex).trim();
+        const valueRaw = line.slice(colonIndex + 1).trim() || "-";
+        const isLink = /^https?:\/\//i.test(valueRaw) || valueRaw.startsWith("/uploads/") || valueRaw.startsWith("/files/");
+        const isPhoneLabel = /telefone|celular|whats?/i.test(label);
+        const phoneDigits = valueRaw.replace(/[^0-9+]/g, "");
+        const isPhone = isPhoneLabel && phoneDigits.length >= 9;
+        items.push({ type: "field", label, value: valueRaw, isLink, isPhone });
+      } else {
+        items.push({ type: "text", value: line });
+      }
+    }
+    return items;
+  }, [drawerTicket?.description]);
 
   return (
     <Page>
@@ -624,7 +711,14 @@ export default function TicketsPage() {
                   const ticketsInColumn = groupedTickets[status];
                   const nextStatus = STATUS_DETAILS[status];
                   return (
-                    <Column key={status}>
+                    <Column
+                      key={status}
+                      $dropping={dropTargetStatus === status}
+                      onDragOver={(event) => handleDragOver(event, status)}
+                      onDragEnter={(event) => handleDragOver(event, status)}
+                      onDragLeave={() => handleDragLeave(status)}
+                      onDrop={(event) => handleDrop(event, status)}
+                    >
                       <ColumnHeader>
                         <ColumnTitle>{nextStatus.label}</ColumnTitle>
                         <ColumnCount>{ticketsInColumn.length}</ColumnCount>
@@ -638,12 +732,27 @@ export default function TicketsPage() {
                           </EmptyState>
                         )}
                         {ticketsInColumn.map((ticket) => {
-                          const next = NEXT_STATUS[ticket.status];
                           const assignedLabel = ticket.assignedTo
                             ? ticket.assignedTo.name || ticket.assignedTo.email || "Usuário"
                             : "Sem responsável";
                           return (
-                            <TicketCard key={ticket.id} data-pending={pendingTicketId === ticket.id}>
+                            <TicketCard
+                              key={ticket.id}
+                              data-pending={pendingTicketId === ticket.id}
+                              role="button"
+                              tabIndex={0}
+                              draggable
+                              onDragStart={(event) => handleDragStart(event, ticket.id)}
+                              onDragEnd={handleDragEnd}
+                              onClick={() => handleCardClick(ticket)}
+                              onKeyDown={(event: KeyboardEvent<HTMLDivElement>) => {
+                                if (draggedTicketId !== null) return;
+                                if (event.key === "Enter" || event.key === " ") {
+                                  event.preventDefault();
+                                  openDrawer(ticket);
+                                }
+                              }}
+                            >
                               <TicketHeader>
                                 <TicketId>#{ticket.id}</TicketId>
                                 <StatusBadge data-status={ticket.status}>
@@ -651,24 +760,7 @@ export default function TicketsPage() {
                                 </StatusBadge>
                               </TicketHeader>
                               <TicketTitle>{ticket.title}</TicketTitle>
-                              <TicketSnippet>
-                                {ticket.description ? ticket.description.slice(0, 220) : "Sem descrição fornecida."}
-                                {ticket.description.length > 220 ? "..." : ""}
-                              </TicketSnippet>
                               <TicketMeta>
-                                <MetaGroup>
-                                  <MetaLabel>Solicitante</MetaLabel>
-                                  <MetaValue>
-                                    {ticket.requester ? (
-                                      <>
-                                        {ticket.requester.name || "Usuário"}
-                                        {ticket.requester.email ? ` · ${ticket.requester.email}` : ""}
-                                      </>
-                                    ) : (
-                                      "Não informado"
-                                    )}
-                                  </MetaValue>
-                                </MetaGroup>
                                 <MetaGroup>
                                   <MetaLabel>Responsável</MetaLabel>
                                   <MetaValue>{assignedLabel}</MetaValue>
@@ -684,39 +776,6 @@ export default function TicketsPage() {
                                   <MetaValue>{formatDate(ticket.updatedAt)}</MetaValue>
                                 </MetaGroup>
                               </TicketMeta>
-                              <TicketActions>
-                                <PrimaryAction type="button" onClick={() => openDrawer(ticket)}>
-                                  Gerenciar
-                                </PrimaryAction>
-                                {next && (
-                                  <GhostAction
-                                    type="button"
-                                    onClick={() => mutateTicket(ticket.id, { status: next })}
-                                    disabled={pendingTicketId === ticket.id}
-                                  >
-                                    Avançar para {STATUS_DETAILS[next].label}
-                                  </GhostAction>
-                                )}
-                                <AssigneeSelect
-                                  value={ticket.assignedTo ? String(ticket.assignedTo.id) : ""}
-                                  onChange={(event: ChangeEvent<HTMLSelectElement>) => {
-                                    const element = event.currentTarget as any;
-                                    const value = typeof element?.value === "string" ? element.value : "";
-                                    mutateTicket(ticket.id, {
-                                      assignedToId: value ? Number(value) : null,
-                                    });
-                                  }}
-                                  disabled={pendingTicketId === ticket.id}
-                                >
-                                  <option value="">Sem responsável</option>
-                                  {users.map((user) => (
-                                    <option key={user.id} value={user.id}>
-                                      {user.name}
-                                      {user.email ? ` (${user.email})` : ""}
-                                    </option>
-                                  ))}
-                                </AssigneeSelect>
-                              </TicketActions>
                             </TicketCard>
                           );
                         })}
@@ -748,22 +807,57 @@ export default function TicketsPage() {
 
           <DrawerSection>
             <SectionTitle>Resumo</SectionTitle>
-            <Paragraph>
-              {drawerTicket.description ? drawerTicket.description : "Nenhuma descrição foi registrada."}
-            </Paragraph>
+            {summaryEntries.length === 0 ? (
+              <EmptySummary>Nenhuma informação adicional registrada.</EmptySummary>
+            ) : (
+              <SummaryWrapper>
+                {summaryEntries.map((entry, index) => {
+                  if (entry.type === "section") {
+                    return (
+                      <SummarySectionHeading key={`section-${index}`}>
+                        {entry.label}
+                      </SummarySectionHeading>
+                    );
+                  }
+                  if (entry.type === "text") {
+                    return (
+                      <SummaryText key={`text-${index}`}>{entry.value}</SummaryText>
+                    );
+                  }
+                  return (
+                    <SummaryRow key={`field-${index}`}>
+                      <SummaryLabel>{entry.label}</SummaryLabel>
+                      <SummaryRowContent>
+                        {entry.isLink ? (
+                          <SummaryLink
+                            href={entry.value.startsWith("http") ? entry.value : `${getBrowserOrigin()}${entry.value}`}
+                            target="_blank"
+                            rel="noreferrer"
+                          >
+                            Abrir arquivo
+                          </SummaryLink>
+                        ) : (
+                          <SummaryValue>{entry.value || "-"}</SummaryValue>
+                        )}
+                        {entry.isPhone && (
+                          <WhatsappButton
+                            type="button"
+                            onClick={() => openWhatsapp(entry.value)}
+                          >
+                            Chamar no WhatsApp
+                          </WhatsappButton>
+                        )}
+                      </SummaryRowContent>
+                    </SummaryRow>
+                  );
+                })}
+              </SummaryWrapper>
+            )}
           </DrawerSection>
 
           <DrawerSection>
             <SectionTitle>Detalhes</SectionTitle>
             <DetailGrid>
-              <DetailItem>
-                <DetailLabel>Solicitante</DetailLabel>
-                <DetailValue>
-                  {drawerTicket.requester
-                    ? `${drawerTicket.requester.name || "Usuário"}${drawerTicket.requester.email ? ` · ${drawerTicket.requester.email}` : ""}`
-                    : "Não informado"}
-                </DetailValue>
-              </DetailItem>
               <DetailItem>
                 <DetailLabel>Responsável</DetailLabel>
                 <DetailValue>
@@ -1166,14 +1260,16 @@ const Board = styled.section`
   grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
 `;
 
-const Column = styled.article`
+const Column = styled.article<{ $dropping?: boolean }>`
   background: #fff;
   border-radius: 16px;
-  border: 1px solid rgba(148, 163, 184, 0.18);
+  border: 2px solid ${(p) => (p.$dropping ? "rgba(37, 99, 235, 0.45)" : "rgba(148, 163, 184, 0.18)")};
   display: flex;
   flex-direction: column;
   padding: 18px;
   box-shadow: 0 20px 30px -24px rgba(15, 23, 42, 0.6);
+  transition: border-color 0.15s ease, transform 0.15s ease;
+  ${(p) => (p.$dropping ? "transform: translateY(-4px);" : "")}
 `;
 
 const ColumnHeader = styled.div`
@@ -1234,6 +1330,7 @@ const TicketCard = styled.div`
   background: linear-gradient(180deg, #ffffff, #f8fafc 120%);
   box-shadow: 0 16px 32px -24px rgba(15, 23, 42, 0.8);
   transition: transform 0.15s ease, box-shadow 0.15s ease;
+  cursor: pointer;
   &[data-pending="true"] {
     opacity: 0.6;
     pointer-events: none;
@@ -1241,6 +1338,13 @@ const TicketCard = styled.div`
   &:hover {
     transform: translateY(-2px);
     box-shadow: 0 20px 40px -20px rgba(15, 23, 42, 0.35);
+  }
+  &:focus {
+    outline: none;
+  }
+  &:focus-visible {
+    outline: 3px solid rgba(37, 99, 235, 0.45);
+    outline-offset: 3px;
   }
 `;
 
@@ -1276,14 +1380,6 @@ const TicketTitle = styled.h3`
   color: #0f172a;
 `;
 
-const TicketSnippet = styled.p`
-  margin: 0;
-  color: #475569;
-  font-size: 0.95rem;
-  line-height: 1.45;
-  white-space: pre-wrap;
-`;
-
 const TicketMeta = styled.div`
   display: grid;
   gap: 10px;
@@ -1306,15 +1402,8 @@ const MetaValue = styled.span`
   color: #0f172a;
 `;
 
-const TicketActions = styled.div`
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  align-items: center;
-`;
-
 const PrimaryAction = styled.button`
-  padding: 8px 14px;
+  padding: 10px 16px;
   border-radius: 10px;
   border: 0;
   background: linear-gradient(135deg, #2563eb, #1d4ed8);
@@ -1322,12 +1411,12 @@ const PrimaryAction = styled.button`
   font-weight: 600;
   cursor: pointer;
   transition: transform 0.1s ease, box-shadow 0.1s ease;
-  &:hover { transform: translateY(-1px); box-shadow: 0 8px 18px -12px rgba(37, 99, 235, 0.6); }
+  &:hover { transform: translateY(-1px); box-shadow: 0 12px 24px -18px rgba(37, 99, 235, 0.6); }
   &:disabled { opacity: 0.6; cursor: default; }
 `;
 
 const GhostAction = styled.button`
-  padding: 8px 12px;
+  padding: 10px 16px;
   border-radius: 10px;
   border: 1px solid rgba(148, 163, 184, 0.35);
   background: transparent;
@@ -1337,15 +1426,6 @@ const GhostAction = styled.button`
   transition: background 0.2s ease;
   &:hover { background: rgba(226, 232, 240, 0.6); }
   &:disabled { opacity: 0.5; cursor: default; }
-`;
-
-const AssigneeSelect = styled.select`
-  min-width: 160px;
-  padding: 8px 12px;
-  border-radius: 10px;
-  border: 1px solid rgba(148, 163, 184, 0.35);
-  background: #fff;
-  color: #0f172a;
 `;
 
 const pulse = keyframes`
@@ -1391,16 +1471,16 @@ const DrawerOverlay = styled.div`
   z-index: 30;
 `;
 
-const Drawer = styled.div`
+const Drawer = styled.aside`
   position: fixed;
   right: 0;
   top: 0;
   bottom: 0;
-  width: min(460px, 90vw);
+  width: min(600px, 92vw);
   background: #fff;
   border-left: 1px solid rgba(148, 163, 184, 0.2);
-  box-shadow: -24px 0 48px -38px rgba(15, 23, 42, 0.45);
-  padding: 32px 28px;
+  box-shadow: -26px 0 52px -34px rgba(15, 23, 42, 0.45);
+  padding: 36px 32px;
   display: flex;
   flex-direction: column;
   gap: 24px;
@@ -1465,11 +1545,84 @@ const SectionTitle = styled.h3`
   color: #0f172a;
 `;
 
-const Paragraph = styled.p`
+const SummaryWrapper = styled.div`
+  display: grid;
+  gap: 10px;
+  padding: 12px;
+  border: 1px solid rgba(148, 163, 184, 0.25);
+  border-radius: 12px;
+  background: #f8fafc;
+`;
+
+const SummaryRow = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+`;
+
+const SummaryRowContent = styled.div`
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+`;
+
+const SummaryLabel = styled.span`
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: #94a3b8;
+`;
+
+const SummaryValue = styled.span`
+  color: #0f172a;
+  word-break: break-word;
+`;
+
+const SummaryLink = styled.a`
+  color: #2563eb;
+  font-weight: 600;
+  text-decoration: none;
+  &:hover { text-decoration: underline; }
+`;
+
+const WhatsappButton = styled.button`
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 12px;
+  border-radius: 8px;
+  border: 1px solid rgba(37, 211, 102, 0.4);
+  background: rgba(37, 211, 102, 0.12);
+  color: #128c7e;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s ease;
+  &:hover { background: rgba(37, 211, 102, 0.2); }
+`;
+
+const SummarySectionHeading = styled.span`
+  display: block;
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: #0f172a;
+  padding-top: 8px;
+  border-top: 1px dashed rgba(148, 163, 184, 0.6);
+`;
+
+const SummaryText = styled.p`
   margin: 0;
   color: #475569;
-  line-height: 1.55;
-  white-space: pre-wrap;
+  line-height: 1.5;
+`;
+
+const EmptySummary = styled.p`
+  margin: 0;
+  padding: 12px;
+  border-radius: 12px;
+  border: 1px dashed rgba(148, 163, 184, 0.4);
+  color: #64748b;
+  background: rgba(248, 250, 252, 0.7);
 `;
 
 const DetailGrid = styled.div`
