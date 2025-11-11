@@ -4,7 +4,7 @@ import { useEffect, useRef } from "react";
 import styled from "styled-components";
 import { useRouter, useSearchParams } from "next/navigation";
 
-type SectionKey = "general" | "appearance" | "notifications" | "security" | "integrations";
+type SectionKey = "general" | "appearance" | "notifications" | "security" | "integrations" | "forms";
 
 type Props = {
   open: boolean;
@@ -79,6 +79,13 @@ export default function SettingsSideMenu({ open, setOpen, activeKey, onSelect }:
             aria-current={activeKey === "integrations" ? "page" : undefined}
           >
             🔗 Integrações
+          </NavItem>
+          <NavItem
+            onClick={() => navigate("forms")}
+            aria-label="Formulários"
+            aria-current={activeKey === "forms" ? "page" : undefined}
+          >
+            📝 Formulários
           </NavItem>
         </MenuScroll>
       </nav>

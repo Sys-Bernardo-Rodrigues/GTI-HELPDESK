@@ -667,8 +667,8 @@ export default function ProfilePage() {
           <nav role="navigation" aria-label="Navegação principal">
             <MenuScroll>
               <NavItem href="http://localhost:3000/home" aria-label="Início" ref={firstLinkRef as any}>Início</NavItem>
-              <NavItem href="#" aria-label="Tickets">Tickets</NavItem>
-              <NavItem href="#" aria-label="Usuários">Usuários</NavItem>
+              <NavItem href="/tickets" aria-label="Tickets">Tickets</NavItem>
+              <NavItem href="/users" aria-label="Usuários">Usuários</NavItem>
               <NavItem href="/config?section=forms" aria-label="Configurações">Configurações</NavItem>
             </MenuScroll>
           </nav>

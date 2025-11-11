@@ -31,8 +31,8 @@ export default function AppHeader({ open, onToggle }: Props) {
       <Brand>Helpdesk</Brand>
       <MainNav aria-label="Navegação principal">
         <NavLink href="/home" aria-label="Início">Início</NavLink>
-        <NavLink href="#" aria-label="Tickets">Tickets</NavLink>
-        <NavLink href="#" aria-label="Usuários">Usuários</NavLink>
+        <NavLink href="/tickets" aria-label="Tickets">Tickets</NavLink>
+        <NavLink href="/users" aria-label="Usuários">Usuários</NavLink>
         <NavLink href="/config" aria-label="Configurações">Configurações</NavLink>
       </MainNav>
       <UserArea aria-label="Usuário" role="button" tabIndex={0} aria-haspopup="false">

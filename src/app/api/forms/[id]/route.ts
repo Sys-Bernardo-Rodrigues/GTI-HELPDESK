@@ -2,31 +2,57 @@ import { NextRequest, NextResponse } from "next/server";
 import { getAuthenticatedUser } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 
-export async function GET(_: NextRequest, { params }: { params: { id: string } }) {
+type ParamsPromise = Promise<{ id: string }>;
+
+async function parseNumericId(paramsPromise: ParamsPromise) {
+  const params = await paramsPromise;
+  const raw = params?.id ?? "";
+  const id = Number(raw);
+  if (!Number.isFinite(id) || id <= 0) return null;
+  return id;
+}
+
+async function parseRawId(paramsPromise: ParamsPromise) {
+  const params = await paramsPromise;
+  return (params?.id ?? "").trim();
+}
+
+export async function GET(req: NextRequest, context: { params: ParamsPromise }) {
   const user = await getAuthenticatedUser();
   if (!user) return NextResponse.json({ error: "Não autenticado" }, { status: 401 });
-  const id = Number(params.id);
-  if (!id) return NextResponse.json({ error: "ID inválido" }, { status: 400 });
-  const form = await prisma.form.findFirst({ where: { id, userId: user.id }, include: { fields: true } });
+  const id = await parseNumericId(context.params);
+  if (!id) {
+    return NextResponse.json({ error: "ID inválido" }, { status: 400 });
+  }
+  const form = await prisma.form.findUnique({
+    where: { id },
+    include: {
+      fields: { orderBy: { id: "asc" } },
+    },
+  });
   if (!form) return NextResponse.json({ error: "Formulário não encontrado" }, { status: 404 });
   return NextResponse.json(form);
 }
 
-export async function PUT(req: NextRequest, { params }: { params: { id: string } }) {
+export async function PUT(req: NextRequest, context: { params: ParamsPromise }) {
   const user = await getAuthenticatedUser();
   if (!user) return NextResponse.json({ error: "Não autenticado" }, { status: 401 });
-  const id = Number(params.id);
-  if (!id) return NextResponse.json({ error: "ID inválido" }, { status: 400 });
+  const id = await parseNumericId(context.params);
+  if (!id) {
+    return NextResponse.json({ error: "ID inválido" }, { status: 400 });
+  }
   const body = await req.json().catch(() => null);
   const title = body?.title?.toString() || undefined;
   const description = body?.description?.toString() || undefined;
   const fields = Array.isArray(body?.fields) ? body.fields : undefined;
+  const isPublic = typeof body?.isPublic === "boolean" ? Boolean(body.isPublic) : undefined;
 
   const updated = await prisma.form.update({
     where: { id },
     data: {
       title,
       description,
+      ...(isPublic !== undefined ? { isPublic } : {}),
       ...(fields ? { fields: { deleteMany: {}, create: fields.map((f: any) => ({
         label: (f?.label?.toString() || "Campo").slice(0, 64),
         type: (f?.type as any) || "TEXT",
@@ -39,10 +65,10 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
   return NextResponse.json(updated);
 }
 
-export async function DELETE(req: NextRequest, { params }: { params: { id: string } }) {
+export async function DELETE(req: NextRequest, context: { params: ParamsPromise }) {
   const user = await getAuthenticatedUser();
   if (!user) return NextResponse.json({ error: "Não autenticado" }, { status: 401 });
-  const raw = (params.id || "").trim();
+  const raw = await parseRawId(context.params);
   let id = Number.parseInt(raw, 10);
   let formId: number | null = Number.isFinite(id) && id > 0 ? id : null;
 
@@ -65,10 +91,11 @@ export async function DELETE(req: NextRequest, { params }: { params: { id: strin
     return NextResponse.json({ error: "ID inválido" }, { status: 400 });
   }
   // Validar propriedade do formulário
-  const owned = await prisma.form.findFirst({ where: { id: formId, userId: user.id }, select: { id: true } });
-  if (!owned) {
-    return NextResponse.json({ error: "Formulário não encontrado" }, { status: 404 });
-  }
+  const owned = await prisma.form.findUnique({
+    where: { id: formId },
+    select: { id: true },
+  });
+  if (!owned) return NextResponse.json({ error: "Formulário não encontrado" }, { status: 404 });
   const url = new URL(req.url);
   const hard = url.searchParams.get("hard") === "true";
 

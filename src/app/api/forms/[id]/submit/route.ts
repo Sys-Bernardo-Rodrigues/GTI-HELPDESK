@@ -5,6 +5,8 @@ import path from "path";
 
 export const runtime = "nodejs";
 
+type ParamsPromise = Promise<{ id: string }>;
+
 // Rate limit básico em memória por IP (limite: 5/min)
 const rate = new Map<string, { count: number; resetAt: number }>();
 
@@ -20,9 +22,64 @@ function rateOk(ip: string) {
   return true;
 }
 
-export async function POST(req: NextRequest, { params }: { params: { id: string } }) {
-  const id = Number(params.id);
-  if (!id) return NextResponse.json({ error: "ID inválido" }, { status: 400 });
+async function parseId(paramsPromise: ParamsPromise) {
+  const params = await paramsPromise;
+  const raw = params?.id ?? "";
+  const id = Number(raw);
+  if (!Number.isFinite(id) || id <= 0) return null;
+  return id;
+}
+
+function buildSummary(payload: Record<string, any>, formTitle: string, fields: { id: number; label: string; type: string }[]) {
+  const lines: string[] = [];
+  lines.push(`Formulário: ${formTitle}`);
+  lines.push(`Enviado em: ${new Date().toLocaleString("pt-BR")}`);
+  lines.push("");
+
+  const fieldMap = new Map<string, { label: string; type: string }>();
+  for (const field of fields) {
+    fieldMap.set(`field_${field.id}`, { label: field.label, type: field.type });
+  }
+
+  for (const [key, info] of fieldMap.entries()) {
+    const rawValue = payload[key];
+    let value: string;
+    if (rawValue === null || rawValue === undefined || rawValue === "") {
+      value = "-";
+    } else if (Array.isArray(rawValue)) {
+      value = rawValue.join(", ");
+    } else if (typeof rawValue === "boolean") {
+      value = rawValue ? "Sim" : "Não";
+    } else {
+      value = String(rawValue);
+    }
+    lines.push(`${info.label}: ${value}`);
+  }
+
+  // demais entradas do payload que não são campos conhecidos
+  const extraKeys = Object.keys(payload).filter((key) => !fieldMap.has(key) && key !== "website");
+  if (extraKeys.length > 0) {
+    lines.push("");
+    lines.push("Campos adicionais:");
+    for (const key of extraKeys) {
+      const raw = payload[key];
+      let value: string;
+      if (raw === null || raw === undefined) value = "-";
+      else if (Array.isArray(raw)) value = raw.join(", ");
+      else if (typeof raw === "object") value = JSON.stringify(raw);
+      else value = String(raw);
+      lines.push(`${key}: ${value}`);
+    }
+  }
+
+  return lines.join("\n");
+}
+
+export async function POST(req: NextRequest, context: { params: ParamsPromise }) {
+  const id = await parseId(context.params);
+  if (!id) {
+    return NextResponse.json({ error: "ID inválido" }, { status: 400 });
+  }
 
   const ip = req.headers.get("x-forwarded-for") || "local";
   if (!rateOk(ip)) return NextResponse.json({ error: "Muitas submissões. Tente novamente mais tarde." }, { status: 429 });
@@ -30,7 +87,10 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
   const contentType = req.headers.get("content-type") || "";
   const isMultipart = contentType.includes("multipart/form-data");
 
-  const form = await prisma.form.findUnique({ where: { id }, include: { fields: true } });
+  const form = await prisma.form.findUnique({
+    where: { id },
+    include: { fields: true },
+  });
   if (!form || !form.isPublic) return NextResponse.json({ error: "Formulário não encontrado" }, { status: 404 });
 
   let payload: Record<string, any> = {};
@@ -69,40 +129,38 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
       }
     }
   } else {
-    const body = await req.json().catch(() => null);
-    if (!body || typeof body !== "object") return NextResponse.json({ error: "Dados inválidos" }, { status: 400 });
-    if ((body as any).website) return NextResponse.json({ error: "Detectado spam" }, { status: 400 }); // honeypot
-    payload = body as any;
+    payload = await req.json().catch(() => null);
+    if (!payload || typeof payload !== "object") {
+      return NextResponse.json({ error: "Dados inválidos" }, { status: 400 });
+    }
+    if ((payload as any).website) {
+      return NextResponse.json({ error: "Detectado spam" }, { status: 400 });
+    }
   }
 
   // Persistir submissão
-  const submission = await prisma.formSubmission.create({ data: { formId: id, data: payload as any } });
+  const submission = await prisma.formSubmission.create({
+    data: { formId: id, data: payload },
+  });
 
-  // Converter em ticket
+  // Converter em ticket automaticamente
   const adminEmail = process.env.DEFAULT_USER_EMAIL || "admin@example.com";
   const admin = await prisma.user.findUnique({ where: { email: adminEmail } });
-  const userId = admin?.id || 1; // fallback simples
-  const description = JSON.stringify(body);
-  const ticket = await prisma.ticket.create({
-    data: {
-      title: `Resposta: ${form.title}`,
-      description,
-      userId,
-      submissionId: submission.id,
-    },
-  });
-  // Ação pós-submissão: desativar o formulário (persistente)
-  // Motivo: manter integridade referencial com o ticket/submissão
-  // Caso deseje remover completamente, isso exigiria tratar chaves estrangeiras
-  // e não é recomendado aqui.
-  let postActionStatus: "ok" | "error" = "ok";
-  let postActionMessage: string | undefined;
-  try {
-    await prisma.form.update({ where: { id }, data: { isPublic: false } });
-  } catch (e: any) {
-    postActionStatus = "error";
-    postActionMessage = e?.message || "Falha ao desativar formulário";
-  }
+  const fallbackUser = admin ?? (await prisma.user.findFirst());
+  const userId = fallbackUser?.id ?? form.userId ?? null;
 
-  return NextResponse.json({ success: true, ticketId: ticket.id, postActionStatus, postActionMessage });
+  let ticketId: number | null = null;
+  if (userId) {
+    const summary = buildSummary(payload, form.title, form.fields);
+    const ticket = await prisma.ticket.create({
+      data: {
+        title: `Resposta: ${form.title}`,
+        description: summary,
+        userId,
+        submissionId: submission.id,
+      },
+    });
+    ticketId = ticket.id;
+  }
+  return NextResponse.json({ success: true, ticketId, submissionId: submission.id, formId: form.id });
 }

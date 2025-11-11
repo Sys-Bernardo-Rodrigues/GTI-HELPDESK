@@ -1,14 +1,21 @@
 {
+  "/_not-found/page": "app/_not-found/page.js",
   "/api/forms/[id]/route": "app/api/forms/[id]/route.js",
+  "/api/forms/[id]/submit/route": "app/api/forms/[id]/submit/route.js",
   "/api/forms/by-slug/route": "app/api/forms/by-slug/route.js",
   "/api/forms/route": "app/api/forms/route.js",
-  "/api/health/route": "app/api/health/route.js",
   "/api/login/route": "app/api/login/route.js",
+  "/api/logout/route": "app/api/logout/route.js",
+  "/api/profile/avatar/route": "app/api/profile/avatar/route.js",
   "/api/profile/route": "app/api/profile/route.js",
   "/api/session/route": "app/api/session/route.js",
+  "/api/tickets/route": "app/api/tickets/route.js",
+  "/api/users/route": "app/api/users/route.js",
   "/config/page": "app/config/page.js",
   "/forms/[slug]/page": "app/forms/[slug]/page.js",
   "/home/page": "app/home/page.js",
   "/page": "app/page.js",
-  "/profile/page": "app/profile/page.js"
+  "/profile/page": "app/profile/page.js",
+  "/tickets/page": "app/tickets/page.js",
+  "/users/page": "app/users/page.js"
 }

@@ -75,7 +75,7 @@ const config = {
             "value": "prisma-client"
         },
         "output": {
-            "value": "F:\\GITHUB - REPOSITORIOS\\GTI-HELPDESK\\src\\generated\\prisma",
+            "value": "/home/zroot/Documentos/GitHub/GTI-HELPDESK/src/generated/prisma",
             "fromEnvVar": null
         },
         "config": {
@@ -84,12 +84,12 @@ const config = {
         "binaryTargets": [
             {
                 "fromEnvVar": null,
-                "value": "windows",
+                "value": "debian-openssl-3.0.x",
                 "native": true
             }
         ],
         "previewFeatures": [],
-        "sourceFilePath": "F:\\GITHUB - REPOSITORIOS\\GTI-HELPDESK\\prisma\\schema.prisma",
+        "sourceFilePath": "/home/zroot/Documentos/GitHub/GTI-HELPDESK/prisma/schema.prisma",
         "isCustomOutput": true
     },
     "relativePath": "../../../prisma",
@@ -441,8 +441,8 @@ globalThis['__dirname'] = __TURBOPACK__imported__module__$5b$externals$5d2f$node
 const PrismaClient = __TURBOPACK__imported__module__$5b$project$5d2f$src$2f$generated$2f$prisma$2f$internal$2f$class$2e$ts__$5b$app$2d$rsc$5d$__$28$ecmascript$29$__["getPrismaClientClass"](("TURBOPACK compile-time value", "/ROOT/src/generated/prisma"));
 ;
 // file annotations for bundling tools to include these files
-__TURBOPACK__imported__module__$5b$externals$5d2f$node$3a$path__$5b$external$5d$__$28$node$3a$path$2c$__cjs$29$__["join"](("TURBOPACK compile-time value", "/ROOT/src/generated/prisma"), "query_engine-windows.dll.node");
-__TURBOPACK__imported__module__$5b$externals$5d2f$node$3a$path__$5b$external$5d$__$28$node$3a$path$2c$__cjs$29$__["join"](__TURBOPACK__imported__module__$5b$externals$5d2f$node$3a$process__$5b$external$5d$__$28$node$3a$process$2c$__cjs$29$__["cwd"](), "src/generated/prisma/query_engine-windows.dll.node");
+__TURBOPACK__imported__module__$5b$externals$5d2f$node$3a$path__$5b$external$5d$__$28$node$3a$path$2c$__cjs$29$__["join"](("TURBOPACK compile-time value", "/ROOT/src/generated/prisma"), "libquery_engine-debian-openssl-3.0.x.so.node");
+__TURBOPACK__imported__module__$5b$externals$5d2f$node$3a$path__$5b$external$5d$__$28$node$3a$path$2c$__cjs$29$__["join"](__TURBOPACK__imported__module__$5b$externals$5d2f$node$3a$process__$5b$external$5d$__$28$node$3a$process$2c$__cjs$29$__["cwd"](), "src/generated/prisma/libquery_engine-debian-openssl-3.0.x.so.node");
 __turbopack_async_result__();
 } catch(e) { __turbopack_async_result__(e); } }, false);}),
 "[project]/src/lib/prisma.ts [app-rsc] (ecmascript)", ((__turbopack_context__) => {

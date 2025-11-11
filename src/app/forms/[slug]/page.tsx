@@ -30,6 +30,7 @@ export default function PublicFormPage({ params }: { params: Promise<{ slug: str
   const [title, setTitle] = useState("");
   const [fields, setFields] = useState<Field[]>([]);
   const [success, setSuccess] = useState(false);
+  const [ticketId, setTicketId] = useState<number | null>(null);
   const [deactivated, setDeactivated] = useState(false);
   const [toast, setToast] = useState<{ type: "success" | "error"; message: string } | null>(null);
   const { slug } = use(params);
@@ -56,11 +57,19 @@ export default function PublicFormPage({ params }: { params: Promise<{ slug: str
     const formId = (formEl as any)["data-form-id"]; // not used here
     const formData = new FormData(formEl);
     // submit via API (need form id; fetch by slug first)
-    const meta = await fetch(`/api/forms/by-slug?slug=${encodeURIComponent(slug)}`).then(r => r.json());
+    const metaRes = await fetch(`/api/forms/by-slug?slug=${encodeURIComponent(slug)}`);
+    if (!metaRes.ok) {
+      const err = await metaRes.json().catch(() => null);
+      setError(err?.error || "Formulário não encontrado.");
+      setToast({ type: "error", message: err?.error || "Formulário não encontrado." });
+      return;
+    }
+    const meta = await metaRes.json();
     const res = await fetch(`/api/forms/${meta.id}/submit`, { method: "POST", body: formData });
     const j = await res.json().catch(() => ({}));
     if (res.ok) {
       setSuccess(true);
+      setTicketId(j?.ticketId ?? null);
       setToast({ type: "success", message: "Formulário enviado com sucesso." });
       // desativa campos imediatamente após o toast
       setDeactivated(true);
@@ -73,8 +82,9 @@ export default function PublicFormPage({ params }: { params: Promise<{ slug: str
       setTimeout(() => setToast(null), 2500);
       formEl.reset();
     } else {
-      setError(j?.error || "Falha ao enviar");
-      setToast({ type: "error", message: j?.error || "Falha ao enviar." });
+      const errMsg = j?.error || "Falha ao enviar formulário.";
+      setError(errMsg);
+      setToast({ type: "error", message: errMsg });
       setTimeout(() => setToast(null), 2500);
     }
   }
@@ -86,7 +96,16 @@ export default function PublicFormPage({ params }: { params: Promise<{ slug: str
     <Wrapper>
       <Card>
         <Title>{title}</Title>
-        {success && <Success>Obrigado! Sua resposta foi enviada.</Success>}
+        {success && (
+          <Success>
+            Obrigado! Sua resposta foi enviada.
+            {ticketId ? (
+              <span style={{ display: "block", marginTop: 8 }}>Ticket gerado: <strong>#{ticketId}</strong>.</span>
+            ) : (
+              <span style={{ display: "block", marginTop: 8 }}>Ticket registrado no sistema.</span>
+            )}
+          </Success>
+        )}
         <Form onSubmit={onSubmit} data-form-id={slug}>
           <input type="text" name="website" style={{ display: "none" }} tabIndex={-1} aria-hidden />
           {fields.map((f) => (

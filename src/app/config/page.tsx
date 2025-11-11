@@ -31,37 +31,25 @@ export default function ConfigPage() {
   const [builderFields, setBuilderFields] = useState<BuilderField[]>([]);
   const [savingForm, setSavingForm] = useState<boolean>(false);
   const [createOpen, setCreateOpen] = useState<boolean>(false);
-  const [copiedId, setCopiedId] = useState<number | null>(null);
-  
-  // Modal de remoção da lista por ID
-  const [deleteOpen, setDeleteOpen] = useState<boolean>(false);
-  const [deleteInputId, setDeleteInputId] = useState<string>("");
-  const [deleteConfirm, setDeleteConfirm] = useState<boolean>(false);
-  const [isDeleting, setIsDeleting] = useState<boolean>(false);
-  // Modal de itens removidos
-  const [removedOpen, setRemovedOpen] = useState<boolean>(false);
-  // Ocultar formulários localmente (apenas na lista)
-  const [hiddenFormIds, setHiddenFormIds] = useState<number[]>([]);
-  const [allForms, setAllForms] = useState<Array<{ id: number; title: string; slug: string; link: string; createdAt?: string; isPublic?: boolean }>>([]);
-  useEffect(() => {
-    try {
-      const raw = localStorage.getItem("hidden_form_ids");
-      if (raw) {
-        const parsed = JSON.parse(raw);
-        if (Array.isArray(parsed)) setHiddenFormIds(parsed.filter((n: any) => Number.isFinite(Number(n))).map((n: any) => Number(n)));
-      }
-    } catch {}
-  }, []);
-  useEffect(() => {
-    try {
-      localStorage.setItem("hidden_form_ids", JSON.stringify(hiddenFormIds));
-    } catch {}
-  }, [hiddenFormIds]);
+  const [formsFeedback, setFormsFeedback] = useState<{ type: "success" | "error"; text: string } | null>(null);
+  const [manageOpen, setManageOpen] = useState<boolean>(false);
+  const [manageFormId, setManageFormId] = useState<number | null>(null);
+  const [formsLoading, setFormsLoading] = useState<boolean>(false);
+  const [toggleVisibilityLoading, setToggleVisibilityLoading] = useState<boolean>(false);
+  const [editOpen, setEditOpen] = useState<boolean>(false);
+  const [editFormId, setEditFormId] = useState<number | null>(null);
+  const [editTitle, setEditTitle] = useState<string>("");
+  const [editDesc, setEditDesc] = useState<string>("");
+  const [editBuilderFields, setEditBuilderFields] = useState<BuilderField[]>([]);
+  const [editLoading, setEditLoading] = useState<boolean>(false);
+  const [editSaving, setEditSaving] = useState<boolean>(false);
+  const [editError, setEditError] = useState<string>("");
 
-  // Refiltra a lista visível sempre que ocultos ou a lista completa mudarem
   useEffect(() => {
-    setFormsList(allForms.filter((i) => !hiddenFormIds.includes(i.id)));
-  }, [hiddenFormIds, allForms]);
+    if (!formsFeedback) return;
+    const timer = window.setTimeout(() => setFormsFeedback(null), 2400);
+    return () => window.clearTimeout(timer);
+  }, [formsFeedback]);
 
 
   // Fechar modal com ESC e gerenciar foco básico
@@ -151,25 +139,33 @@ export default function ConfigPage() {
 
   // Utilitário para carregar lista de formulários
   async function loadForms() {
+    setFormsLoading(true);
     try {
       const res = await fetch("/api/forms");
       if (res.ok) {
         const json = await res.json();
         const items = (json.items || []).map((i: any) => ({
           id: i.id,
+          numericId: Number(i.id),
           title: i.title,
           slug: i.slug,
           link: i.link,
           createdAt: i.createdAt,
-          isPublic: i.isPublic,
+          isPublic: Boolean(i.isPublic),
           createdByName: i.createdByName ?? null,
           createdByEmail: i.createdByEmail ?? null,
         }));
-        setAllForms(items);
-        setFormsList(items.filter((i: any) => !hiddenFormIds.includes(i.id)));
+        setFormsList(items);
+        setFormsFeedback(null);
+        setError("");
       }
-    } catch {}
+    } catch (err: any) {
+      setError(err?.message || "Erro ao carregar formulários");
+    } finally {
+      setFormsLoading(false);
+    }
   }
+
   // Carregar ao entrar na seção
   useEffect(() => {
     if (section === "forms") {
@@ -223,6 +219,7 @@ export default function ConfigPage() {
       await loadForms();
       setFormTitle(""); setFormDesc(""); setBuilderFields([]);
       setCreateOpen(false);
+      setFormsFeedback({ type: "success", text: "Formulário criado com sucesso." });
     } catch (e: any) {
       setError(e?.message || "Erro ao salvar");
     } finally {
@@ -231,26 +228,166 @@ export default function ConfigPage() {
   }
   
 
-  function copyFormLink(id: number, slug: string) {
+  function copyFormLink(slug: string) {
     try {
       const link = `${window.location.origin}/forms/${slug}`;
       const write = navigator.clipboard?.writeText(link);
       if (write && typeof write.then === "function") {
-        write.then(() => {
-          setCopiedId(id);
-          setTimeout(() => setCopiedId((cur) => (cur === id ? null : cur)), 1500);
-        }).catch(() => {
-          setCopiedId(id);
-          setTimeout(() => setCopiedId((cur) => (cur === id ? null : cur)), 1500);
-        });
+        write
+          .then(() => {
+            setFormsFeedback({ type: "success", text: "Link copiado para a área de transferência." });
+          })
+          .catch(() => {
+            setFormsFeedback({ type: "success", text: "Link copiado para a área de transferência." });
+          });
       } else {
-        // Fallback: ainda atualiza feedback mesmo sem clipboard API
-        setCopiedId(id);
-        setTimeout(() => setCopiedId((cur) => (cur === id ? null : cur)), 1500);
+        setFormsFeedback({ type: "success", text: "Link copiado para a área de transferência." });
       }
     } catch {
-      setCopiedId(id);
-      setTimeout(() => setCopiedId((cur) => (cur === id ? null : cur)), 1500);
+      setFormsFeedback({ type: "error", text: "Não foi possível copiar o link." });
+    }
+  }
+
+  function openManageForm(id: number) {
+    setManageFormId(id);
+    setManageOpen(true);
+    setFormsFeedback(null);
+  }
+
+  function closeManageForm() {
+    setManageOpen(false);
+    setManageFormId(null);
+    setFormsFeedback(null);
+  }
+
+  async function toggleFormVisibility(form: { id: number; isPublic: boolean }) {
+    setToggleVisibilityLoading(true);
+    try {
+      if (form.isPublic) {
+        const res = await fetch(`/api/forms/${form.id}`, { method: "DELETE" });
+        if (!res.ok) {
+          const json = await res.json().catch(() => null);
+          throw new Error(json?.error || "Falha ao desativar formulário");
+        }
+        await loadForms();
+        setFormsFeedback({ type: "success", text: "Formulário desativado com sucesso." });
+      } else {
+        const res = await fetch(`/api/forms/${form.id}`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ isPublic: true }),
+        });
+        if (!res.ok) {
+          const json = await res.json().catch(() => null);
+          throw new Error(json?.error || "Falha ao reativar formulário");
+        }
+        await loadForms();
+        setFormsFeedback({ type: "success", text: "Formulário reativado com sucesso." });
+      }
+    } catch (err: any) {
+      setFormsFeedback({ type: "error", text: err?.message || "Erro ao atualizar formulário" });
+    } finally {
+      setToggleVisibilityLoading(false);
+    }
+  }
+
+  function closeEditModal() {
+    if (editSaving) return;
+    setEditOpen(false);
+    setEditFormId(null);
+    setEditBuilderFields([]);
+    setEditTitle("");
+    setEditDesc("");
+    setEditError("");
+  }
+
+  function editAddField() {
+    setEditBuilderFields((prev) => [
+      ...prev,
+      { tempId: Math.random().toString(36).slice(2), label: "Novo campo", type: "TEXT", options: "", required: true },
+    ]);
+  }
+
+  function editRemoveField(tempId: string) {
+    setEditBuilderFields((prev) => prev.filter((f) => f.tempId !== tempId));
+  }
+
+  function editUpdateField(tempId: string, patch: Partial<BuilderField>) {
+    setEditBuilderFields((prev) => prev.map((f) => (f.tempId === tempId ? { ...f, ...patch } : f)));
+  }
+
+  async function openEditModal(formId: number) {
+    setEditFormId(formId);
+    setEditOpen(true);
+    setEditLoading(true);
+    setEditError("");
+    setFormsFeedback(null);
+    try {
+      const res = await fetch(`/api/forms/${formId}?t=${Date.now()}`);
+      if (!res.ok) {
+        const json = await res.json().catch(() => null);
+        throw new Error(json?.error || "Falha ao carregar formulário");
+      }
+      const data = await res.json();
+      setEditTitle(data?.title ?? "");
+      setEditDesc(data?.description ?? "");
+      const mapped: BuilderField[] = Array.isArray(data?.fields)
+        ? data.fields.map((field: any) => ({
+            tempId: `${field.id ?? Math.random().toString(36).slice(2)}`,
+            label: String(field.label ?? "Campo"),
+            type: String(field.type ?? "TEXT"),
+            options: field.options ?? "",
+            required: Boolean(field.required),
+          }))
+        : [];
+      setEditBuilderFields(mapped);
+    } catch (err: any) {
+      setEditError(err?.message || "Erro ao carregar formulário");
+    } finally {
+      setEditLoading(false);
+    }
+  }
+
+  async function startEditForm(formId: number) {
+    closeManageForm();
+    await openEditModal(formId);
+  }
+
+  async function saveEditedForm() {
+    if (!editFormId) return;
+    if (!editTitle.trim()) {
+      setEditError("Informe um título para o formulário.");
+      return;
+    }
+    setEditSaving(true);
+    setEditError("");
+    try {
+      const payload = {
+        title: editTitle.trim(),
+        description: editDesc.trim(),
+        fields: editBuilderFields.map((f) => ({
+          label: f.label,
+          type: f.type,
+          options: f.options,
+          required: f.required,
+        })),
+      };
+      const res = await fetch(`/api/forms/${editFormId}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      if (!res.ok) {
+        const json = await res.json().catch(() => null);
+        throw new Error(json?.error || "Falha ao salvar formulário");
+      }
+      await loadForms();
+      setFormsFeedback({ type: "success", text: "Formulário atualizado com sucesso." });
+      closeEditModal();
+    } catch (err: any) {
+      setEditError(err?.message || "Erro ao salvar formulário");
+    } finally {
+      setEditSaving(false);
     }
   }
 
@@ -390,6 +527,9 @@ export default function ConfigPage() {
     }
   }, [section, loading, error]);
 
+  const activeForm = manageFormId ? formsList.find((f) => f.id === manageFormId) ?? null : null;
+  const baseUrl = typeof window !== "undefined" ? window.location.origin : "";
+
   return (
     <Page>
       <TopBar role="navigation" aria-label="Barra de navegação">
@@ -408,8 +548,8 @@ export default function ConfigPage() {
           <nav role="navigation" aria-label="Navegação principal">
             <MenuScroll>
               <NavItem href="http://localhost:3000/home" aria-label="Início" ref={firstLinkRef as any}>Início</NavItem>
-              <NavItem href="#" aria-label="Tickets">Tickets</NavItem>
-              <NavItem href="#" aria-label="Usuários">Usuários</NavItem>
+              <NavItem href="/tickets" aria-label="Tickets">Tickets</NavItem>
+              <NavItem href="/users" aria-label="Usuários">Usuários</NavItem>
               <NavItem href="/config?section=forms" aria-label="Configurações" aria-current="page">Configurações</NavItem>
             </MenuScroll>
           </nav>
@@ -495,72 +635,96 @@ export default function ConfigPage() {
             </Card>
           )}
           {section === "forms" && (
-            <RightCol aria-label="Ações de formulários">
-              <Card>
+            <FormsWrapper>
+              <Card aria-labelledby="forms-card-title">
                 <CardHeader>
                   <HeaderIcon aria-hidden>📂</HeaderIcon>
                   <div>
-                    <CardTitle>Meus formulários</CardTitle>
-                    <Muted>Gerencie e compartilhe seus formulários.</Muted>
+                    <CardTitle id="forms-card-title">Formulários públicos</CardTitle>
+                    <Muted>Gerencie as estruturas e links compartilhados com os usuários.</Muted>
                   </div>
+                  <HeaderActions>
+                    <ActionButton type="button" onClick={() => loadForms()} disabled={formsLoading}>
+                      Recarregar
+                    </ActionButton>
+                    <PrimaryButton type="button" onClick={() => setCreateOpen(true)}>
+                      Novo formulário
+                    </PrimaryButton>
+                  </HeaderActions>
                 </CardHeader>
                 {error && (
-                  <Muted role="alert">{error}</Muted>
+                  <Feedback role="alert" $variant="error">{error}</Feedback>
                 )}
-                <div style={{ display: "grid", gap: 10 }}>
-                  {formsList.map((f) => (
-                    <div key={f.id} style={{ display: "grid", gridTemplateColumns: "1fr auto", gap: 10, alignItems: "center" }}>
-                      <div>
-                        <strong>{f.title} {!f.isPublic && (<span style={{ marginLeft: 8, color: "#b45309", fontSize: 12 }}>(Desativado)</span>)}</strong>
-                        <div style={{ marginTop: 2 }}><small>ID: <code>{f.id}</code></small></div>
-                        <div><small>Link: {f.isPublic ? (<a href={`/forms/${f.slug}`} target="_blank" rel="noreferrer">/forms/{f.slug}</a>) : (<span style={{ color: "#6b7280" }}>Desativado</span>)}</small></div>
-                        <Meta>
-                          <span>Criado por: <strong>{(f.createdByName || f.createdByEmail || "Usuário")}</strong></span>
-                          <span>Em: <strong>{formatDateTime(f.createdAt)}</strong></span>
-                        </Meta>
-                      </div>
-                      <ActionButton
-                        type="button"
-                        title={f.isPublic ? "Copiar link do formulário" : "Link desativado"}
-                        aria-label={`Copiar link de ${f.title}`}
-                        onClick={() => f.isPublic ? copyFormLink(f.id, f.slug) : null}
-                        disabled={!f.isPublic}
-                      >
-                        {f.isPublic ? (copiedId === f.id ? "Copiado!" : "Copiar link") : "Desativado"}
-                      </ActionButton>
-                    </div>
-                  ))}
-                  {formsList.length === 0 && <Muted>Nenhum formulário criado ainda.</Muted>}
-                </div>
+                {formsFeedback && !manageOpen && !createOpen && (
+                  <Feedback role={formsFeedback.type === "error" ? "alert" : "status"} $variant={formsFeedback.type}>
+                    {formsFeedback.text}
+                  </Feedback>
+                )}
+                <FormsScroll role="region" aria-label="Lista de formulários">
+                  <FormsTable>
+                    <thead>
+                      <tr>
+                        <FormsHeaderCell>Formulário</FormsHeaderCell>
+                        <FormsHeaderCell>Visibilidade</FormsHeaderCell>
+                        <FormsHeaderCell>Criado por</FormsHeaderCell>
+                        <FormsHeaderCell>Criado em</FormsHeaderCell>
+                        <FormsHeaderCell>Link</FormsHeaderCell>
+                        <FormsHeaderCell aria-label="Ações" />
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {formsLoading && (
+                        <tr>
+                          <FormsCell colSpan={6}>
+                            <Muted>Carregando formulários...</Muted>
+                          </FormsCell>
+                        </tr>
+                      )}
+                      {!formsLoading && formsList.length === 0 && (
+                        <tr>
+                          <FormsCell colSpan={6}>
+                            <Muted>Nenhum formulário cadastrado ainda.</Muted>
+                          </FormsCell>
+                        </tr>
+                      )}
+                      {!formsLoading && formsList.map((form) => (
+                        <tr key={form.numericId ?? form.id}>
+                          <FormsCell>
+                            <FormTitle>
+                              <strong>{form.title}</strong>
+                              <small>Slug: {form.slug}</small>
+                            </FormTitle>
+                          </FormsCell>
+                          <FormsCell>
+                            <StatusBadge $tone={form.isPublic ? "success" : "warning"}>
+                              {form.isPublic ? "Público" : "Desativado"}
+                            </StatusBadge>
+                          </FormsCell>
+                          <FormsCell>
+                            <FormMeta>{form.createdByName || form.createdByEmail || "—"}</FormMeta>
+                          </FormsCell>
+                          <FormsCell>{formatDateTime(form.createdAt)}</FormsCell>
+                          <FormsCell>
+                            {form.isPublic ? (
+                              <FormLink href={`/forms/${form.slug}`} target="_blank" rel="noreferrer">
+                                /forms/{form.slug}
+                              </FormLink>
+                            ) : (
+                              <span>-</span>
+                            )}
+                          </FormsCell>
+                          <FormsCell>
+                            <ActionButton type="button" onClick={() => openManageForm(form.numericId ?? form.id)}>
+                              Gerenciar
+                            </ActionButton>
+                          </FormsCell>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </FormsTable>
+                </FormsScroll>
               </Card>
-
-              <Card>
-                <CardHeader>
-                  <HeaderIcon aria-hidden>📝</HeaderIcon>
-                  <div>
-                    <CardTitle>Novo formulário</CardTitle>
-                    <Muted>Abra um popup para configurar e salvar.</Muted>
-                  </div>
-                </CardHeader>
-                <Actions>
-                  <PrimaryButton type="button" onClick={() => setCreateOpen(true)}>Novo formulário</PrimaryButton>
-                </Actions>
-              </Card>
-
-              <Card>
-                <CardHeader>
-                  <HeaderIcon aria-hidden>🗑️</HeaderIcon>
-                  <div>
-                    <CardTitle>Remover da lista</CardTitle>
-                    <Muted>Oculta um formulário da lista localmente, via ID.</Muted>
-                  </div>
-                </CardHeader>
-                <Actions>
-                  <DangerButton type="button" onClick={() => { setDeleteOpen(true); setDeleteInputId(""); setDeleteConfirm(false); }}>Remover da lista</DangerButton>
-                  <ActionButton type="button" onClick={() => setRemovedOpen(true)}>Ver removidos</ActionButton>
-                </Actions>
-              </Card>
-            </RightCol>
+            </FormsWrapper>
           )}
         </Content>
       </Shell>
@@ -672,109 +836,209 @@ export default function ConfigPage() {
         </>
       )}
 
-      {deleteOpen && (
+      {manageOpen && activeForm && (
         <>
-          <ModalBackdrop $open={deleteOpen} onClick={() => !isDeleting && setDeleteOpen(false)} aria-hidden={!deleteOpen} />
+          <ModalBackdrop $open={manageOpen} onClick={closeManageForm} aria-hidden={!manageOpen} />
           <ModalDialog
             role="dialog"
             aria-modal="true"
-            aria-labelledby="delete-form-title"
-            $open={deleteOpen}
-            onKeyDown={(e) => { if (e.key === "Escape" && !isDeleting) setDeleteOpen(false); }}
+            aria-labelledby="manage-form-title"
+            $open={manageOpen}
+            onKeyDown={(e) => { if (e.key === "Escape") closeManageForm(); }}
           >
             <ModalHeader>
-              <ModalIcon aria-hidden>🗑️</ModalIcon>
+              <ModalIcon aria-hidden>🔧</ModalIcon>
               <div>
-                <ModalTitle id="delete-form-title">Remover da lista</ModalTitle>
-                <Muted>Informe o ID do formulário e confirme para ocultá-lo da lista.</Muted>
+                <ModalTitle id="manage-form-title">{activeForm.title}</ModalTitle>
+                <Muted>Detalhes do formulário e ações rápidas.</Muted>
               </div>
             </ModalHeader>
-            <div>
-              <Field>
-                <Label htmlFor="delete-form-id">ID do formulário</Label>
-                <Input
-                  id="delete-form-id"
-                  type="number"
-                  placeholder="Ex.: 123"
-                  value={deleteInputId}
-                  onChange={(e) => setDeleteInputId(e.target.value)}
-                />
-              </Field>
-              <label style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                <input type="checkbox" checked={deleteConfirm} onChange={(e) => setDeleteConfirm(e.target.checked)} />
-                <span>Confirmo remover este formulário da lista</span>
-              </label>
-            </div>
+            {formsFeedback && (
+              <Feedback role={formsFeedback.type === "error" ? "alert" : "status"} $variant={formsFeedback.type}>
+                {formsFeedback.text}
+              </Feedback>
+            )}
+            <InfoGrid>
+              <div>
+                <InfoLabel>ID</InfoLabel>
+                <InfoValue>{activeForm.id}</InfoValue>
+              </div>
+              <div>
+                <InfoLabel>Slug</InfoLabel>
+                <InfoValue>{activeForm.slug}</InfoValue>
+              </div>
+              <div>
+                <InfoLabel>Visibilidade</InfoLabel>
+                <InfoValue>
+                  <StatusBadge $tone={activeForm.isPublic ? "success" : "warning"}>
+                    {activeForm.isPublic ? "Público" : "Desativado"}
+                  </StatusBadge>
+                </InfoValue>
+              </div>
+              <div>
+                <InfoLabel>Criado por</InfoLabel>
+                <InfoValue>{activeForm.createdByName || activeForm.createdByEmail || "—"}</InfoValue>
+              </div>
+              <div>
+                <InfoLabel>Criado em</InfoLabel>
+                <InfoValue>{formatDateTime(activeForm.createdAt)}</InfoValue>
+              </div>
+              <div>
+                <InfoLabel>Link público</InfoLabel>
+                <InfoValue>
+                  {activeForm.isPublic ? (
+                    <FormLink href={`/forms/${activeForm.slug}`} target="_blank" rel="noreferrer">
+                      {`${baseUrl}/forms/${activeForm.slug}`}
+                    </FormLink>
+                  ) : (
+                    <span>-</span>
+                  )}
+                </InfoValue>
+              </div>
+            </InfoGrid>
             <ModalActions>
-              <CancelButton type="button" onClick={() => !isDeleting && setDeleteOpen(false)} disabled={isDeleting}>Cancelar</CancelButton>
-              <ConfirmButton
+              <ActionButton
                 type="button"
-                onClick={async () => {
-                  if (isDeleting) return;
-                  const id = Number.parseInt(deleteInputId, 10);
-                  if (!Number.isFinite(id) || id <= 0) { setError("ID inválido"); return; }
-                  if (!deleteConfirm) { setError("Marque a confirmação para remover"); return; }
-                  setIsDeleting(true);
-                  try {
-                    setHiddenFormIds((prev) => {
-                      if (prev.includes(id)) return prev;
-                      const next = [...prev, id];
-                      setFormsList((cur) => cur.filter((f) => f.id !== id));
-                      return next;
-                    });
-                    setDeleteOpen(false);
-                  } catch (e: any) {
-                    setError(e?.message || "Erro ao remover da lista");
-                  } finally {
-                    setIsDeleting(false);
-                  }
-                }}
-                disabled={isDeleting || !deleteConfirm || !deleteInputId}
-                aria-label="Confirmar remoção da lista"
+                onClick={() => toggleFormVisibility(activeForm)}
+                disabled={toggleVisibilityLoading}
               >
-                {isDeleting ? "Removendo..." : "Remover"}
-              </ConfirmButton>
+                {toggleVisibilityLoading ? "Atualizando..." : activeForm.isPublic ? "Desativar formulário" : "Reativar formulário"}
+              </ActionButton>
+              <ActionButton
+                type="button"
+                onClick={() => startEditForm(activeForm.id)}
+                disabled={toggleVisibilityLoading}
+              >
+                Editar conteúdo
+              </ActionButton>
+              <PrimaryButton
+                type="button"
+                onClick={() => copyFormLink(activeForm.slug)}
+                disabled={!activeForm.isPublic || toggleVisibilityLoading}
+              >
+                Copiar link
+              </PrimaryButton>
+              <CancelButton type="button" onClick={closeManageForm} disabled={toggleVisibilityLoading}>Fechar</CancelButton>
             </ModalActions>
           </ModalDialog>
         </>
       )}
 
-      {removedOpen && (
+      {editOpen && (
         <>
-          <ModalBackdrop $open={removedOpen} onClick={() => setRemovedOpen(false)} aria-hidden={!removedOpen} />
+          <ModalBackdrop
+            $open={editOpen}
+            onClick={() => { if (!editSaving && !editLoading) closeEditModal(); }}
+            aria-hidden={!editOpen}
+          />
           <ModalDialog
             role="dialog"
             aria-modal="true"
-            aria-labelledby="removed-list-title"
-            $open={removedOpen}
-            onKeyDown={(e) => { if (e.key === "Escape") setRemovedOpen(false); }}
+            aria-labelledby="edit-form-title"
+            $open={editOpen}
+            onKeyDown={(e) => { if (e.key === "Escape" && !editSaving) closeEditModal(); }}
           >
             <ModalHeader>
-              <ModalIcon aria-hidden>📁</ModalIcon>
+              <ModalIcon aria-hidden>✏️</ModalIcon>
               <div>
-                <ModalTitle id="removed-list-title">Formulários removidos da lista</ModalTitle>
-                <Muted>Itens ocultos localmente (não foram excluídos no servidor).</Muted>
+                <ModalTitle id="edit-form-title">Editar formulário</ModalTitle>
+                <Muted>Atualize título, descrição e campos conforme necessário.</Muted>
               </div>
             </ModalHeader>
-            <div style={{ display: "grid", gap: 10 }}>
-              {allForms.filter((f) => hiddenFormIds.includes(f.id)).map((f) => (
-                <div key={f.id} style={{ display: "grid", gap: 4 }}>
-                  <strong>{f.title}</strong>
-                  <small>ID: <code>{f.id}</code></small>
-                  <small>Slug: <code>{f.slug}</code></small>
+            {editError && (
+              <Feedback role="alert" $variant="error">{editError}</Feedback>
+            )}
+            {editLoading ? (
+              <Muted>Carregando dados do formulário...</Muted>
+            ) : (
+              <div>
+                <Field>
+                  <Label htmlFor="edit-form-title-input">Título</Label>
+                  <Input
+                    id="edit-form-title-input"
+                    type="text"
+                    value={editTitle}
+                    onChange={(e) => setEditTitle(e.target.value)}
+                  />
+                </Field>
+                <Field>
+                  <Label htmlFor="edit-form-desc-input">Descrição</Label>
+                  <Input
+                    id="edit-form-desc-input"
+                    type="text"
+                    value={editDesc}
+                    onChange={(e) => setEditDesc(e.target.value)}
+                  />
+                </Field>
+                <SectionTitle>Campos</SectionTitle>
+                <div style={{ display: "grid", gap: 12 }}>
+                  {editBuilderFields.map((bf) => (
+                    <div key={bf.tempId} style={{ display: "grid", gap: 8, gridTemplateColumns: "1fr auto", alignItems: "end" }}>
+                      <div>
+                        <Field>
+                          <Label>Rótulo</Label>
+                          <Input
+                            type="text"
+                            value={bf.label}
+                            onChange={(e) => editUpdateField(bf.tempId, { label: e.target.value })}
+                          />
+                        </Field>
+                        <Field>
+                          <Label>Tipo</Label>
+                          <select
+                            value={bf.type}
+                            onChange={(e) => editUpdateField(bf.tempId, { type: e.target.value as any })}
+                            style={{ width: "100%", padding: "10px", borderRadius: 10, border: "1px solid var(--border)", background: "#fff" }}
+                          >
+                            <option value="TEXT">Texto</option>
+                            <option value="TEXTAREA">Texto longo</option>
+                            <option value="SELECT">Selecionar</option>
+                            <option value="RADIO">Opções (única)</option>
+                            <option value="CHECKBOX">Marcar</option>
+                            <option value="FILE">Foto/Imagem</option>
+                          </select>
+                        </Field>
+                        {(bf.type === "SELECT" || bf.type === "RADIO") && (
+                          <Field>
+                            <Label>Opções (separadas por vírgula)</Label>
+                            <Input
+                              type="text"
+                              value={bf.options || ""}
+                              onChange={(e) => editUpdateField(bf.tempId, { options: e.target.value })}
+                            />
+                          </Field>
+                        )}
+                        {bf.type === "FILE" && (
+                          <Muted>Este campo aceitará upload de imagem (jpeg, png, webp).</Muted>
+                        )}
+                        <label style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                          <input
+                            type="checkbox"
+                            checked={bf.required}
+                            onChange={(e) => editUpdateField(bf.tempId, { required: e.target.checked })}
+                          />
+                          <span>Obrigatório</span>
+                        </label>
+                      </div>
+                      <DangerButton type="button" onClick={() => editRemoveField(bf.tempId)}>Remover</DangerButton>
+                    </div>
+                  ))}
                 </div>
-              ))}
-              {allForms.filter((f) => hiddenFormIds.includes(f.id)).length === 0 && (
-                <Muted>Nenhum formulário removido.</Muted>
-              )}
-            </div>
+                <div style={{ marginTop: 10 }}>
+                  <ActionButton type="button" onClick={editAddField}>Adicionar campo</ActionButton>
+                </div>
+              </div>
+            )}
             <ModalActions>
-              <ConfirmButton type="button" onClick={() => setRemovedOpen(false)}>Fechar</ConfirmButton>
+              <CancelButton type="button" onClick={closeEditModal} disabled={editSaving || editLoading}>Cancelar</CancelButton>
+              <PrimaryButton type="button" onClick={saveEditedForm} disabled={editSaving || editLoading}>
+                {editSaving ? "Salvando..." : "Salvar alterações"}
+              </PrimaryButton>
             </ModalActions>
           </ModalDialog>
         </>
       )}
-      
+
       </Page>
   );
 }
@@ -926,6 +1190,13 @@ const Content = styled.main`
   gap: 16px;
 `;
 
+const FormsWrapper = styled.div`
+  grid-column: span 12;
+  min-height: calc(100dvh - 120px);
+  display: flex;
+  flex-direction: column;
+`;
+
 const Card = styled.div`
   --card-radius: 18px;
   grid-column: span 12;
@@ -949,59 +1220,6 @@ const Card = styled.div`
     pointer-events: none;
   }
   @media (min-width: 960px) { grid-column: span 8; }
-`;
-
-// Layout em duas colunas com espaçamento de 15px, responsivo.
-// Usa CSS Grid e aplica Flexbox como fallback para navegadores mais antigos.
-const TwoCol = styled.div`
-  display: grid;
-  grid-template-columns: 1fr;
-  gap: 15px;
-  align-items: start;
-
-  @media (min-width: 960px) {
-    grid-template-columns: 1fr 1fr;
-  }
-
-  /* Neutraliza o grid-column do Card dentro deste container */
-  > ${Card} { grid-column: auto; }
-
-  @supports not (display: grid) {
-    display: flex;
-    gap: 15px;
-    flex-direction: column;
-    @media (min-width: 960px) {
-      flex-direction: row;
-      align-items: stretch;
-    }
-  }
-`;
-
-// Coluna lateral à direita para ações de formulários
-const RightCol = styled.div`
-  grid-column: span 12;
-  display: grid;
-  gap: 15px;
-  align-items: start;
-  grid-template-columns: 1fr;
-
-  @media (min-width: 960px) {
-    grid-column: span 12; /* ocupa toda a largura da main */
-    grid-template-columns: repeat(2, 1fr); /* sempre 2 cards por linha */
-  }
-
-  > ${Card} { grid-column: auto; }
-
-  /* Fallback para navegadores sem Grid */
-  @supports not (display: grid) {
-    display: flex;
-    gap: 15px;
-    flex-direction: column;
-    @media (min-width: 960px) {
-      flex-direction: row;
-      align-items: stretch;
-    }
-  }
 `;
 
 const CardHeader = styled.div`
@@ -1029,6 +1247,16 @@ const CardTitle = styled.h1`
   margin: 0;
 `;
 
+const Feedback = styled.p<{ $variant: "success" | "error" }>`
+  margin: 12px 0;
+  padding: 12px 14px;
+  border-radius: 10px;
+  font-weight: 600;
+  background: ${(p) => (p.$variant === "success" ? "rgba(16, 185, 129, 0.12)" : "rgba(220, 38, 38, 0.12)")};
+  color: ${(p) => (p.$variant === "success" ? "#047857" : "#B91C1C")};
+  border: 1px solid ${(p) => (p.$variant === "success" ? "rgba(16, 185, 129, 0.4)" : "rgba(220, 38, 38, 0.4)")};
+`;
+
 const Muted = styled.p`
   color: var(--muted);
   margin: 0 0 12px;
@@ -1041,6 +1269,78 @@ const Meta = styled.div`
   color: var(--muted);
   font-size: 0.9rem;
   margin-top: 4px;
+`;
+
+const HeaderActions = styled.div`
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  margin-left: auto;
+  flex-wrap: wrap;
+`;
+
+const FormsTable = styled.table`
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 12px;
+  border-radius: 16px;
+  overflow: hidden;
+  background: #fff;
+  border: 1px solid rgba(148, 163, 184, 0.2);
+`;
+
+const FormsScroll = styled.div`
+  flex: 1;
+  overflow: auto;
+  margin-top: 12px;
+  padding-bottom: 12px;
+`;
+
+const FormsHeaderCell = styled.th`
+  padding: 12px 14px;
+  text-align: left;
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: #334155;
+  background: #f8fafc;
+  border-bottom: 1px solid rgba(148, 163, 184, 0.2);
+`;
+
+const FormsCell = styled.td`
+  padding: 14px;
+  border-bottom: 1px solid rgba(148, 163, 184, 0.18);
+  vertical-align: top;
+  font-size: 0.95rem;
+  color: #1f2937;
+`;
+
+const FormTitle = styled.div`
+  display: grid;
+  gap: 4px;
+  strong { font-size: 1rem; }
+  small { color: var(--muted); font-size: 0.8rem; }
+`;
+
+const FormMeta = styled.span`
+  color: var(--muted);
+`;
+
+const StatusBadge = styled.span<{ $tone: "success" | "warning" }>`
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 8px;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  background: ${(p) => (p.$tone === "success" ? "rgba(16, 185, 129, 0.15)" : "rgba(234, 179, 8, 0.18)")};
+  color: ${(p) => (p.$tone === "success" ? "#047857" : "#854d0e")};
+`;
+
+const FormLink = styled.a`
+  color: var(--primary-700);
+  text-decoration: none;
+  word-break: break-all;
+  &:hover { text-decoration: underline; }
 `;
 
 const Field = styled.div`
@@ -1222,7 +1522,7 @@ const ConfirmButton = styled.button`
   background: linear-gradient(135deg, #B00000, #8A0000);
 `;
 
-// Estilos do modal de criação de formulário
+// Estilos do modal de criação/gestão de formulário
 const ModalBackdrop = styled.div<{ $open: boolean }>`
   position: fixed;
   inset: 0;
@@ -1280,4 +1580,24 @@ const ModalActions = styled.div`
   gap: 10px;
   align-items: center;
   justify-content: flex-end;
+`;
+
+const InfoGrid = styled.div`
+  display: grid;
+  gap: 12px;
+  margin: 18px 0;
+`;
+
+const InfoLabel = styled.span`
+  display: block;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #64748b;
+  margin-bottom: 4px;
+`;
+
+const InfoValue = styled.span`
+  font-size: 1rem;
+  color: #1f2937;
+  word-break: break-word;
 `;
