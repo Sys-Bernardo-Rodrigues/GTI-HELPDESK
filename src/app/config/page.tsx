@@ -163,7 +163,7 @@ export default function ConfigPage() {
       setError(err?.message || "Erro ao carregar formulários");
     } finally {
       setFormsLoading(false);
-    }
+  }
   }
 
   // Carregar ao entrar na seção
@@ -239,7 +239,7 @@ export default function ConfigPage() {
           })
           .catch(() => {
             setFormsFeedback({ type: "success", text: "Link copiado para a área de transferência." });
-          });
+        });
       } else {
         setFormsFeedback({ type: "success", text: "Link copiado para a área de transferência." });
       }
@@ -727,10 +727,10 @@ export default function ConfigPage() {
                           <FormsCell>
                             <ActionButton type="button" onClick={() => openManageForm(form.numericId ?? form.id)}>
                               Gerenciar
-                            </ActionButton>
+                      </ActionButton>
                           </FormsCell>
                         </tr>
-                      ))}
+                  ))}
                     </tbody>
                   </FormsTable>
                 </FormsScroll>
@@ -870,10 +870,10 @@ export default function ConfigPage() {
               </Feedback>
             )}
             <InfoGrid>
-              <div>
+            <div>
                 <InfoLabel>ID</InfoLabel>
                 <InfoValue>{activeForm.id}</InfoValue>
-              </div>
+            </div>
               <div>
                 <InfoLabel>Slug</InfoLabel>
                 <InfoValue>{activeForm.slug}</InfoValue>
@@ -1032,9 +1032,9 @@ export default function ConfigPage() {
                         </label>
                       </div>
                       <DangerButton type="button" onClick={() => editRemoveField(bf.tempId)}>Remover</DangerButton>
-                    </div>
-                  ))}
                 </div>
+              ))}
+            </div>
                 <div style={{ marginTop: 10 }}>
                   <ActionButton type="button" onClick={editAddField}>Adicionar campo</ActionButton>
                 </div>
@@ -1049,7 +1049,7 @@ export default function ConfigPage() {
           </ModalDialog>
         </>
       )}
-
+      
       </Page>
   );
 }

@@ -1,170 +1,283 @@
-[00:00:01.822] Server  LOG      ✓ Ready in 1300ms
-[00:00:05.015] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
-[00:00:57.533] Server  ERROR   TypeError: Cannot convert undefined or null to object
-[00:01:04.118] Server  ERROR   TypeError: Cannot convert undefined or null to object
-[00:01:11.058] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
-[00:03:51.161] Server  LOG      ✓ Compiled in 65ms
-[00:04:18.920] Server  ERROR   TypeError: Cannot convert undefined or null to object
-[00:05:51.698] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
-[00:07:04.420] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
-[00:07:08.331] Server  LOG      ✓ Compiled in 78ms
-[00:09:50.220] Server  LOG      ✓ Compiled in 71ms
-[00:09:50.380] Browser ERROR   uncaughtError: ReferenceError: GhostAction is not defined
-[00:10:14.250] Server  WARN     ⚠ Fast Refresh had to perform a full reload due to a runtime error.
-[00:10:14.263] Server  LOG      ✓ Compiled in 64ms
-[00:10:15.088] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
-[00:10:24.029] Browser ERROR   uncaughtError: ReferenceError: GhostAction is not defined
-[00:10:27.663] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
-[00:10:29.552] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
-[00:10:51.187] Server  LOG      ✓ Compiled in 73ms
-[00:12:14.264] Server  ERROR   TypeError: Cannot convert undefined or null to object
-[00:13:29.571] Server  LOG      ✓ Compiled in 171ms
-[00:13:49.998] Server  LOG      ✓ Compiled in 66ms
-[00:14:11.453] Server  LOG      ✓ Compiled in 47ms
-[00:14:33.326] Server  ERROR   TypeError: Cannot convert undefined or null to object
-[00:14:55.892] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
-[00:14:59.249] Server  ERROR   TypeError: Cannot convert undefined or null to object
-[00:19:52.395] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
-[00:19:55.683] Server  ERROR   TypeError: Cannot convert undefined or null to object
-[00:21:50.996] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
-[00:23:44.020] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
-[00:24:04.305] Server  ERROR   PrismaClientValidationError: 
-Invalid `__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$prisma$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["prisma"].formSubmission.create()` invocation in
-/home/zroot/Documentos/GitHub/GTI-HELPDESK/.next/dev/server/chunks/[root-of-the-server]__c58a5e6a._.js:698:174
+[00:00:02.153] Server  LOG      ✓ Ready in 1455ms
+[00:00:06.485] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
+[00:00:21.102] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
+[00:00:22.395] Server  ERROR    ⨯ ./src/app/tickets/page.tsx:1252:18
+Parsing ecmascript source code failed
+  1250 | -                    {drawerScheduleDue ? "Agendamento vencido" : drawerScheduleLabel}
+  1251 | -                  </ScheduleStatus>
+> 1252 | -                )}
+       |                  ^
+  1253 | -              </ScheduleHeader>
+  1254 | -
+  1255 | -              <ScheduleGrid>
 
-  695     }
-  696 }
-  697 // Persistir submissão
-→ 698 const submission = await __TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$prisma$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["prisma"].formSubmission.create({
-        data: {
-          formId: 3,
-          data: {
-            field_14: "SHOWROOM",
-            field_15: "BERNARDO RODRIGUES",
-            field_16: "1",
-            field_17: "49998105096",
-            field_18: "10073309966",
-            field_19: "/uploads/forms/form_3_1762887666477_w4pmtrl529p.jpg"
-          }
-          ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-        }
-      })
+Expected '</', got ')'
 
-Argument `data`: Invalid value provided. Expected String, provided Object.
-[00:24:34.496] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
-[00:24:36.515] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
-[00:25:21.250] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
-[00:25:45.569] Server  ERROR   PrismaClientValidationError: 
-Invalid `__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$prisma$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["prisma"].formSubmission.create()` invocation in
-/home/zroot/Documentos/GitHub/GTI-HELPDESK/.next/dev/server/chunks/[root-of-the-server]__c58a5e6a._.js:698:174
 
-  695     }
-  696 }
-  697 // Persistir submissão
-→ 698 const submission = await __TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$prisma$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["prisma"].formSubmission.create({
-        data: {
-          formId: 3,
-          data: {
-            field_26: "SHOWROOM",
-            field_27: "BERNARDO RODRIGUES",
-            field_28: "100",
-            field_29: "49998105096",
-            field_30: "10073309966",
-            field_31: null
-          }
-          ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-        }
-      })
+[00:00:22.647] Browser ERROR   ./src/app/tickets/page.tsx:1252:18
+Parsing ecmascript source code failed
+  1250 | -                    {drawerScheduleDue ? "Agendamento vencido" : drawerScheduleLabel}
+  1251 | -                  </ScheduleStatus>
+> 1252 | -                )}
+       |                  ^
+  1253 | -              </ScheduleHeader>
+  1254 | -
+  1255 | -              <ScheduleGrid>
 
-Argument `data`: Invalid value provided. Expected String, provided Object.
-[00:25:48.726] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
-[00:26:17.658] Server  ERROR   PrismaClientValidationError: 
-Invalid `__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$prisma$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["prisma"].formSubmission.create()` invocation in
-/home/zroot/Documentos/GitHub/GTI-HELPDESK/.next/dev/server/chunks/[root-of-the-server]__c58a5e6a._.js:698:174
+Expected '</', got ')'
+[00:00:22.648] Browser ERROR   ./src/app/tickets/page.tsx:1252:18
+Parsing ecmascript source code failed
+  1250 | -                    {drawerScheduleDue ? "Agendamento vencido" : drawerScheduleLabel}
+  1251 | -                  </ScheduleStatus>
+> 1252 | -                )}
+       |                  ^
+  1253 | -              </ScheduleHeader>
+  1254 | -
+  1255 | -              <ScheduleGrid>
 
-  695     }
-  696 }
-  697 // Persistir submissão
-→ 698 const submission = await __TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$prisma$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["prisma"].formSubmission.create({
-        data: {
-          formId: 3,
-          data: {
-            field_26: "SHOWROOM",
-            field_27: "BERNARDO RODRIGUES",
-            field_28: "1",
-            field_29: "49998105096",
-            field_30: "10073309966",
-            field_31: null
-          }
-          ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-        }
-      })
+Expected '</', got ')'
+[00:00:23.568] Browser ERROR   ./src/app/tickets/page.tsx:1252:18
+Parsing ecmascript source code failed
+  1250 | -                    {drawerScheduleDue ? "Agendamento vencido" : drawerScheduleLabel}
+  1251 | -                  </ScheduleStatus>
+> 1252 | -                )}
+       |                  ^
+  1253 | -              </ScheduleHeader>
+  1254 | -
+  1255 | -              <ScheduleGrid>
 
-Argument `data`: Invalid value provided. Expected String, provided Object.
-[00:29:22.386] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
-[00:29:25.409] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
-[00:29:41.024] Server  ERROR   [forms:submit] PrismaClientValidationError: 
-Invalid `__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$prisma$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["prisma"].formSubmission.create()` invocation in
-/home/zroot/Documentos/GitHub/GTI-HELPDESK/.next/dev/server/chunks/[root-of-the-server]__c58a5e6a._.js:699:178
+Expected '</', got ')'
+[00:00:23.568] Browser ERROR   ./src/app/tickets/page.tsx:1252:18
+Parsing ecmascript source code failed
+  1250 | -                    {drawerScheduleDue ? "Agendamento vencido" : drawerScheduleLabel}
+  1251 | -                  </ScheduleStatus>
+> 1252 | -                )}
+       |                  ^
+  1253 | -              </ScheduleHeader>
+  1254 | -
+  1255 | -              <ScheduleGrid>
 
-  696 }
-  697 try {
-  698     // Persistir submissão
-→ 699     const submission = await __TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$prisma$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["prisma"].formSubmission.create({
-            data: {
-              formId: 3,
-              data: {
-                field_26: "SHOWROOM",
-                field_27: "BERNARDO RODRIGUES",
-                field_28: "1",
-                field_29: "49998105096",
-                field_30: "10073309966",
-                field_31: null
-              }
-              ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-            }
-          })
+Expected '</', got ')'
+[00:00:24.125] Browser ERROR   ./src/app/tickets/page.tsx:1252:18
+Parsing ecmascript source code failed
+  1250 | -                    {drawerScheduleDue ? "Agendamento vencido" : drawerScheduleLabel}
+  1251 | -                  </ScheduleStatus>
+> 1252 | -                )}
+       |                  ^
+  1253 | -              </ScheduleHeader>
+  1254 | -
+  1255 | -              <ScheduleGrid>
 
-Argument `data`: Invalid value provided. Expected String, provided Object.
-[00:31:37.549] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
-[00:32:37.494] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
-[00:36:13.065] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
-[00:36:22.119] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
-[00:36:36.110] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
-[00:38:18.580] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
-[00:38:20.562] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
-[00:38:37.964] Server  LOG      ✓ Compiled in 86ms
-[00:39:52.048] Server  LOG      ✓ Compiled in 44ms
-[00:44:22.051] Server  LOG      ✓ Compiled in 105ms
-[00:44:40.634] Server  LOG      ✓ Compiled in 106ms
-[00:45:59.908] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
-[00:46:01.249] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
-[00:46:02.494] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
-[00:46:03.784] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
-[00:46:47.280] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
-[00:47:26.142] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
-[00:47:41.659] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
-[00:48:41.666] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
-[00:48:43.290] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
-[00:49:46.126] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
-[00:54:05.644] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
-[00:54:09.714] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
-[00:56:15.506] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
-[00:56:18.232] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
-[00:57:10.298] Server  LOG      ✓ Compiled in 105ms
-[00:57:52.512] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
-[00:58:06.486] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
-[01:35:10.389] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
-[01:36:53.288] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
-[01:37:24.871] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
-[01:37:27.966] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
-[01:37:29.315] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
-[01:38:15.054] Server  LOG      ✓ Compiled in 51ms
-[01:38:31.395] Browser ERROR   uncaughtError: ReferenceError: setDrawerTicket is not defined
-[01:38:34.753] Browser ERROR   uncaughtError: ReferenceError: setDrawerTicket is not defined
-[01:38:37.328] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
-[01:38:38.422] Browser ERROR   uncaughtError: ReferenceError: setDrawerTicket is not defined
-[01:38:39.684] Browser ERROR   uncaughtError: ReferenceError: setDrawerTicket is not defined
-[01:38:45.955] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
-[01:38:46.835] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
-[01:38:48.278] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
+Expected '</', got ')'
+[00:00:24.453] Browser ERROR   uncaughtError: Error: ./src/app/tickets/page.tsx:1252:18
+Parsing ecmascript source code failed
+  1250 | -                    {drawerScheduleDue ? "Agendamento vencido" : drawerScheduleLabel}
+  1251 | -                  </ScheduleStatus>
+> 1252 | -                )}
+       |                  ^
+  1253 | -              </ScheduleHeader>
+  1254 | -
+  1255 | -              <ScheduleGrid>
+
+Expected '</', got ')'
+
+
+[00:00:24.636] Browser ERROR   ./src/app/tickets/page.tsx:1252:18
+Parsing ecmascript source code failed
+  1250 | -                    {drawerScheduleDue ? "Agendamento vencido" : drawerScheduleLabel}
+  1251 | -                  </ScheduleStatus>
+> 1252 | -                )}
+       |                  ^
+  1253 | -              </ScheduleHeader>
+  1254 | -
+  1255 | -              <ScheduleGrid>
+
+Expected '</', got ')'
+[00:00:24.742] Browser ERROR   ./src/app/tickets/page.tsx:1252:18
+Parsing ecmascript source code failed
+  1250 | -                    {drawerScheduleDue ? "Agendamento vencido" : drawerScheduleLabel}
+  1251 | -                  </ScheduleStatus>
+> 1252 | -                )}
+       |                  ^
+  1253 | -              </ScheduleHeader>
+  1254 | -
+  1255 | -              <ScheduleGrid>
+
+Expected '</', got ')'
+[00:01:10.300] Browser ERROR   ./src/app/tickets/page.tsx:1252:18
+Parsing ecmascript source code failed
+  1250 | -                    {drawerScheduleDue ? "Agendamento vencido" : drawerScheduleLabel}
+  1251 | -                  </ScheduleStatus>
+> 1252 | -                )}
+       |                  ^
+  1253 | -              </ScheduleHeader>
+  1254 | -
+  1255 | -              <ScheduleGrid>
+
+Expected '</', got ')'
+[00:01:55.516] Browser ERROR   ./src/app/tickets/page.tsx:1252:18
+Parsing ecmascript source code failed
+  1250 | -                    {drawerScheduleDue ? "Agendamento vencido" : drawerScheduleLabel}
+  1251 | -                  </ScheduleStatus>
+> 1252 | -                )}
+       |                  ^
+  1253 | -              </ScheduleHeader>
+  1254 | -
+  1255 | -              <ScheduleGrid>
+
+Expected '</', got ')'
+[00:02:36.196] Browser ERROR   ./src/app/tickets/page.tsx:1252:18
+Parsing ecmascript source code failed
+  1250 | -                    {drawerScheduleDue ? "Agendamento vencido" : drawerScheduleLabel}
+  1251 | -                  </ScheduleStatus>
+> 1252 | -                )}
+       |                  ^
+  1253 | -              </ScheduleHeader>
+  1254 | -
+  1255 | -              <ScheduleGrid>
+
+Expected '</', got ')'
+[00:03:45.970] Server  LOG      ✓ Compiled in 216ms
+[00:03:48.126] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
+[00:06:11.869] Server  LOG      ✓ Compiled in 89ms
+[00:06:11.974] Browser ERROR   ./src/app/tickets/page.tsx:1244:1
+Parsing ecmascript source code failed
+  1242 | +                <ScheduleActionLabel>Agendamento</ScheduleActionLabel>
+  1243 | +                <ScheduleActionButton
+> 1244 | +                  type="button"
+       | ^
+  1245 | +                  onClick={openScheduleModal}
+  1246 | +                  disabled={!drawerTicket || scheduleSaving}
+  1247 | +                >
+
+Expression expected
+
+Import traces:
+  Client Component Browser:
+    ./src/app/tickets/page.tsx [Client Component Browser]
+    ./src/app/tickets/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./src/app/tickets/page.tsx [Client Component SSR]
+    ./src/app/tickets/page.tsx [Server Component]
+[00:06:41.780] Browser ERROR   ./src/app/tickets/page.tsx:1270:18
+Parsing ecmascript source code failed
+  1268 | -                    {drawerScheduleDue ? "Agendamento vencido" : drawerScheduleLabel}
+  1269 | -                  </ScheduleStatus>
+> 1270 | -                )}
+       |                  ^
+  1271 | -              </ScheduleCalloutHeader>
+  1272 | -
+  1273 | -              <ScheduleActionsRow>
+
+Expected '</', got ')'
+
+Import traces:
+  Client Component Browser:
+    ./src/app/tickets/page.tsx [Client Component Browser]
+    ./src/app/tickets/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./src/app/tickets/page.tsx [Client Component SSR]
+    ./src/app/tickets/page.tsx [Server Component]
+[00:07:13.378] Browser ERROR   ./src/app/tickets/page.tsx:1270:18
+Parsing ecmascript source code failed
+  1268 | -                    {drawerScheduleDue ? "Agendamento vencido" : drawerScheduleLabel}
+  1269 | -                  </ScheduleStatus>
+> 1270 | -                )}
+       |                  ^
+  1271 | -              </ScheduleCalloutHeader>
+  1272 | -
+  1273 | -              <ScheduleActionsRow>
+
+Expected '</', got ')'
+
+Import traces:
+  Client Component Browser:
+    ./src/app/tickets/page.tsx [Client Component Browser]
+    ./src/app/tickets/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./src/app/tickets/page.tsx [Client Component SSR]
+    ./src/app/tickets/page.tsx [Server Component]
+[00:07:35.144] Browser ERROR   ./src/app/tickets/page.tsx:1980:2
+Parsing ecmascript source code failed
+  1978 |  `;
+  1979 |  
+> 1980 | -const ScheduleQuickAction = styled.div`
+       |  ^^^^^
+  1981 | +const QuickActionScheduleCard = styled.div`
+  1982 |    display: grid;
+  1983 |    gap: 6px;
+
+Expression expected
+
+Import traces:
+  Client Component Browser:
+    ./src/app/tickets/page.tsx [Client Component Browser]
+    ./src/app/tickets/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./src/app/tickets/page.tsx [Client Component SSR]
+    ./src/app/tickets/page.tsx [Server Component]
+[00:08:25.839] Browser ERROR   ./src/app/tickets/page.tsx:2338:34
+Parsing ecmascript source code failed
+  2336 | `;
+  2337 |
+> 2338 | const ConfirmActions = styled.div`
+       |                                  ^
+
+Expected a semicolon
+
+Import traces:
+  Client Component Browser:
+    ./src/app/tickets/page.tsx [Client Component Browser]
+    ./src/app/tickets/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./src/app/tickets/page.tsx [Client Component SSR]
+    ./src/app/tickets/page.tsx [Server Component]
+[00:08:25.839] Browser ERROR   ./src/app/tickets/page.tsx:2338:34
+Parsing ecmascript source code failed
+  2336 | `;
+  2337 |
+> 2338 | const ConfirmActions = styled.div`
+       |                                  ^
+
+Unterminated template
+
+Import traces:
+  Client Component Browser:
+    ./src/app/tickets/page.tsx [Client Component Browser]
+    ./src/app/tickets/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./src/app/tickets/page.tsx [Client Component SSR]
+    ./src/app/tickets/page.tsx [Server Component]
+[00:11:20.039] Server  LOG      ✓ Compiled in 195ms
+[00:13:38.874] Server  LOG      ✓ Compiled in 153ms
+[00:14:35.489] Server  LOG      ✓ Compiled in 84ms
+[00:14:35.595] Browser ERROR   ./src/app/tickets/page.tsx:2512:2
+Parsing ecmascript source code failed
+  2510 | +`;
+  2511 | +
+> 2512 | +const EmptyScheduledInfo = styled.p`
+       |  ^^^^^
+  2513 | +  margin: 0;
+  2514 | +  color: #94a3b8;
+  2515 | +  font-size: 0.9rem;
+
+Expression expected
+
+Import traces:
+  Client Component Browser:
+    ./src/app/tickets/page.tsx [Client Component Browser]
+    ./src/app/tickets/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./src/app/tickets/page.tsx [Client Component SSR]
+    ./src/app/tickets/page.tsx [Server Component]
+[00:18:18.180] Server  LOG      ✓ Compiled in 168ms
+[00:19:06.594] Server  LOG      ✓ Compiled in 140ms
+[00:20:53.051] Server  LOG      ✓ Compiled in 116ms
+[00:22:42.504] Server  LOG      ✓ Compiled in 207ms

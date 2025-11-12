@@ -30,7 +30,14 @@ export async function PUT(req: NextRequest, context: { params: ParamsPromise }) 
   const assignedToRaw = hasAssignedKey ? body?.assignedToId : undefined;
   let assignedToId: number | null | undefined = undefined;
 
-  if (!statusProvided && !hasAssignedKey) {
+  const hasScheduleKey = Object.prototype.hasOwnProperty.call(body ?? {}, "scheduledAt");
+  const scheduleRaw = hasScheduleKey ? body?.scheduledAt : undefined;
+  const hasScheduleNoteKey = Object.prototype.hasOwnProperty.call(body ?? {}, "scheduledNote");
+  const scheduleNoteRaw = hasScheduleNoteKey ? body?.scheduledNote : undefined;
+  let scheduledAt: Date | null | undefined = undefined;
+  let scheduledNote: string | null | undefined = undefined;
+
+  if (!statusProvided && !hasAssignedKey && !hasScheduleKey && !hasScheduleNoteKey) {
     return NextResponse.json({ error: "Nenhuma alteração enviada" }, { status: 400 });
   }
 
@@ -56,10 +63,34 @@ export async function PUT(req: NextRequest, context: { params: ParamsPromise }) 
     }
   }
 
+  if (hasScheduleKey) {
+    if (scheduleRaw === null || scheduleRaw === "") {
+      scheduledAt = null;
+    } else {
+      const parsed = new Date(scheduleRaw);
+      if (Number.isNaN(parsed.getTime())) {
+        return NextResponse.json({ error: "Data de agendamento inválida" }, { status: 400 });
+      }
+      scheduledAt = parsed;
+    }
+  }
+
+  if (hasScheduleNoteKey) {
+    if (scheduleNoteRaw === null || scheduleNoteRaw === "") {
+      scheduledNote = null;
+    } else if (typeof scheduleNoteRaw === "string") {
+      scheduledNote = scheduleNoteRaw.trim() ? scheduleNoteRaw.trim() : null;
+    } else {
+      return NextResponse.json({ error: "Observação do agendamento inválida" }, { status: 400 });
+    }
+  }
+
   try {
     const data: Record<string, any> = { updatedAt: new Date() };
     if (statusProvided) data.status = status as TicketStatus;
     if (assignedToId !== undefined) data.assignedToId = assignedToId;
+    if (scheduledAt !== undefined) data.scheduledAt = scheduledAt;
+    if (scheduledNote !== undefined) data.scheduledNote = scheduledNote;
 
     const updated = await prisma.ticket.update({
       where: { id },
@@ -74,6 +105,12 @@ export async function PUT(req: NextRequest, context: { params: ParamsPromise }) 
             form: { select: { id: true, title: true, slug: true } },
           },
         },
+        updates: {
+          orderBy: { createdAt: "asc" },
+          include: {
+            user: { select: { id: true, name: true, email: true } },
+          },
+        },
       },
     });
 
@@ -84,6 +121,8 @@ export async function PUT(req: NextRequest, context: { params: ParamsPromise }) 
       status: updated.status,
       createdAt: updated.createdAt,
       updatedAt: updated.updatedAt,
+      scheduledAt: updated.scheduledAt,
+      scheduledNote: updated.scheduledNote,
       category: updated.category
         ? { id: updated.category.id, name: updated.category.name }
         : null,
@@ -100,6 +139,14 @@ export async function PUT(req: NextRequest, context: { params: ParamsPromise }) 
             slug: updated.submission.form.slug,
           }
         : null,
+      updates: updated.updates.map((update) => ({
+        id: update.id,
+        content: update.content,
+        createdAt: update.createdAt,
+        author: update.user
+          ? { id: update.user.id, name: update.user.name, email: update.user.email }
+          : null,
+      })),
     });
   } catch (error) {
     console.error("[tickets:update]", error);

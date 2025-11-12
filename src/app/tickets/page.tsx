@@ -1,9 +1,16 @@
 "use client";
 
-import { ChangeEvent, DragEvent, KeyboardEvent, useEffect, useMemo, useRef, useState } from "react";
+import { ChangeEvent, DragEvent, FormEvent, KeyboardEvent, useEffect, useMemo, useRef, useState } from "react";
 import styled, { keyframes } from "styled-components";
 
 type TicketStatus = "OPEN" | "IN_PROGRESS" | "RESOLVED" | "CLOSED";
+
+type TicketUpdateItem = {
+  id: number;
+  content: string;
+  createdAt: string;
+  author: { id: number; name: string | null; email: string | null } | null;
+};
 
 type TicketItem = {
   id: number;
@@ -16,6 +23,9 @@ type TicketItem = {
   requester: { id: number; name: string | null; email: string | null } | null;
   form: { id: number; title: string; slug: string } | null;
   assignedTo: { id: number; name: string | null; email: string | null } | null;
+  scheduledAt: string | null;
+  scheduledNote: string | null;
+  updates: TicketUpdateItem[];
 };
 
 type UserOption = { id: number; name: string; email: string };
@@ -59,6 +69,27 @@ const STATUS_DETAILS: Record<
   },
 };
 
+const DUE_PULSE = keyframes`
+  0% {
+    transform: translateY(0);
+    box-shadow: 0 20px 40px -22px rgba(249, 115, 22, 0.6);
+  }
+  50% {
+    transform: translateY(-2px);
+    box-shadow: 0 20px 44px -18px rgba(249, 115, 22, 0.75);
+  }
+  100% {
+    transform: translateY(0);
+    box-shadow: 0 20px 40px -22px rgba(249, 115, 22, 0.6);
+  }
+`;
+
+const PULSE = keyframes`
+  0% { opacity: 0.5; }
+  50% { opacity: 1; }
+  100% { opacity: 0.5; }
+`;
+
 function normalizeTicket(raw: any): TicketItem {
   return {
     id: Number(raw.id),
@@ -91,6 +122,28 @@ function normalizeTicket(raw: any): TicketItem {
           email: raw.assignedTo.email ?? null,
         }
       : null,
+    scheduledAt: raw.scheduledAt ?? null,
+    scheduledNote: raw.scheduledNote ?? null,
+    updates: Array.isArray(raw.updates)
+      ? raw.updates.map((update: any) => ({
+          id: Number(update.id),
+          content: String(update.content || ""),
+          createdAt: update.createdAt,
+          author: update.author
+            ? {
+                id: Number(update.author.id),
+                name: update.author.name ?? null,
+                email: update.author.email ?? null,
+              }
+            : update.user
+            ? {
+                id: Number(update.user.id),
+                name: update.user.name ?? null,
+                email: update.user.email ?? null,
+              }
+            : null,
+        }))
+      : [],
   };
 }
 
@@ -112,6 +165,30 @@ function formatDate(value?: string | null) {
   } catch {
     return value;
   }
+}
+
+function formatDateTimeLocal(value?: string | null) {
+  if (!value) return "";
+  try {
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return "";
+    const pad = (n: number) => String(n).padStart(2, "0");
+    const year = date.getFullYear();
+    const month = pad(date.getMonth() + 1);
+    const day = pad(date.getDate());
+    const hours = pad(date.getHours());
+    const minutes = pad(date.getMinutes());
+    return `${year}-${month}-${day}T${hours}:${minutes}`;
+  } catch {
+    return "";
+  }
+}
+
+function parseDateTimeLocal(value: string): string | null {
+  if (!value) return null;
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return null;
+  return date.toISOString();
 }
 
 function getBrowserWindow(): any {
@@ -168,9 +245,16 @@ export default function TicketsPage() {
   const [drawerStatus, setDrawerStatus] = useState<TicketStatus>("OPEN");
   const [drawerAssignee, setDrawerAssignee] = useState<string>("");
   const [drawerSaving, setDrawerSaving] = useState<boolean>(false);
+  const [drawerSchedule, setDrawerSchedule] = useState<string>("");
+  const [scheduleModalOpen, setScheduleModalOpen] = useState<boolean>(false);
+  const [scheduleSaving, setScheduleSaving] = useState<boolean>(false);
+  const [scheduleError, setScheduleError] = useState<string>("");
+  const [updateMessage, setUpdateMessage] = useState<string>("");
+  const [updateSaving, setUpdateSaving] = useState<boolean>(false);
   const [pendingTicketId, setPendingTicketId] = useState<number | null>(null);
   const [draggedTicketId, setDraggedTicketId] = useState<number | null>(null);
   const [dropTargetStatus, setDropTargetStatus] = useState<TicketStatus | null>(null);
+  const [now, setNow] = useState<number>(() => Date.now());
   const firstLinkRef = useRef<any>(null);
   const footerRef = useRef<any>(null);
   const menuRef = useRef<any>(null);
@@ -185,6 +269,9 @@ export default function TicketsPage() {
     if (!drawerTicket) return;
     setDrawerStatus(drawerTicket.status);
     setDrawerAssignee(drawerTicket.assignedTo ? String(drawerTicket.assignedTo.id) : "");
+    setUpdateMessage("");
+    setDrawerSchedule(formatDateTimeLocal(drawerTicket.scheduledAt));
+    setScheduleError("");
   }, [drawerTicket]);
 
   useEffect(() => {
@@ -262,6 +349,17 @@ export default function TicketsPage() {
     }
   }, [userMenuOpen]);
 
+  useEffect(() => {
+    const win = getBrowserWindow();
+    if (!win?.setInterval) return;
+    const interval = win.setInterval(() => {
+      setNow(Date.now());
+    }, 15000);
+    return () => {
+      if (interval) win.clearInterval(interval);
+    };
+  }, []);
+
   async function onLogout() {
     try {
       await fetch("/api/logout", { method: "POST" });
@@ -327,6 +425,7 @@ export default function TicketsPage() {
         ticket.assignedTo?.email,
         ticket.form?.title,
         ticket.form?.slug,
+        ticket.scheduledNote,
       ]
         .filter(Boolean)
         .map((v) => String(v).toLowerCase())
@@ -359,14 +458,19 @@ export default function TicketsPage() {
 
   async function mutateTicket(
     ticketId: number,
-    payload: { status?: TicketStatus; assignedToId?: number | null },
-    source: "card" | "drawer" = "card",
-  ) {
-    setFeedback(null);
+    payload: { status?: TicketStatus; assignedToId?: number | null; scheduledAt?: string | null; scheduledNote?: string | null },
+    source: "card" | "drawer" | "schedule" = "card",
+  ): Promise<boolean> {
+    if (source !== "schedule") {
+      setFeedback(null);
+    }
     if (source === "card") {
       setPendingTicketId(ticketId);
-    } else {
+    } else if (source === "drawer") {
       setDrawerSaving(true);
+    } else {
+      setScheduleSaving(true);
+      setScheduleError("");
     }
     try {
       const res = await fetch(`/api/tickets/${ticketId}`, {
@@ -383,17 +487,25 @@ export default function TicketsPage() {
       if (drawerTicket && drawerTicket.id === updated.id) {
         setDrawerTicket(updated);
       }
-      if (source === "drawer") {
+      if (source === "drawer" || source === "schedule") {
         setFeedback({ type: "success", message: "Ticket atualizado com sucesso." });
       }
+      return true;
     } catch (err: any) {
       const message = err?.message || "Não foi possível atualizar o ticket.";
-      setFeedback({ type: "error", message });
+      if (source === "schedule") {
+        setScheduleError(message);
+      } else {
+        setFeedback({ type: "error", message });
+      }
+      return false;
     } finally {
       if (source === "card") {
         setPendingTicketId(null);
-      } else {
+      } else if (source === "drawer") {
         setDrawerSaving(false);
+      } else {
+        setScheduleSaving(false);
       }
     }
   }
@@ -401,19 +513,29 @@ export default function TicketsPage() {
   function openDrawer(ticket: TicketItem) {
     setDrawerTicket(ticket);
     setFeedback(null);
+    setUpdateMessage("");
+    setDrawerSchedule(formatDateTimeLocal(ticket.scheduledAt));
+    setScheduleError("");
+    setScheduleModalOpen(false);
     setDrawerOpen(true);
   }
 
   function closeDrawer() {
-    if (drawerSaving) return;
     setDrawerOpen(false);
     setDrawerTicket(null);
     setFeedback(null);
+    setUpdateMessage("");
+    setDrawerSchedule("");
+    setScheduleModalOpen(false);
+    setScheduleError("");
   }
 
   function handleDrawerSave() {
     if (!drawerTicket) return;
-    const updates: { status?: TicketStatus; assignedToId?: number | null } = {};
+    const updates: {
+      status?: TicketStatus;
+      assignedToId?: number | null;
+    } = {};
     if (drawerStatus !== drawerTicket.status) updates.status = drawerStatus;
     const currentAssignee = drawerTicket.assignedTo ? String(drawerTicket.assignedTo.id) : "";
     if (drawerAssignee !== currentAssignee) {
@@ -424,6 +546,102 @@ export default function TicketsPage() {
       return;
     }
     mutateTicket(drawerTicket.id, updates, "drawer");
+  }
+
+  function openScheduleModal() {
+    if (!drawerTicket) return;
+    setDrawerSchedule(formatDateTimeLocal(drawerTicket.scheduledAt));
+    setScheduleError("");
+    setScheduleModalOpen(true);
+  }
+
+  function closeScheduleModal() {
+    if (drawerTicket) {
+      setDrawerSchedule(formatDateTimeLocal(drawerTicket.scheduledAt));
+    } else {
+      setDrawerSchedule("");
+    }
+    setScheduleError("");
+    setScheduleModalOpen(false);
+  }
+
+  async function handleScheduleSave() {
+    if (!drawerTicket) return;
+    const trimmed = drawerSchedule.trim();
+    if (!trimmed) {
+      setScheduleError("Informe data e horário para o atendimento.");
+      return;
+    }
+    const iso = parseDateTimeLocal(trimmed);
+    if (!iso) {
+      setScheduleError("Data e horário inválidos.");
+      return;
+    }
+    const success = await mutateTicket(drawerTicket.id, { scheduledAt: iso, scheduledNote: null }, "schedule");
+    if (success) {
+      setScheduleModalOpen(false);
+    }
+  }
+
+  async function handleScheduleClear() {
+    if (!drawerTicket) return;
+    const success = await mutateTicket(drawerTicket.id, { scheduledAt: null, scheduledNote: null }, "schedule");
+    if (success) {
+      setDrawerSchedule("");
+      setScheduleModalOpen(false);
+    }
+  }
+
+  async function handleAddUpdate(event?: FormEvent<HTMLFormElement> | null) {
+    event?.preventDefault();
+    if (!drawerTicket) return;
+    const content = updateMessage.trim();
+    if (!content) {
+      setFeedback({ type: "error", message: "Digite uma anotação antes de salvar." });
+      return;
+    }
+
+    setUpdateSaving(true);
+    try {
+      const res = await fetch(`/api/tickets/${drawerTicket.id}/updates`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ content }),
+      });
+      const json: any = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        throw new Error(json?.error || "Não foi possível registrar a atualização.");
+      }
+
+      const update: TicketUpdateItem = {
+        id: Number(json.id),
+        content: String(json.content || ""),
+        createdAt: json.createdAt,
+        author: json.author
+          ? {
+              id: Number(json.author.id),
+              name: json.author.name ?? null,
+              email: json.author.email ?? null,
+            }
+          : null,
+      };
+
+      setTickets((prev) =>
+        prev.map((ticket) =>
+          ticket.id === drawerTicket.id ? { ...ticket, updates: [...ticket.updates, update] } : ticket,
+        ),
+      );
+      setDrawerTicket((prev) =>
+        prev ? { ...prev, updates: [...prev.updates, update], updatedAt: update.createdAt } : prev,
+      );
+      setUpdateMessage("");
+      setFeedback({ type: "success", message: "Atualização registrada com sucesso." });
+    } catch (err: any) {
+      const message = err?.message || "Não foi possível salvar a atualização.";
+      setFeedback({ type: "error", message });
+    } finally {
+      setUpdateSaving(false);
+    }
   }
 
   function handleCardClick(ticket: TicketItem) {
@@ -479,6 +697,11 @@ export default function TicketsPage() {
   }
 
   const drawerFormUrl = drawerTicket?.form ? `${getBrowserOrigin()}/forms/${drawerTicket.form.slug}` : null;
+  const drawerUpdates = drawerTicket?.updates ?? [];
+  const drawerScheduleDue = drawerTicket?.scheduledAt
+    ? new Date(drawerTicket.scheduledAt).getTime() <= now
+    : false;
+  const drawerScheduleLabel = drawerTicket?.scheduledAt ? formatDate(drawerTicket.scheduledAt) : null;
   const summaryEntries = useMemo<SummaryEntry[]>(() => {
     if (!drawerTicket?.description) return [];
     const lines = drawerTicket.description.split(/\r?\n/g);
@@ -738,10 +961,18 @@ export default function TicketsPage() {
                           const assignedLabel = ticket.assignedTo
                             ? ticket.assignedTo.name || ticket.assignedTo.email || "Usuário"
                             : "Sem responsável";
+                          let scheduleDate: Date | null = null;
+                          if (ticket.scheduledAt) {
+                            scheduleDate = new Date(ticket.scheduledAt);
+                          }
+                          const hasSchedule = Boolean(scheduleDate);
+                          const scheduleDue = scheduleDate ? scheduleDate.getTime() <= now : false;
+                          const scheduleLabel = scheduleDate ? formatDate(scheduleDate.toISOString()) : null;
                           return (
                             <TicketCard
                               key={ticket.id}
                               data-pending={pendingTicketId === ticket.id}
+                              data-due={scheduleDue ? "true" : undefined}
                               role="button"
                               tabIndex={0}
                               draggable
@@ -778,6 +1009,15 @@ export default function TicketsPage() {
                                   <MetaLabel>Atualizado</MetaLabel>
                                   <MetaValue>{formatDate(ticket.updatedAt)}</MetaValue>
                                 </MetaGroup>
+                                {hasSchedule && (
+                                  <MetaGroup>
+                                    <MetaLabel>Agendado</MetaLabel>
+                                    <MetaValue>
+                                      {scheduleLabel}
+                                      {scheduleDue && <ScheduleBadge>Agora</ScheduleBadge>}
+                                    </MetaValue>
+                                  </MetaGroup>
+                                )}
                               </TicketMeta>
                             </TicketCard>
                           );
@@ -795,151 +1035,246 @@ export default function TicketsPage() {
       {drawerOpen && drawerTicket && <DrawerOverlay role="presentation" onClick={closeDrawer} />}
 
       {drawerOpen && drawerTicket && (
-        <Drawer role="dialog" aria-modal="true" aria-labelledby="drawer-title">
-          <DrawerHeader>
-            <div>
-              <DrawerTitle id="drawer-title">Ticket #{drawerTicket.id}</DrawerTitle>
-              <DrawerSubtitle>{drawerTicket.title}</DrawerSubtitle>
-            </div>
-            <DrawerStatus data-status={drawerTicket.status}>
-              {STATUS_DETAILS[drawerTicket.status].label}
-            </DrawerStatus>
-          </DrawerHeader>
+         <Drawer role="dialog" aria-modal="true" aria-labelledby="drawer-title">
+           <DrawerHeader>
+             <div>
+               <DrawerTitle id="drawer-title">Ticket #{drawerTicket.id}</DrawerTitle>
+               <DrawerSubtitle>{drawerTicket.title}</DrawerSubtitle>
+             </div>
+             <DrawerStatus data-status={drawerTicket.status}>
+               {STATUS_DETAILS[drawerTicket.status].label}
+             </DrawerStatus>
+           </DrawerHeader>
+ 
+           {feedback && <DrawerFeedback data-type={feedback.type}>{feedback.message}</DrawerFeedback>}
+ 
+           <DrawerContent role="region" aria-label="Informações do ticket">
+            <DrawerGrid>
+              <DrawerColumn>
+                <DrawerSection>
+                  <SectionTitle>Resumo</SectionTitle>
+                  {summaryEntries.length === 0 ? (
+                    <EmptySummary>Nenhuma informação adicional registrada.</EmptySummary>
+                  ) : (
+                    <SummaryWrapper>
+                      {summaryEntries.map((entry, index) => {
+                        if (entry.type === "section") {
+                          return (
+                            <SummarySectionHeading key={`section-${index}`}>
+                              {entry.label}
+                            </SummarySectionHeading>
+                          );
+                        }
+                        if (entry.type === "text") {
+                          return (
+                            <SummaryText key={`text-${index}`}>{entry.value}</SummaryText>
+                          );
+                        }
+                        return (
+                          <SummaryRow key={`field-${index}`}>
+                            <SummaryLabel>{entry.label}</SummaryLabel>
+                            <SummaryRowContent>
+                              {entry.isLink ? (
+                                <SummaryLink
+                                  href={entry.value.startsWith("http") ? entry.value : `${getBrowserOrigin()}${entry.value}`}
+                                  target="_blank"
+                                  rel="noreferrer"
+                                >
+                                  Abrir arquivo
+                                </SummaryLink>
+                              ) : (
+                                <SummaryValue>{entry.value || "-"}</SummaryValue>
+                              )}
+                              {entry.isPhone && (
+                                <WhatsappButton
+                                  type="button"
+                                  onClick={() => openWhatsapp(entry.value)}
+                                >
+                                  Chamar no WhatsApp
+                                </WhatsappButton>
+                              )}
+                            </SummaryRowContent>
+                          </SummaryRow>
+                        );
+                      })}
+                    </SummaryWrapper>
+                  )}
+                </DrawerSection>
+              </DrawerColumn>
 
-          {feedback && <DrawerFeedback data-type={feedback.type}>{feedback.message}</DrawerFeedback>}
-
-          <DrawerSection>
-            <SectionTitle>Resumo</SectionTitle>
-            {summaryEntries.length === 0 ? (
-              <EmptySummary>Nenhuma informação adicional registrada.</EmptySummary>
-            ) : (
-              <SummaryWrapper>
-                {summaryEntries.map((entry, index) => {
-                  if (entry.type === "section") {
-                    return (
-                      <SummarySectionHeading key={`section-${index}`}>
-                        {entry.label}
-                      </SummarySectionHeading>
-                    );
-                  }
-                  if (entry.type === "text") {
-                    return (
-                      <SummaryText key={`text-${index}`}>{entry.value}</SummaryText>
-                    );
-                  }
-                  return (
-                    <SummaryRow key={`field-${index}`}>
-                      <SummaryLabel>{entry.label}</SummaryLabel>
-                      <SummaryRowContent>
-                        {entry.isLink ? (
-                          <SummaryLink
-                            href={entry.value.startsWith("http") ? entry.value : `${getBrowserOrigin()}${entry.value}`}
-                            target="_blank"
-                            rel="noreferrer"
-                          >
-                            Abrir arquivo
+              <DrawerColumn>
+                <DrawerSection>
+                  <SectionTitle>Detalhes</SectionTitle>
+                  <DetailGrid>
+                    <DetailItem>
+                      <DetailLabel>Responsável</DetailLabel>
+                      <DetailValue>
+                        {drawerTicket.assignedTo
+                          ? `${drawerTicket.assignedTo.name || "Usuário"}${drawerTicket.assignedTo.email ? ` · ${drawerTicket.assignedTo.email}` : ""}`
+                          : "—"}
+                      </DetailValue>
+                    </DetailItem>
+                    <DetailItem>
+                      <DetailLabel>Status atual</DetailLabel>
+                      <DetailValue>{STATUS_DETAILS[drawerTicket.status].label}</DetailValue>
+                    </DetailItem>
+                    <DetailItem>
+                      <DetailLabel>Formulário</DetailLabel>
+                      <DetailValue>
+                        {drawerTicket.form ? (
+                          <SummaryLink href={drawerFormUrl ?? "#"} target="_blank" rel="noreferrer">
+                            {drawerTicket.form.title}
                           </SummaryLink>
                         ) : (
-                          <SummaryValue>{entry.value || "-"}</SummaryValue>
+                          "—"
                         )}
-                        {entry.isPhone && (
-                          <WhatsappButton
-                            type="button"
-                            onClick={() => openWhatsapp(entry.value)}
-                          >
-                            Chamar no WhatsApp
-                          </WhatsappButton>
-                        )}
-                      </SummaryRowContent>
-                    </SummaryRow>
-                  );
-                })}
-              </SummaryWrapper>
-            )}
-          </DrawerSection>
+                      </DetailValue>
+                    </DetailItem>
+                    <DetailItem>
+                      <DetailLabel>Criação</DetailLabel>
+                      <DetailValue>{formatDate(drawerTicket.createdAt)}</DetailValue>
+                    </DetailItem>
+                    <DetailItem>
+                      <DetailLabel>Última atualização</DetailLabel>
+                      <DetailValue>{formatDate(drawerTicket.updatedAt)}</DetailValue>
+                    </DetailItem>
+                    {drawerTicket.scheduledAt && (
+                      <DetailItem>
+                        <DetailLabel>Próximo atendimento</DetailLabel>
+                        <DetailValue>{formatDate(drawerTicket.scheduledAt)}</DetailValue>
+                      </DetailItem>
+                    )}
+                  </DetailGrid>
+                </DrawerSection>
+              </DrawerColumn>
 
-          <DrawerSection>
-            <SectionTitle>Detalhes</SectionTitle>
-            <DetailGrid>
-              <DetailItem>
-                <DetailLabel>Responsável</DetailLabel>
-                <DetailValue>
-                  {drawerTicket.assignedTo
-                    ? `${drawerTicket.assignedTo.name || "Usuário"}${drawerTicket.assignedTo.email ? ` · ${drawerTicket.assignedTo.email}` : ""}`
-                    : "Sem responsável"}
-                </DetailValue>
-              </DetailItem>
-              <DetailItem>
-                <DetailLabel>Atualizado em</DetailLabel>
-                <DetailValue>{formatDate(drawerTicket.updatedAt)}</DetailValue>
-              </DetailItem>
-              <DetailItem>
-                <DetailLabel>Formulário</DetailLabel>
-                <DetailValue>
-                  {drawerTicket.form ? drawerTicket.form.title : "—"}
-                  {drawerFormUrl && (
-                    <FormLink href={drawerFormUrl} target="_blank" rel="noreferrer">
-                      Abrir formulário público
-                    </FormLink>
+              <DrawerColumn>
+                <DrawerSection>
+                  <SectionTitle>Atualizações</SectionTitle>
+                  {drawerUpdates.length === 0 ? (
+                    <EmptySummary>Nenhuma atualização registrada até o momento.</EmptySummary>
+                  ) : (
+                    <UpdatesList>
+                      {drawerUpdates.map((update) => (
+                        <UpdateItem key={update.id}>
+                          <UpdateMeta>
+                            <UpdateAuthor>{update.author?.name || update.author?.email || "Equipe"}</UpdateAuthor>
+                            <UpdateTimestamp>{formatDate(update.createdAt)}</UpdateTimestamp>
+                          </UpdateMeta>
+                          <UpdateContent>{update.content}</UpdateContent>
+                        </UpdateItem>
+                      ))}
+                    </UpdatesList>
                   )}
-                </DetailValue>
-              </DetailItem>
-            </DetailGrid>
-          </DrawerSection>
 
-          <DrawerSection>
-            <SectionTitle>Ações</SectionTitle>
-            <FormGroup>
-              <FormLabel>Status</FormLabel>
-              <Select
-                value={drawerStatus}
-                onChange={(event: ChangeEvent<HTMLSelectElement>) => {
-                  const element = event.currentTarget as any;
-                  const value = (element?.value as TicketStatus) ?? drawerStatus;
-                  setDrawerStatus(value);
-                }}
-                disabled={drawerSaving}
-              >
-                {STATUS_FLOW.map((status) => (
-                  <option key={status} value={status}>
-                    {STATUS_DETAILS[status].label}
-                  </option>
-                ))}
-              </Select>
-            </FormGroup>
+                  <UpdateForm onSubmit={handleAddUpdate}>
+                    <UpdateTextarea
+                      placeholder="Descreva o andamento, contatos realizados ou próximos passos..."
+                      value={updateMessage}
+                      onChange={(event) => {
+                        const element = event.currentTarget as unknown as { value?: string };
+                        setUpdateMessage(element.value ?? "");
+                      }}
+                      disabled={updateSaving}
+                      onKeyDown={(event) => {
+                        if (event.key === "Enter" && (event.metaKey || event.ctrlKey)) {
+                          event.preventDefault();
+                          handleAddUpdate();
+                        }
+                      }}
+                    />
+                    <UpdateActions>
+                      <UpdateHint>Use Ctrl+Enter para salvar rapidamente.</UpdateHint>
+                      <UpdateSubmit type="submit" disabled={updateSaving || !updateMessage.trim()}>
+                        {updateSaving ? "Registrando..." : "Registrar atualização"}
+                      </UpdateSubmit>
+                    </UpdateActions>
+                  </UpdateForm>
+                </DrawerSection>
+              </DrawerColumn>
+            </DrawerGrid>
+          </DrawerContent>
+ 
+           <DrawerFooter role="region" aria-label="Atualizações de status">
+             <SectionTitle>Ações rápidas</SectionTitle>
+             <QuickActionsGrid>
+               <FormGroup>
+                 <FormLabel>Status</FormLabel>
+                 <Select
+                   value={drawerStatus}
+                   onChange={(event: ChangeEvent<HTMLSelectElement>) => {
+                     const element = event.currentTarget as any;
+                     const value = (element?.value as TicketStatus) ?? drawerStatus;
+                     setDrawerStatus(value);
+                   }}
+                   disabled={drawerSaving}
+                 >
+                   {STATUS_FLOW.map((status) => (
+                     <option key={status} value={status}>
+                       {STATUS_DETAILS[status].label}
+                     </option>
+                   ))}
+                 </Select>
+               </FormGroup>
 
-            <FormGroup>
-              <FormLabel>Responsável</FormLabel>
-              <Select
-                value={drawerAssignee}
-                onChange={(event: ChangeEvent<HTMLSelectElement>) => {
-                  const element = event.currentTarget as any;
-                  const value = typeof element?.value === "string" ? element.value : "";
-                  setDrawerAssignee(value);
-                }}
-                disabled={drawerSaving}
-              >
-                <option value="">Sem responsável</option>
-                {users.map((user) => (
-                  <option key={user.id} value={user.id}>
-                    {user.name}
-                    {user.email ? ` (${user.email})` : ""}
-                  </option>
-                ))}
-              </Select>
-            </FormGroup>
+               <FormGroup>
+                 <FormLabel>Responsável</FormLabel>
+                 <Select
+                   value={drawerAssignee}
+                   onChange={(event: ChangeEvent<HTMLSelectElement>) => {
+                     const element = event.currentTarget as any;
+                     const value = typeof element?.value === "string" ? element.value : "";
+                     setDrawerAssignee(value);
+                   }}
+                   disabled={drawerSaving}
+                 >
+                   <option value="">Sem responsável</option>
+                   {users.map((user) => (
+                     <option key={user.id} value={user.id}>
+                       {user.name}
+                       {user.email ? ` (${user.email})` : ""}
+                     </option>
+                   ))}
+                 </Select>
+               </FormGroup>
 
-            <DrawerActions>
-              <GhostAction type="button" onClick={closeDrawer} disabled={drawerSaving}>
-                Fechar
-              </GhostAction>
-              <PrimaryAction type="button" onClick={handleDrawerSave} disabled={drawerSaving}>
-                {drawerSaving ? "Salvando..." : "Salvar alterações"}
-              </PrimaryAction>
-            </DrawerActions>
-          </DrawerSection>
-        </Drawer>
-      )}
+               <QuickActionScheduleCard>
+                 <QuickActionScheduleLabel>Agendamento</QuickActionScheduleLabel>
+                 <QuickActionScheduleButton
+                   type="button"
+                   onClick={openScheduleModal}
+                   disabled={!drawerTicket || scheduleSaving}
+                 >
+                   {drawerTicket?.scheduledAt ? "Reagendar atendimento" : "Agendar atendimento"}
+                 </QuickActionScheduleButton>
+                 {drawerTicket?.scheduledAt && drawerScheduleLabel && (
+                   <QuickActionScheduleSummary data-due={drawerScheduleDue ? "true" : undefined}>
+                     {drawerScheduleDue ? "Agendamento vencido" : drawerScheduleLabel}
+                   </QuickActionScheduleSummary>
+                 )}
+                 {drawerTicket?.scheduledAt && (
+                   <QuickActionScheduleClear
+                     type="button"
+                     onClick={handleScheduleClear}
+                     disabled={scheduleSaving}
+                   >
+                     Remover agendamento
+                   </QuickActionScheduleClear>
+                 )}
+               </QuickActionScheduleCard>
+             </QuickActionsGrid>
+ 
+             <DrawerActions>
+               <GhostAction type="button" onClick={closeDrawer} disabled={drawerSaving}>
+                 Fechar
+               </GhostAction>
+               <PrimaryAction type="button" onClick={handleDrawerSave} disabled={drawerSaving}>
+                 {drawerSaving ? "Salvando..." : "Salvar alterações"}
+               </PrimaryAction>
+             </DrawerActions>
+           </DrawerFooter>
+         </Drawer>
+       )}
     </Page>
   );
 }
@@ -1338,6 +1673,11 @@ const TicketCard = styled.div`
     opacity: 0.6;
     pointer-events: none;
   }
+  &[data-due="true"] {
+    border-color: rgba(249, 115, 22, 0.8);
+    box-shadow: 0 20px 40px -18px rgba(249, 115, 22, 0.45);
+    animation: ${DUE_PULSE} 1.4s ease-in-out infinite;
+  }
   &:hover {
     transform: translateY(-2px);
     box-shadow: 0 20px 40px -20px rgba(15, 23, 42, 0.35);
@@ -1431,12 +1771,6 @@ const GhostAction = styled.button`
   &:disabled { opacity: 0.5; cursor: default; }
 `;
 
-const pulse = keyframes`
-  0% { opacity: 0.5; }
-  50% { opacity: 1; }
-  100% { opacity: 0.5; }
-`;
-
 const BoardSkeleton = styled.div`
   display: grid;
   gap: 18px;
@@ -1456,14 +1790,14 @@ const SkeletonHeader = styled.div`
   height: 24px;
   border-radius: 8px;
   background: #e2e8f0;
-  animation: ${pulse} 1.2s ease infinite;
+  animation: ${PULSE} 1.2s ease infinite;
 `;
 
 const SkeletonCard = styled.div`
   height: 120px;
   border-radius: 12px;
   background: #e2e8f0;
-  animation: ${pulse} 1.2s ease infinite;
+  animation: ${PULSE} 1.2s ease infinite;
 `;
 
 const DrawerOverlay = styled.div`
@@ -1479,15 +1813,31 @@ const Drawer = styled.aside`
   right: 0;
   top: 0;
   bottom: 0;
-  width: min(600px, 92vw);
+  width: min(980px, 97vw);
+  height: 100vh;
+  max-height: 100vh;
   background: #fff;
   border-left: 1px solid rgba(148, 163, 184, 0.2);
   box-shadow: -26px 0 52px -34px rgba(15, 23, 42, 0.45);
-  padding: 36px 32px;
+  padding: 32px 32px 28px;
   display: flex;
   flex-direction: column;
-  gap: 24px;
+  gap: 20px;
+  overflow: hidden;
   z-index: 40;
+
+  @media (max-width: 1320px) {
+    width: min(94vw, 840px);
+  }
+
+  @media (max-width: 980px) {
+    width: min(95vw, 720px);
+  }
+
+  @media (max-width: 860px) {
+    width: 100vw;
+    padding: 28px 20px 24px;
+  }
 `;
 
 const DrawerHeader = styled.div`
@@ -1537,10 +1887,120 @@ const DrawerFeedback = styled.div`
   }
 `;
 
+const DrawerContent = styled.div`
+  flex: 1;
+  display: grid;
+  gap: 24px;
+  overflow-y: auto;
+  padding-right: 8px;
+
+  &::-webkit-scrollbar {
+    width: 6px;
+  }
+
+  &::-webkit-scrollbar-thumb {
+    background: rgba(148, 163, 184, 0.6);
+    border-radius: 999px;
+  }
+
+  &::-webkit-scrollbar-track {
+    background: rgba(226, 232, 240, 0.4);
+    border-radius: 999px;
+  }
+`;
+
+const DrawerGrid = styled.div`
+  display: grid;
+  gap: 24px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  align-items: flex-start;
+
+  @media (max-width: 1320px) {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  @media (max-width: 980px) {
+    grid-template-columns: 1fr;
+  }
+`;
+
+const DrawerColumn = styled.div`
+  display: grid;
+  gap: 24px;
+  min-width: 0;
+`;
+
 const DrawerSection = styled.section`
   display: grid;
   gap: 12px;
 `;
+
+const DrawerFooter = styled.div`
+  display: grid;
+  gap: 14px;
+  padding-top: 18px;
+  border-top: 1px solid rgba(148, 163, 184, 0.18);
+  background: linear-gradient(180deg, rgba(248, 250, 252, 0) 0%, rgba(248, 250, 252, 0.9) 35%, #f8fafc 100%);
+  padding-bottom: 6px;
+  box-shadow: 0 -18px 28px -28px rgba(15, 23, 42, 0.55);
+`;
+
+const QuickActionsGrid = styled.div`
+   display: grid;
+   gap: 12px;
+   grid-template-columns: repeat(3, minmax(0, 1fr));
+ 
+   @media (max-width: 960px) {
+     grid-template-columns: repeat(2, minmax(0, 1fr));
+   }
+ 
+   @media (max-width: 640px) {
+     grid-template-columns: 1fr;
+   }
+ `;
+ 
+const QuickActionScheduleCard = styled.div`
+   display: grid;
+   gap: 6px;
+   border-radius: 12px;
+   border: 1px solid rgba(148, 163, 184, 0.25);
+   background: rgba(248, 250, 252, 0.8);
+   padding: 12px 14px;
+ `;
+ 
+const QuickActionScheduleLabel = styled.span`
+   font-size: 0.75rem;
+   text-transform: uppercase;
+   letter-spacing: 0.08em;
+   color: #94a3b8;
+ `;
+ 
+const QuickActionScheduleButton = styled.button`
+   padding: 10px 14px;
+   border-radius: 10px;
+   border: none;
+   background: linear-gradient(135deg, #f97316, #fb923c);
+   color: #fff;
+   font-weight: 600;
+   cursor: pointer;
+   transition: transform 0.1s ease, box-shadow 0.1s ease;
+
+   &:hover:not(:disabled) {
+     transform: translateY(-1px);
+     box-shadow: 0 12px 24px -18px rgba(249, 115, 22, 0.6);
+   }
+
+   &:disabled {
+     opacity: 0.6;
+     cursor: not-allowed;
+   }
+ `;
+ 
+const QuickActionScheduleSummary = styled.span<{ "data-due"?: string }>`
+   font-size: 0.8rem;
+   color: ${(p) => (p["data-due"] ? "#c2410c" : "#475569")};
+   font-weight: 600;
+ `;
 
 const SectionTitle = styled.h3`
   margin: 0;
@@ -1647,15 +2107,7 @@ const DetailLabel = styled.span`
 
 const DetailValue = styled.span`
   color: #0f172a;
-`;
-
-const FormLink = styled.a`
-  display: inline-block;
-  margin-top: 8px;
-  font-size: 0.85rem;
-  color: #2563eb;
-  text-decoration: none;
-  &:hover { text-decoration: underline; }
+  word-break: break-word;
 `;
 
 const FormGroup = styled.div`
@@ -1664,23 +2116,140 @@ const FormGroup = styled.div`
 `;
 
 const FormLabel = styled.label`
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  color: #94a3b8;
+  letter-spacing: 0.08em;
+  font-weight: 600;
+`;
+
+const Select = styled.select`
+  width: 100%;
+  padding: 10px 14px;
+  border-radius: 10px;
+  border: 1px solid rgba(148, 163, 184, 0.4);
+  background: #fff;
+  color: #0f172a;
+  font-size: 0.95rem;
+  appearance: none;
+  background-image: linear-gradient(45deg, transparent 50%, rgba(15, 23, 42, 0.35) 50%),
+    linear-gradient(135deg, rgba(15, 23, 42, 0.35) 50%),
+    linear-gradient(to right, rgba(15, 23, 42, 0.35), rgba(15, 23, 42, 0.35));
+  background-position: calc(100% - 18px) calc(50% - 3px), calc(100% - 13px) calc(50% - 3px), calc(100% - 2.2rem) 50%;
+  background-size: 8px 8px, 8px 8px, 1px 70%;
+  background-repeat: no-repeat;
+
+  &:focus {
+    outline: none;
+    border-color: #2563eb;
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
+  }
+
+  &:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
+`;
+
+const UpdatesList = styled.ul`
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 16px;
+`;
+
+const UpdateItem = styled.li`
+  display: grid;
+  gap: 8px;
+  padding: 14px 16px;
+  border-radius: 12px;
+  border: 1px solid rgba(148, 163, 184, 0.25);
+  background: #f8fafc;
+`;
+
+const UpdateMeta = styled.div`
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+  font-size: 0.85rem;
+  color: #475569;
+`;
+
+const UpdateAuthor = styled.span`
   font-weight: 600;
   color: #0f172a;
 `;
 
-const Select = styled.select`
-  padding: 10px 12px;
-  border-radius: 10px;
+const UpdateTimestamp = styled.time`
+  font-size: 0.8rem;
+  color: #64748b;
+`;
+
+const UpdateContent = styled.p`
+  margin: 0;
+  color: #334155;
+  line-height: 1.5;
+  white-space: pre-wrap;
+`;
+
+const UpdateForm = styled.form`
+  display: grid;
+  gap: 12px;
+  margin-top: 16px;
+`;
+
+const UpdateTextarea = styled.textarea`
+  min-height: 120px;
+  padding: 12px 14px;
+  border-radius: 12px;
   border: 1px solid rgba(148, 163, 184, 0.35);
   background: #fff;
   color: #0f172a;
+  resize: vertical;
+  font-family: inherit;
+  font-size: 0.95rem;
+  line-height: 1.5;
+`;
+
+const UpdateActions = styled.div`
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  justify-content: space-between;
+  align-items: center;
+`;
+
+const UpdateHint = styled.span`
+  font-size: 0.8rem;
+  color: #94a3b8;
+`;
+
+const UpdateSubmit = styled.button`
+  padding: 10px 18px;
+  border-radius: 10px;
+  border: none;
+  background: #2563eb;
+  color: #fff;
+  font-weight: 600;
+  cursor: pointer;
+  transition: transform 0.1s ease;
+
+  &:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
+
+  &:not(:disabled):hover {
+    transform: translateY(-1px);
+  }
 `;
 
 const DrawerActions = styled.div`
-  margin-top: auto;
   display: flex;
+  gap: 12px;
   justify-content: flex-end;
-  gap: 10px;
 `;
 
 const UserMenu = styled.div<{ $open: boolean }>`
@@ -1772,3 +2341,117 @@ const ConfirmButton = styled.button`
   background: linear-gradient(135deg, #B00000, #8A0000);
 `;
 
+const ScheduleModalBackdrop = styled.div`
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.45);
+  backdrop-filter: blur(2px);
+  z-index: 48;
+`;
+
+const ScheduleModal = styled.div`
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: min(480px, 96vw);
+  background: #fff;
+  border-radius: 16px;
+  border: 1px solid rgba(148, 163, 184, 0.25);
+  box-shadow: 0 28px 80px -32px rgba(15, 23, 42, 0.6);
+  padding: 26px 28px;
+  display: grid;
+  gap: 20px;
+  z-index: 49;
+`;
+
+const ScheduleModalHeader = styled.header`
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: flex-start;
+`;
+
+const ScheduleModalTitle = styled.h2`
+  margin: 0;
+  font-size: 1.25rem;
+  color: #0f172a;
+`;
+
+const ScheduleModalSubtitle = styled.p`
+  margin: 6px 0 0;
+  color: #64748b;
+`;
+
+const ScheduleModalAlert = styled.div`
+  padding: 12px 14px;
+  border-radius: 10px;
+  border: 1px solid rgba(220, 38, 38, 0.35);
+  background: rgba(254, 226, 226, 0.7);
+  color: #b91c1c;
+  font-weight: 600;
+`;
+
+const ScheduleModalBody = styled.div`
+  display: grid;
+  gap: 14px;
+`;
+
+const ScheduleModalCurrent = styled.p`
+  margin: 0;
+  color: #475569;
+  font-size: 0.9rem;
+
+  strong {
+    color: #0f172a;
+  }
+`;
+
+const ScheduleModalFooter = styled.footer`
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: center;
+  justify-content: space-between;
+`;
+
+const ScheduleModalActions = styled.div`
+   display: flex;
+   gap: 10px;
+   align-items: center;
+ `;
+
+const ScheduleBadge = styled.span`
+  display: inline-flex;
+  align-items: center;
+  margin-left: 8px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  background: rgba(249, 115, 22, 0.15);
+  color: #f97316;
+`;
+
+const QuickActionScheduleClear = styled.button`
+  justify-self: flex-start;
+  margin-top: 4px;
+  padding: 8px 14px;
+  border-radius: 10px;
+  border: 1px solid rgba(248, 113, 113, 0.35);
+  background: rgba(254, 226, 226, 0.6);
+  color: #b91c1c;
+  font-weight: 600;
+  cursor: pointer;
+
+  &:hover:not(:disabled) {
+    background: rgba(254, 202, 202, 0.8);
+  }
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+`;

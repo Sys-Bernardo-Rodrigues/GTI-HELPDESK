@@ -21,6 +21,12 @@ export async function GET() {
             },
           },
         },
+        updates: {
+          orderBy: { createdAt: "asc" },
+          include: {
+            user: { select: { id: true, name: true, email: true } },
+          },
+        },
       },
     });
 
@@ -31,6 +37,8 @@ export async function GET() {
       status: ticket.status,
       createdAt: ticket.createdAt,
       updatedAt: ticket.updatedAt,
+      scheduledAt: ticket.scheduledAt,
+      scheduledNote: ticket.scheduledNote,
       requester: ticket.user
         ? { id: ticket.user.id, name: ticket.user.name, email: ticket.user.email }
         : null,
@@ -47,6 +55,14 @@ export async function GET() {
             slug: ticket.submission.form.slug,
           }
         : null,
+      updates: ticket.updates.map((update) => ({
+        id: update.id,
+        content: update.content,
+        createdAt: update.createdAt,
+        author: update.user
+          ? { id: update.user.id, name: update.user.name, email: update.user.email }
+          : null,
+      })),
     }));
 
     return NextResponse.json({ items });
