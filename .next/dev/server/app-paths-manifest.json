@@ -1,12 +1,10 @@
 {
-  "/api/forms/route": "app/api/forms/route.js",
   "/api/login/route": "app/api/login/route.js",
   "/api/profile/route": "app/api/profile/route.js",
   "/api/session/route": "app/api/session/route.js",
-  "/api/tickets/[id]/route": "app/api/tickets/[id]/route.js",
+  "/api/tickets/[id]/updates/route": "app/api/tickets/[id]/updates/route.js",
   "/api/tickets/route": "app/api/tickets/route.js",
   "/api/users/route": "app/api/users/route.js",
-  "/config/page": "app/config/page.js",
   "/home/page": "app/home/page.js",
   "/page": "app/page.js",
   "/tickets/page": "app/tickets/page.js"

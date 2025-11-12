@@ -1959,23 +1959,21 @@ const QuickActionsGrid = styled.div`
    }
  `;
  
-const QuickActionScheduleCard = styled.div`
+ const QuickActionScheduleCard = styled.div`
    display: grid;
    gap: 6px;
-   border-radius: 12px;
-   border: 1px solid rgba(148, 163, 184, 0.25);
-   background: rgba(248, 250, 252, 0.8);
-   padding: 12px 14px;
  `;
  
-const QuickActionScheduleLabel = styled.span`
-   font-size: 0.75rem;
+ const QuickActionScheduleLabel = styled.span`
+   font-size: 0.8rem;
    text-transform: uppercase;
    letter-spacing: 0.08em;
    color: #94a3b8;
+   font-weight: 600;
  `;
  
-const QuickActionScheduleButton = styled.button`
+ const QuickActionScheduleButton = styled.button`
+   width: 100%;
    padding: 10px 14px;
    border-radius: 10px;
    border: none;
@@ -1996,7 +1994,7 @@ const QuickActionScheduleButton = styled.button`
    }
  `;
  
-const QuickActionScheduleSummary = styled.span<{ "data-due"?: string }>`
+ const QuickActionScheduleSummary = styled.span<{ "data-due"?: string }>`
    font-size: 0.8rem;
    color: ${(p) => (p["data-due"] ? "#c2410c" : "#475569")};
    font-weight: 600;
