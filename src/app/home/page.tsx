@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import styled from "styled-components";
+import NotificationBell from "@/components/NotificationBell";
 
 const Page = styled.div`
   min-height: 100dvh;
@@ -17,10 +18,18 @@ const TopBar = styled.header`
   height: 56px;
   display: flex;
   align-items: center;
+  justify-content: space-between;
   gap: 12px;
   padding: 0 16px;
   background: #fff;
   border-bottom: 1px solid var(--border);
+`;
+
+const TopBarActions = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-left: auto;
 `;
 
 const Brand = styled.div`
@@ -277,6 +286,9 @@ export default function HomePage() {
     <Page>
       <TopBar role="navigation" aria-label="Barra de navegação">
         <Brand>Helpdesk</Brand>
+        <TopBarActions>
+          <NotificationBell />
+        </TopBarActions>
         <MenuToggle
           aria-label={open ? "Fechar menu lateral" : "Abrir menu lateral"}
           aria-controls="sidebar"

@@ -3,6 +3,8 @@
 import { ChangeEvent, DragEvent, FormEvent, KeyboardEvent, MouseEvent as ReactMouseEvent, useEffect, useMemo, useRef, useState } from "react";
 import styled, { keyframes } from "styled-components";
 import { useSound } from "@/lib/sounds";
+import { useNotifications } from "@/lib/notifications";
+import NotificationBell from "@/components/NotificationBell";
 
 type TicketStatus = "OPEN" | "IN_PROGRESS" | "OBSERVATION" | "RESOLVED" | "CLOSED";
 
@@ -285,6 +287,7 @@ const RefreshIcon = styled.svg<{ $spinning?: boolean }>`
 
 export default function TicketsPage() {
   const sounds = useSound();
+  const notifications = useNotifications();
   const [sidebarOpen, setSidebarOpen] = useState<boolean>(true);
   const [userMenuOpen, setUserMenuOpen] = useState<boolean>(false);
   const [confirmOpen, setConfirmOpen] = useState<boolean>(false);
@@ -299,6 +302,7 @@ export default function TicketsPage() {
   const [statusFilter, setStatusFilter] = useState<TicketStatus | "ALL">("ALL");
   const [onlyMine, setOnlyMine] = useState<boolean>(false);
   const [onlyOverdue, setOnlyOverdue] = useState<boolean>(false);
+  const [onlyScheduled, setOnlyScheduled] = useState<boolean>(false);
   const [feedback, setFeedback] = useState<FeedbackMessage>(null);
   const [drawerOpen, setDrawerOpen] = useState<boolean>(false);
   const [drawerTicket, setDrawerTicket] = useState<TicketItem | null>(null);
@@ -323,7 +327,90 @@ export default function TicketsPage() {
   useEffect(() => {
     loadTickets();
     loadUsers();
+    // Solicitar permissão para notificações após interação do usuário
+    const timer = setTimeout(() => {
+      if (notifications.getPermission() === "default") {
+        notifications.requestPermission();
+      }
+    }, 2000);
+    return () => clearTimeout(timer);
   }, []);
+
+  // Iniciar verificação periódica de tickets atrasados e agendados
+  useEffect(() => {
+    if (tickets.length > 0 && notifications.isAvailable()) {
+      notifications.startChecking(tickets.map(t => ({
+        id: t.id,
+        title: t.title,
+        createdAt: t.createdAt,
+        status: t.status,
+        scheduledAt: t.scheduledAt,
+      })));
+    }
+    return () => {
+      notifications.stopChecking();
+    };
+  }, [tickets]);
+
+  // Verificar novos tickets e tickets atribuídos ao usuário
+  const previousTicketsRef = useRef<Map<number, { assignedToId: number | null; createdAt: string }>>(new Map());
+  const isInitialLoadRef = useRef<boolean>(true);
+  
+  useEffect(() => {
+    if (tickets.length === 0) {
+      previousTicketsRef.current.clear();
+      return;
+    }
+
+    // Na primeira carga, apenas armazenar os tickets sem notificar
+    if (isInitialLoadRef.current) {
+      tickets.forEach((ticket) => {
+        previousTicketsRef.current.set(ticket.id, {
+          assignedToId: ticket.assignedTo?.id || null,
+          createdAt: ticket.createdAt,
+        });
+      });
+      isInitialLoadRef.current = false;
+      return;
+    }
+
+    const currentTicketsMap = new Map(tickets.map(t => [t.id, t]));
+    const previousTicketsMap = previousTicketsRef.current;
+
+    tickets.forEach((ticket) => {
+      const previous = previousTicketsMap.get(ticket.id);
+      
+      // Novo ticket criado (não estava no mapa anterior)
+      if (!previous) {
+        notifications.notifyNewTicket({
+          id: ticket.id,
+          title: ticket.title,
+          form: ticket.form,
+        });
+      }
+
+      // Ticket atribuído ao usuário atual
+      if (sessionUser?.id && ticket.assignedTo?.id === sessionUser.id) {
+        const previousAssignedToId = previous?.assignedToId;
+        // Se não estava atribuído antes ou estava atribuído a outro usuário
+        if (previousAssignedToId !== sessionUser.id) {
+          notifications.notifyTicketAssigned({
+            id: ticket.id,
+            title: ticket.title,
+            assignedTo: ticket.assignedTo,
+          });
+        }
+      }
+    });
+
+    // Atualizar o mapa de referência
+    tickets.forEach((ticket) => {
+      previousTicketsRef.current.set(ticket.id, {
+        assignedToId: ticket.assignedTo?.id || null,
+        createdAt: ticket.createdAt,
+      });
+    });
+  }, [tickets, sessionUser?.id]);
 
   useEffect(() => {
     if (!sessionUser?.id) {
@@ -452,7 +539,13 @@ export default function TicketsPage() {
         throw new Error(json?.error || "Não foi possível carregar os tickets.");
       }
       const items = Array.isArray(json?.items) ? json.items : [];
-      setTickets(items.map(normalizeTicket));
+      const normalizedTickets = items.map(normalizeTicket);
+      setTickets(normalizedTickets);
+      
+      // Se for um refresh silencioso, marcar como não sendo carga inicial para detectar novos tickets
+      if (options.silent) {
+        isInitialLoadRef.current = false;
+      }
     } catch (err: any) {
       setError(err?.message || "Erro inesperado ao buscar tickets.");
     } finally {
@@ -488,6 +581,7 @@ export default function TicketsPage() {
         !onlyMine || (sessionUser?.id != null && ticket.assignedTo?.id === sessionUser.id);
       if (!matchesAssignee) return false;
       if (onlyOverdue && !isTicketOverdue(ticket, now)) return false;
+      if (onlyScheduled && ticket.scheduledAt === null) return false;
       if (!term) return true;
       const content = [
         ticket.title,
@@ -503,7 +597,7 @@ export default function TicketsPage() {
         .join(" ");
       return content.includes(term);
     });
-  }, [tickets, statusFilter, search, onlyMine, sessionUser?.id, onlyOverdue, now]);
+  }, [tickets, statusFilter, search, onlyMine, sessionUser?.id, onlyOverdue, onlyScheduled, now]);
 
   const groupedTickets = useMemo(() => {
     return BOARD_STATUSES.reduce<Record<TicketStatus, TicketItem[]>>((acc, status) => {
@@ -513,6 +607,11 @@ export default function TicketsPage() {
   }, [filteredTickets]);
 
   const activeTickets = useMemo(() => tickets.filter((ticket) => ticket.status !== "CLOSED"), [tickets]);
+  
+  const scheduledTickets = useMemo(() => 
+    activeTickets.filter((ticket) => ticket.scheduledAt !== null), 
+    [activeTickets]
+  );
 
   const metrics = useMemo(
     () =>
@@ -840,6 +939,18 @@ export default function TicketsPage() {
     <Page>
       <TopBar role="navigation" aria-label="Barra de navegação">
         <Brand>Helpdesk</Brand>
+        <TopBarActions>
+          <NotificationBell
+            onNotificationClick={(ticketId) => {
+              if (ticketId) {
+                const ticket = tickets.find((t) => t.id === ticketId);
+                if (ticket) {
+                  openDrawer(ticket);
+                }
+              }
+            }}
+          />
+        </TopBarActions>
         <MenuToggle
           aria-label={sidebarOpen ? "Fechar menu lateral" : "Abrir menu lateral"}
           aria-controls="sidebar"
@@ -1043,6 +1154,18 @@ export default function TicketsPage() {
                     {overdueTickets.length.toLocaleString("pt-BR")}
                   </OverdueCount>
                 </OverdueToggle>
+                <ScheduledToggle
+                  type="button"
+                  onClick={() => setOnlyScheduled((prev) => !prev)}
+                  data-active={onlyScheduled ? "true" : undefined}
+                  aria-pressed={onlyScheduled ? "true" : "false"}
+                  title="Mostrar apenas tickets agendados"
+                >
+                  Tickets agendados
+                  <ScheduledCount data-highlight={scheduledTickets.length > 0 ? "true" : undefined}>
+                    {scheduledTickets.length.toLocaleString("pt-BR")}
+                  </ScheduledCount>
+                </ScheduledToggle>
               </ToolbarFilters>
             </Toolbar>
 
@@ -1560,10 +1683,18 @@ const TopBar = styled.header`
   height: 56px;
   display: flex;
   align-items: center;
+  justify-content: space-between;
   gap: 12px;
   padding: 0 16px;
   background: #fff;
   border-bottom: 1px solid var(--border);
+`;
+
+const TopBarActions = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-left: auto;
 `;
 
 const Brand = styled.div`
@@ -2974,4 +3105,45 @@ const OverdueCount = styled.span<{ "data-highlight"?: string }>`
   font-weight: 700;
   background: ${(p) => (p["data-highlight"] ? "rgba(239, 68, 68, 0.2)" : "rgba(148, 163, 184, 0.2)")};
   color: ${(p) => (p["data-highlight"] ? "#b91c1c" : "#475569")};
+`;
+
+const ScheduledToggle = styled.button<{ "data-active"?: string }>`
+  height: 40px;
+  padding: 0 16px;
+  border-radius: 999px;
+  border: 1px solid rgba(139, 92, 246, 0.5);
+  background: ${(p) => (p["data-active"] ? "rgba(221, 214, 254, 0.6)" : "#fff")};
+  color: ${(p) => (p["data-active"] ? "#7c3aed" : "#6d28d9")};
+  font-size: 0.9rem;
+  font-weight: ${(p) => (p["data-active"] ? "600" : "500")};
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+
+  &:hover:not(:disabled) {
+    background: ${(p) => (p["data-active"] ? "rgba(221, 214, 254, 0.8)" : "rgba(237, 233, 254, 0.4)")};
+    border-color: rgba(139, 92, 246, 0.7);
+  }
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+`;
+
+const ScheduledCount = styled.span<{ "data-highlight"?: string }>`
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 24px;
+  height: 24px;
+  padding: 0 8px;
+  border-radius: 999px;
+  font-size: 0.8rem;
+  font-weight: 700;
+  background: ${(p) => (p["data-highlight"] ? "rgba(139, 92, 246, 0.2)" : "rgba(148, 163, 184, 0.2)")};
+  color: ${(p) => (p["data-highlight"] ? "#7c3aed" : "#475569")};
 `;

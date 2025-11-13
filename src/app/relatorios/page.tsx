@@ -3,6 +3,7 @@
 import { ChangeEvent, KeyboardEvent, useEffect, useMemo, useRef, useState } from "react";
 import styled, { keyframes, css } from "styled-components";
 import { useSound } from "@/lib/sounds";
+import NotificationBell from "@/components/NotificationBell";
 
 type TicketStatus = "OPEN" | "IN_PROGRESS" | "OBSERVATION" | "RESOLVED" | "CLOSED";
 
@@ -655,6 +656,9 @@ export default function ReportsPage() {
       <Page>
         <TopBar role="navigation" aria-label="Barra de navegação">
           <Brand>Helpdesk</Brand>
+          <TopBarActions>
+            <NotificationBell />
+          </TopBarActions>
           <MenuToggle
             aria-label={sidebarOpen ? "Fechar menu lateral" : "Abrir menu lateral"}
             aria-controls="sidebar"
@@ -680,6 +684,9 @@ export default function ReportsPage() {
     <Page>
       <TopBar role="navigation" aria-label="Barra de navegação">
         <Brand>Helpdesk</Brand>
+        <TopBarActions>
+          <NotificationBell />
+        </TopBarActions>
         <MenuToggle
           aria-label={sidebarOpen ? "Fechar menu lateral" : "Abrir menu lateral"}
           aria-controls="sidebar"
@@ -1448,10 +1455,18 @@ const TopBar = styled.header`
   height: 56px;
   display: flex;
   align-items: center;
+  justify-content: space-between;
   gap: 12px;
   padding: 0 16px;
   background: #fff;
   border-bottom: 1px solid var(--border);
+`;
+
+const TopBarActions = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-left: auto;
 `;
 
 const Brand = styled.div`

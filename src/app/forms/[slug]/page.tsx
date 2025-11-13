@@ -3,6 +3,7 @@
 import { useEffect, useState, use } from "react";
 import styled from "styled-components";
 import { useSound } from "@/lib/sounds";
+import { useNotifications } from "@/lib/notifications";
 
 type Field = { id: number; label: string; type: "TEXT"|"TEXTAREA"|"SELECT"|"RADIO"|"CHECKBOX"|"FILE"; options?: string|null; required: boolean };
 
@@ -27,6 +28,7 @@ const Toast = styled.div<{ $type: "success" | "error" }>`
 
 export default function PublicFormPage({ params }: { params: Promise<{ slug: string }> }) {
   const sounds = useSound();
+  const notifications = useNotifications();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [title, setTitle] = useState("");
