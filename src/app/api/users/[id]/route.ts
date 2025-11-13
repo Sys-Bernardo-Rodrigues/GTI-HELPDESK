@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from "next/server";
-import { Prisma } from "@prisma/client";
 import { getAuthenticatedUser } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 
@@ -148,7 +147,7 @@ export async function PUT(req: NextRequest, context: { params: ParamsPromise }) 
 
     return NextResponse.json(mapUserResponse(updated));
   } catch (error: any) {
-    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002") {
+    if (error && typeof error === "object" && "code" in error && (error as any).code === "P2002") {
       return NextResponse.json({ error: "E-mail já está em uso" }, { status: 409 });
     }
     return NextResponse.json({ error: "Falha ao atualizar usuário" }, { status: 500 });

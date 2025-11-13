@@ -30,10 +30,10 @@ export async function POST(req: NextRequest) {
   const user = await getAuthenticatedUser();
   if (!user) return NextResponse.json({ error: "Não autenticado" }, { status: 401 });
 
-  const body = await req.json().catch(() => null);
-  const title = body?.title?.toString() || "";
-  const description = body?.description?.toString() || "";
-  const fields = Array.isArray(body?.fields) ? body.fields : [];
+  const body = (await req.json().catch(() => null)) as Record<string, unknown> | null;
+  const title = typeof body?.title === "string" ? body.title : body?.title?.toString() || "";
+  const description = typeof body?.description === "string" ? body.description : body?.description?.toString() || "";
+  const fields = Array.isArray(body?.fields) ? (body.fields as unknown[]) : [];
   if (!title) return NextResponse.json({ error: "Título é obrigatório" }, { status: 400 });
 
   const slug = slugify(title);

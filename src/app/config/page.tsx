@@ -47,18 +47,23 @@ export default function ConfigPage() {
 
   useEffect(() => {
     if (!formsFeedback) return;
-    const timer = window.setTimeout(() => setFormsFeedback(null), 2400);
-    return () => window.clearTimeout(timer);
+    const timer = setTimeout(() => setFormsFeedback(null), 2400);
+    return () => clearTimeout(timer);
   }, [formsFeedback]);
 
 
   // Fechar modal com ESC e gerenciar foco básico
   useEffect(() => {
-    function onKey(e: KeyboardEvent) {
-      if (e.key === "Escape") setCreateOpen(false);
-    }
-    if (createOpen) document.addEventListener("keydown", onKey);
-    return () => document.removeEventListener("keydown", onKey);
+    const globalWindow = typeof globalThis !== "undefined" ? (globalThis as any).window : undefined;
+    const doc: Document | undefined = globalWindow?.document;
+    if (!createOpen || !doc) return;
+    const onKey = (event: KeyboardEvent) => {
+      if ("key" in event && (event as unknown as { key?: string }).key === "Escape") {
+        setCreateOpen(false);
+      }
+    };
+    doc.addEventListener("keydown", onKey);
+    return () => doc.removeEventListener("keydown", onKey);
   }, [createOpen]);
 
   // Garantir que a URL contenha ?section=forms quando acessado sem query

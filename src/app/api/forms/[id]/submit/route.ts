@@ -147,13 +147,14 @@ export async function POST(req: NextRequest, context: { params: ParamsPromise })
       }
     }
   } else {
-    payload = await req.json().catch(() => null);
-    if (!payload || typeof payload !== "object") {
+    const body = (await req.json().catch(() => null)) as Record<string, unknown> | null;
+    if (!body || typeof body !== "object") {
       return NextResponse.json({ error: "Dados inválidos" }, { status: 400 });
     }
-    if ((payload as any).website) {
+    if ((body as any).website) {
       return NextResponse.json({ error: "Detectado spam" }, { status: 400 });
     }
+    payload = body as Record<string, any>;
   }
 
   try {

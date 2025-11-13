@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import prisma from "@/lib/prisma";
+import { prisma } from "@/lib/prisma";
 import { getAuthenticatedUser } from "@/lib/auth";
 
 function isValidEmail(email: string) {
@@ -16,7 +16,8 @@ export async function PUT(req: NextRequest) {
   const user = await getAuthenticatedUser();
   if (!user) return NextResponse.json({ error: "Não autenticado" }, { status: 401 });
 
-  const { email } = await req.json();
+  const body = (await req.json().catch(() => null)) as Record<string, unknown> | null;
+  const email = typeof body?.email === "string" ? body.email : body?.email?.toString() ?? "";
   if (!email || !isValidEmail(email)) {
     return NextResponse.json({ error: "E-mail inválido" }, { status: 400 });
   }

@@ -2,10 +2,11 @@
   "/api/login/route": "app/api/login/route.js",
   "/api/profile/route": "app/api/profile/route.js",
   "/api/session/route": "app/api/session/route.js",
-  "/api/tickets/[id]/updates/route": "app/api/tickets/[id]/updates/route.js",
   "/api/tickets/route": "app/api/tickets/route.js",
   "/api/users/route": "app/api/users/route.js",
+  "/history/page": "app/history/page.js",
   "/home/page": "app/home/page.js",
   "/page": "app/page.js",
-  "/tickets/page": "app/tickets/page.js"
+  "/tickets/page": "app/tickets/page.js",
+  "/users/page": "app/users/page.js"
 }

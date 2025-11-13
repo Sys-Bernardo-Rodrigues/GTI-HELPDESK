@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import prisma from "@/lib/prisma";
+import { prisma } from "@/lib/prisma";
 import { getAuthenticatedUser } from "@/lib/auth";
 
 // Import the in-memory store from request-code module (same bundle scope in dev)
@@ -9,7 +9,8 @@ export async function POST(req: Request) {
   const user = await getAuthenticatedUser();
   if (!user) return NextResponse.json({ error: "Não autenticado" }, { status: 401 });
 
-  const { code } = await req.json();
+  const body = (await req.json().catch(() => null)) as Record<string, unknown> | null;
+  const code = typeof body?.code === "string" ? body.code : body?.code?.toString() ?? "";
   if (!code) return NextResponse.json({ error: "Informe o código" }, { status: 400 });
 
   const store = __getCodesForTesting();

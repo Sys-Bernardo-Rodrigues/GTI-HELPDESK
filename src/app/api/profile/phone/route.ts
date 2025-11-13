@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import prisma from "@/lib/prisma";
+import { prisma } from "@/lib/prisma";
 import { getAuthenticatedUser } from "@/lib/auth";
 
 function normalizeDigits(v: string) {
@@ -10,7 +10,8 @@ export async function PUT(req: Request) {
   const user = await getAuthenticatedUser();
   if (!user) return NextResponse.json({ error: "Não autenticado" }, { status: 401 });
 
-  const { phone } = await req.json();
+  const body = (await req.json().catch(() => null)) as Record<string, unknown> | null;
+  const phone = typeof body?.phone === "string" ? body.phone : body?.phone?.toString() ?? "";
   const digits = normalizeDigits(phone);
   if (digits.length < 10) return NextResponse.json({ error: "Telefone inválido" }, { status: 400 });
 

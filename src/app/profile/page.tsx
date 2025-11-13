@@ -419,6 +419,99 @@ const Hint = styled.p`
   margin: 0 0 10px;
 `;
 
+const MainArea = styled.div`
+  grid-column: span 12;
+  display: grid;
+  gap: 16px;
+  @media (min-width: 960px) {
+    grid-column: span 8;
+  }
+`;
+
+const SideArea = styled.div`
+  grid-column: span 12;
+  display: grid;
+  gap: 16px;
+  @media (min-width: 960px) {
+    grid-column: span 4;
+    position: sticky;
+    top: 88px;
+    align-self: start;
+  }
+`;
+
+const SideCard = styled(Card)`
+  grid-column: span 12;
+`;
+
+const InlineWarning = styled.span`
+  color: #b91c1c;
+  font-size: 0.85rem;
+`;
+
+const FormMessage = styled.p`
+  margin: 12px 0 0;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: rgba(37, 99, 235, 0.08);
+  color: #1d4ed8;
+  font-weight: 600;
+`;
+
+const CheckboxList = styled.div`
+  display: grid;
+  gap: 10px;
+`;
+
+const CheckboxItem = styled.label`
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 0.9rem;
+  color: #0f172a;
+
+  input {
+    width: 18px;
+    height: 18px;
+  }
+`;
+
+const InlineInfo = styled.p`
+  margin: 8px 0;
+  padding: 8px 10px;
+  border-radius: 10px;
+  background: rgba(20, 93, 191, 0.08);
+  color: #1d4ed8;
+  font-size: 0.85rem;
+`;
+
+const VerificationList = styled.ul`
+  display: grid;
+  gap: 10px;
+  padding: 0;
+  margin: 0;
+  list-style: none;
+`;
+
+const VerificationItem = styled.li`
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: rgba(148, 163, 184, 0.12);
+  padding: 10px 12px;
+  border-radius: 10px;
+`;
+
+const VerificationLabel = styled.span`
+  font-weight: 600;
+  color: #475569;
+`;
+
+const VerificationValue = styled.span<{ "data-status"?: string }>`
+  font-weight: 700;
+  color: ${(p) => (p["data-status"] === "true" ? "#047857" : "#b45309")};
+`;
+
 type Profile = {
   name: string;
   email: string;
@@ -682,3 +775,252 @@ export default function ProfilePage() {
                 Configurações
               </NavItem>
               <NavItem href="/profile" aria-label="Perfil" aria-current="page">
+                Perfil
+              </NavItem>
+            </MenuScroll>
+          </nav>
+
+          <UserFooter>
+            <Avatar>
+              {avatarPreview ? (
+                <img src={avatarPreview} alt="Avatar" />
+              ) : (
+                (profile?.name?.[0] || profile?.email?.[0] || "U").toUpperCase()
+              )}
+            </Avatar>
+            <div>
+              <UserName>{profile?.name || "Usuário"}</UserName>
+              <Small>{profile?.email || "email não informado"}</Small>
+            </div>
+          </UserFooter>
+        </Sidebar>
+
+        <Overlay $show={open} onClick={() => setOpen(false)} />
+
+        <Content>
+          <MainArea>
+            <Card as="section" aria-labelledby="profile-title">
+              <CardHeader>
+                <HeaderIcon>👤</HeaderIcon>
+                <div>
+                  <CardTitle id="profile-title">Perfil do usuário</CardTitle>
+                  <Muted>Atualize suas informações pessoais, foto de perfil e preferências de conta.</Muted>
+                </div>
+              </CardHeader>
+
+              <AvatarRow>
+                <AvatarTop>
+                  {avatarPreview && !imgError ? (
+                    <AvatarImg src={avatarPreview} alt="Pré-visualização do avatar" onLoad={() => setImgLoading(false)} onError={() => { setImgLoading(false); setImgError(true); }} />
+                  ) : (
+                    <span>{profile?.name?.[0] || profile?.email?.[0] || "U"}</span>
+                  )}
+                  {imgLoading && <AvatarSkeleton />}
+                  <EditBadge>
+                    Alterar foto
+                    <HiddenInput type="file" accept="image/*" onChange={(event) => onAvatarChange(event.target.files?.[0])} />
+                  </EditBadge>
+                  {avatarPreview && (
+                    <RemoveBadge type="button" onClick={onRemoveAvatar}>
+                      Remover
+                    </RemoveBadge>
+                  )}
+                </AvatarTop>
+                {imgError && <InlineWarning>Não foi possível carregar a imagem atual.</InlineWarning>}
+              </AvatarRow>
+
+              <form onSubmit={onSave}>
+                <Field>
+                  <Label htmlFor="name">Nome completo</Label>
+                  <Input
+                    id="name"
+                    value={profile?.name ?? ""}
+                    onChange={(event) => setProfile((prev) => (prev ? { ...prev, name: event.target.value } : prev))}
+                    placeholder="Seu nome"
+                  />
+                </Field>
+
+                <FieldRow>
+                  <Field>
+                    <Label htmlFor="phone">Telefone</Label>
+                    <Input
+                      id="phone"
+                      value={profile?.phone ?? ""}
+                      onChange={(event) => setProfile((prev) => (prev ? { ...prev, phone: event.target.value } : prev))}
+                      placeholder="(00) 00000-0000"
+                    />
+                  </Field>
+                  <Field>
+                    <Label htmlFor="discord">Discord</Label>
+                    <Input
+                      id="discord"
+                      value={profile?.discordTag ?? ""}
+                      onChange={(event) => setProfile((prev) => (prev ? { ...prev, discordTag: event.target.value } : prev))}
+                      placeholder="usuario#0000"
+                    />
+                  </Field>
+                </FieldRow>
+
+                <FieldRow>
+                  <Field>
+                    <Label htmlFor="job">Cargo</Label>
+                    <Input
+                      id="job"
+                      value={profile?.jobTitle ?? ""}
+                      onChange={(event) => setProfile((prev) => (prev ? { ...prev, jobTitle: event.target.value } : prev))}
+                      placeholder="Ex: Analista de TI"
+                    />
+                  </Field>
+                  <Field>
+                    <Label htmlFor="company">Empresa</Label>
+                    <Input
+                      id="company"
+                      value={profile?.company ?? ""}
+                      onChange={(event) => setProfile((prev) => (prev ? { ...prev, company: event.target.value } : prev))}
+                      placeholder="Nome da empresa"
+                    />
+                  </Field>
+                </FieldRow>
+
+                <SubTitle>Preferências da conta</SubTitle>
+                <Hint>Escolha as opções que deseja ativar.</Hint>
+                <CheckboxList>
+                  <CheckboxItem htmlFor="twoFactor">
+                    <input
+                      id="twoFactor"
+                      type="checkbox"
+                      checked={!!profile?.account?.twoFactor}
+                      onChange={() => setProfile((prev) => (prev ? { ...prev, account: { ...prev.account, twoFactor: !prev.account?.twoFactor } } : prev))}
+                    />
+                    <span>Autenticação em dois fatores</span>
+                  </CheckboxItem>
+                  <CheckboxItem htmlFor="newsletter">
+                    <input
+                      id="newsletter"
+                      type="checkbox"
+                      checked={!!profile?.account?.newsletter}
+                      onChange={() => setProfile((prev) => (prev ? { ...prev, account: { ...prev.account, newsletter: !prev.account?.newsletter } } : prev))}
+                    />
+                    <span>Receber novidades e comunicados</span>
+                  </CheckboxItem>
+                </CheckboxList>
+
+                {message && <FormMessage role="status">{message}</FormMessage>}
+
+                <Actions>
+                  <PrimaryButton type="submit" disabled={saving || !profile}>
+                    {saving ? "Salvando..." : "Salvar alterações"}
+                  </PrimaryButton>
+                </Actions>
+              </form>
+            </Card>
+          </MainArea>
+
+          <SideArea>
+            <SideCard as="section" aria-labelledby="email-title">
+              <CardHeader>
+                <HeaderIcon>📧</HeaderIcon>
+                <div>
+                  <CardTitle id="email-title">Atualizar e-mail</CardTitle>
+                  <Muted>Informe um novo endereço para receber o link de confirmação.</Muted>
+                </div>
+              </CardHeader>
+              <form onSubmit={onChangeEmail}>
+                <Field>
+                  <Label htmlFor="new-email">Novo e-mail</Label>
+                  <Input
+                    id="new-email"
+                    type="email"
+                    value={emailNew}
+                    onChange={(event) => setEmailNew(event.target.value)}
+                    placeholder="novo@email.com"
+                  />
+                </Field>
+                {profile?.pendingEmail && (
+                  <InlineInfo>
+                    Verificação pendente para <strong>{profile.pendingEmail}</strong>
+                  </InlineInfo>
+                )}
+                {emailMessage && <FormMessage role="status">{emailMessage}</FormMessage>}
+                <Actions>
+                  <PrimaryButton type="submit" disabled={emailSaving}>
+                    {emailSaving ? "Enviando..." : "Enviar verificação"}
+                  </PrimaryButton>
+                </Actions>
+              </form>
+            </SideCard>
+
+            <SideCard as="section" aria-labelledby="password-title">
+              <CardHeader>
+                <HeaderIcon>🔐</HeaderIcon>
+                <div>
+                  <CardTitle id="password-title">Alterar senha</CardTitle>
+                  <Muted>Use uma combinação forte com pelo menos 8 caracteres.</Muted>
+                </div>
+              </CardHeader>
+              <form onSubmit={onChangePassword}>
+                <Field>
+                  <Label htmlFor="pwd-current">Senha atual</Label>
+                  <Input
+                    id="pwd-current"
+                    type="password"
+                    value={pwdCurrent}
+                    onChange={(event) => setPwdCurrent(event.target.value)}
+                  />
+                </Field>
+                <Field>
+                  <Label htmlFor="pwd-new">Nova senha</Label>
+                  <Input
+                    id="pwd-new"
+                    type="password"
+                    value={pwdNew}
+                    onChange={(event) => setPwdNew(event.target.value)}
+                  />
+                </Field>
+                <Field>
+                  <Label htmlFor="pwd-confirm">Confirmar nova senha</Label>
+                  <Input
+                    id="pwd-confirm"
+                    type="password"
+                    value={pwdConfirm}
+                    onChange={(event) => setPwdConfirm(event.target.value)}
+                  />
+                </Field>
+                {pwdMessage && <FormMessage role="status">{pwdMessage}</FormMessage>}
+                <Actions>
+                  <PrimaryButton type="submit" disabled={pwdSaving}>
+                    {pwdSaving ? "Alterando..." : "Alterar senha"}
+                  </PrimaryButton>
+                </Actions>
+              </form>
+            </SideCard>
+
+            <SideCard as="section" aria-labelledby="verifications-title">
+              <CardHeader>
+                <HeaderIcon>✅</HeaderIcon>
+                <div>
+                  <CardTitle id="verifications-title">Verificações</CardTitle>
+                  <Muted>Acompanhe o status das confirmações vinculadas à sua conta.</Muted>
+                </div>
+              </CardHeader>
+              <VerificationList>
+                <VerificationItem>
+                  <VerificationLabel>E-mail principal</VerificationLabel>
+                  <VerificationValue data-status="true">
+                    {profile?.emailVerifiedAt ? "Verificado" : "Pendente"}
+                  </VerificationValue>
+                </VerificationItem>
+                <VerificationItem>
+                  <VerificationLabel>Telefone</VerificationLabel>
+                  <VerificationValue data-status={profile?.phoneVerified ? "true" : "false"}>
+                    {profile?.phoneVerified ? "Verificado" : "Pendente"}
+                  </VerificationValue>
+                </VerificationItem>
+              </VerificationList>
+            </SideCard>
+          </SideArea>
+        </Content>
+      </Shell>
+    </Page>
+  );
+}

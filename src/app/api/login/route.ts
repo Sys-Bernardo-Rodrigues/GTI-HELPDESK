@@ -5,9 +5,9 @@ import jwt from "jsonwebtoken";
 
 export async function POST(req: Request) {
   try {
-    const body = await req.json().catch(() => null);
-    const email = body?.email?.toString() || "";
-    const password = body?.password?.toString() || "";
+    const body = (await req.json().catch(() => null)) as Record<string, unknown> | null;
+    const email = typeof body?.email === "string" ? body.email : body?.email?.toString() || "";
+    const password = typeof body?.password === "string" ? body.password : body?.password?.toString() || "";
     if (!email || !password) {
       return NextResponse.json({ ok: false, error: "Email e senha são obrigatórios" }, { status: 400 });
     }

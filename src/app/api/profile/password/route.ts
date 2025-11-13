@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
-import prisma from "@/lib/prisma";
+import { prisma } from "@/lib/prisma";
 import { getAuthenticatedUser } from "@/lib/auth";
 
 function isStrongPassword(pw: string) {
@@ -14,7 +14,10 @@ export async function POST(req: Request) {
   const user = await getAuthenticatedUser();
   if (!user) return NextResponse.json({ error: "Não autenticado" }, { status: 401 });
 
-  const { currentPassword, newPassword, confirmPassword } = await req.json();
+  const body = (await req.json().catch(() => null)) as Record<string, unknown> | null;
+  const currentPassword = typeof body?.currentPassword === "string" ? body.currentPassword : body?.currentPassword?.toString() ?? "";
+  const newPassword = typeof body?.newPassword === "string" ? body.newPassword : body?.newPassword?.toString() ?? "";
+  const confirmPassword = typeof body?.confirmPassword === "string" ? body.confirmPassword : body?.confirmPassword?.toString() ?? "";
   if (!currentPassword || !newPassword || !confirmPassword) {
     return NextResponse.json({ error: "Preencha todos os campos" }, { status: 400 });
   }

@@ -1,4 +1,7 @@
-[00:00:01.885] Server  LOG      ✓ Ready in 1295ms
-[00:00:08.549] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
-[00:00:24.438] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
-[00:03:39.230] Server  LOG      ✓ Compiled in 91ms
+[00:00:01.258] Server  LOG      ✓ Ready in 859ms
+[00:00:09.730] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
+[00:00:26.560] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
+[00:00:30.462] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
+[00:00:32.709] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
+[00:00:33.119] Browser ERROR   uncaughtError: ReferenceError: InsightsSection is not defined
+[00:00:36.836] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold

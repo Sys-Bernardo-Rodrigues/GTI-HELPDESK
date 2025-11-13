@@ -1,9 +1,9 @@
 "use client";
 
-import { ChangeEvent, DragEvent, FormEvent, KeyboardEvent, useEffect, useMemo, useRef, useState } from "react";
+import { ChangeEvent, DragEvent, FormEvent, KeyboardEvent, MouseEvent as ReactMouseEvent, useEffect, useMemo, useRef, useState } from "react";
 import styled, { keyframes } from "styled-components";
 
-type TicketStatus = "OPEN" | "IN_PROGRESS" | "RESOLVED" | "CLOSED";
+type TicketStatus = "OPEN" | "IN_PROGRESS" | "OBSERVATION" | "RESOLVED" | "CLOSED";
 
 type TicketUpdateItem = {
   id: number;
@@ -37,7 +37,7 @@ type SummaryEntry =
 
 type FeedbackMessage = { type: "success" | "error"; message: string } | null;
 
-const STATUS_FLOW: TicketStatus[] = ["OPEN", "IN_PROGRESS", "RESOLVED", "CLOSED"];
+const STATUS_FLOW: TicketStatus[] = ["OPEN", "IN_PROGRESS", "OBSERVATION", "RESOLVED", "CLOSED"];
 
 const STATUS_DETAILS: Record<
   TicketStatus,
@@ -55,6 +55,12 @@ const STATUS_DETAILS: Record<
     color: "#b45309",
     background: "rgba(234, 179, 8, 0.14)",
   },
+  OBSERVATION: {
+    label: "Em observação",
+    description: "Aguardando acompanhamento ou retorno",
+    color: "#0369a1",
+    background: "rgba(3, 105, 161, 0.16)",
+  },
   RESOLVED: {
     label: "Resolvido",
     description: "Concluído e aguardando validação",
@@ -68,6 +74,8 @@ const STATUS_DETAILS: Record<
     background: "rgba(148, 163, 184, 0.16)",
   },
 };
+
+const BOARD_STATUSES: TicketStatus[] = STATUS_FLOW.filter((status) => status !== "CLOSED");
 
 const DUE_PULSE = keyframes`
   0% {
@@ -239,6 +247,7 @@ export default function TicketsPage() {
   const [error, setError] = useState<string>("");
   const [search, setSearch] = useState<string>("");
   const [statusFilter, setStatusFilter] = useState<TicketStatus | "ALL">("ALL");
+  const [onlyMine, setOnlyMine] = useState<boolean>(false);
   const [feedback, setFeedback] = useState<FeedbackMessage>(null);
   const [drawerOpen, setDrawerOpen] = useState<boolean>(false);
   const [drawerTicket, setDrawerTicket] = useState<TicketItem | null>(null);
@@ -264,6 +273,12 @@ export default function TicketsPage() {
     loadTickets();
     loadUsers();
   }, []);
+
+  useEffect(() => {
+    if (!sessionUser?.id) {
+      setOnlyMine(false);
+    }
+  }, [sessionUser?.id]);
 
   useEffect(() => {
     if (!drawerTicket) return;
@@ -415,8 +430,12 @@ export default function TicketsPage() {
   const filteredTickets = useMemo(() => {
     const term = search.trim().toLowerCase();
     return tickets.filter((ticket) => {
+      if (ticket.status === "CLOSED") return false;
       const matchesStatus = statusFilter === "ALL" || ticket.status === statusFilter;
       if (!matchesStatus) return false;
+      const matchesAssignee =
+        !onlyMine || (sessionUser?.id != null && ticket.assignedTo?.id === sessionUser.id);
+      if (!matchesAssignee) return false;
       if (!term) return true;
       const content = [
         ticket.title,
@@ -432,28 +451,30 @@ export default function TicketsPage() {
         .join(" ");
       return content.includes(term);
     });
-  }, [tickets, statusFilter, search]);
+  }, [tickets, statusFilter, search, onlyMine, sessionUser?.id]);
 
   const groupedTickets = useMemo(() => {
-    return STATUS_FLOW.reduce<Record<TicketStatus, TicketItem[]>>((acc, status) => {
+    return BOARD_STATUSES.reduce<Record<TicketStatus, TicketItem[]>>((acc, status) => {
       acc[status] = filteredTickets.filter((ticket) => ticket.status === status);
       return acc;
-    }, { OPEN: [], IN_PROGRESS: [], RESOLVED: [], CLOSED: [] });
+    }, {} as Record<TicketStatus, TicketItem[]>);
   }, [filteredTickets]);
 
-  const totalTickets = tickets.length;
+  const activeTickets = useMemo(() => tickets.filter((ticket) => ticket.status !== "CLOSED"), [tickets]);
+
   const metrics = useMemo(
     () =>
-      STATUS_FLOW.map((status) => {
-        const count = tickets.filter((ticket) => ticket.status === status).length;
+      BOARD_STATUSES.map((status) => {
+        const count = activeTickets.filter((ticket) => ticket.status === status).length;
+        const total = activeTickets.length;
         return {
           status,
           label: STATUS_DETAILS[status].label,
           count,
-          percent: totalTickets ? Math.round((count / totalTickets) * 100) : 0,
+          percent: total ? Math.round((count / total) * 100) : 0,
         };
       }),
-    [tickets, totalTickets],
+    [activeTickets],
   );
 
   async function mutateTicket(
@@ -590,6 +611,20 @@ export default function TicketsPage() {
       setDrawerSchedule("");
       setScheduleModalOpen(false);
     }
+  }
+
+  function handleScheduleFormSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    handleScheduleSave();
+  }
+
+  function handleScheduleInputChange(event: ChangeEvent<any>) {
+    const element = event.target as unknown as { value?: string };
+    setDrawerSchedule(typeof element?.value === "string" ? element.value : "");
+  }
+
+  function handleScheduleModalClick(event: ReactMouseEvent<HTMLDivElement>) {
+    event.stopPropagation();
   }
 
   async function handleAddUpdate(event?: FormEvent<HTMLFormElement> | null) {
@@ -897,32 +932,45 @@ export default function TicketsPage() {
                   setSearch(value);
                 }}
               />
-              <StatusFilterList role="tablist" aria-label="Filtrar por status">
-                <StatusChip
-                  type="button"
-                  onClick={() => setStatusFilter("ALL")}
-                  data-active={statusFilter === "ALL"}
-                >
-                  Todos
-                </StatusChip>
-                {STATUS_FLOW.map((status) => (
+              <ToolbarFilters>
+                <StatusFilterList role="tablist" aria-label="Filtrar por status">
                   <StatusChip
-                    key={status}
                     type="button"
-                    onClick={() => setStatusFilter(status)}
-                    data-active={statusFilter === status}
+                    onClick={() => setStatusFilter("ALL")}
+                    data-active={statusFilter === "ALL"}
                   >
-                    {STATUS_DETAILS[status].label}
+                    Todos
                   </StatusChip>
-                ))}
-              </StatusFilterList>
+                  {BOARD_STATUSES.map((status) => (
+                    <StatusChip
+                      key={status}
+                      type="button"
+                      onClick={() => setStatusFilter(status)}
+                      data-active={statusFilter === status}
+                    >
+                      {STATUS_DETAILS[status].label}
+                    </StatusChip>
+                  ))}
+                </StatusFilterList>
+                {sessionUser?.id && (
+                  <MineToggle
+                    type="button"
+                    onClick={() => setOnlyMine((prev) => !prev)}
+                    data-active={onlyMine ? "true" : undefined}
+                    aria-pressed={onlyMine ? "true" : "false"}
+                    title="Mostrar apenas tickets atribuídos a mim"
+                  >
+                    Meus tickets
+                  </MineToggle>
+                )}
+              </ToolbarFilters>
             </Toolbar>
 
             {error && <Banner role="alert">{error}</Banner>}
 
             {loading ? (
               <BoardSkeleton>
-                {STATUS_FLOW.map((status) => (
+                {BOARD_STATUSES.map((status) => (
                   <ColumnSkeleton key={status}>
                     <SkeletonHeader />
                     <SkeletonCard />
@@ -933,8 +981,8 @@ export default function TicketsPage() {
               </BoardSkeleton>
             ) : (
               <Board>
-                {STATUS_FLOW.map((status) => {
-                  const ticketsInColumn = groupedTickets[status];
+                {BOARD_STATUSES.map((status) => {
+                  const ticketsInColumn = groupedTickets[status] || [];
                   const nextStatus = STATUS_DETAILS[status];
                   return (
                     <Column
@@ -1275,6 +1323,97 @@ export default function TicketsPage() {
            </DrawerFooter>
          </Drawer>
        )}
+
+      {drawerOpen && drawerTicket && scheduleModalOpen && (
+        <>
+          <ScheduleModalBackdrop onClick={closeScheduleModal} />
+          <ScheduleModal
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="schedule-modal-title"
+            aria-describedby="schedule-modal-description"
+            onClick={handleScheduleModalClick}
+          >
+            <ScheduleModalHeader>
+              <div>
+                <ScheduleModalTitle id="schedule-modal-title">Agendar atendimento</ScheduleModalTitle>
+                <ScheduleModalSubtitle id="schedule-modal-description">
+                  Defina data e horário para receber o alerta visual na lista de tickets.
+                </ScheduleModalSubtitle>
+              </div>
+              {drawerTicket.scheduledAt && <ScheduleBadge>Ativo</ScheduleBadge>}
+            </ScheduleModalHeader>
+
+            {scheduleError && <ScheduleModalAlert role="alert">{scheduleError}</ScheduleModalAlert>}
+
+            <ScheduleModalForm onSubmit={handleScheduleFormSubmit}>
+              <ScheduleModalBody>
+                {drawerTicket.scheduledAt && (
+                  <ScheduleModalCurrent>
+                    Atualmente agendado para <strong>{formatDate(drawerTicket.scheduledAt)}</strong>
+                  </ScheduleModalCurrent>
+                )}
+
+                <div>
+                  <ScheduleModalLabel htmlFor="schedule-datetime">Data e horário</ScheduleModalLabel>
+                  <ScheduleModalInput
+                    id="schedule-datetime"
+                    type="datetime-local"
+                    value={drawerSchedule}
+                    onChange={handleScheduleInputChange}
+                    disabled={scheduleSaving}
+                    autoFocus
+                  />
+                </div>
+              </ScheduleModalBody>
+
+              <ScheduleModalFooter>
+                <ScheduleModalNote>
+                  O cartão do ticket ficará destacado quando o horário configurado for alcançado.
+                </ScheduleModalNote>
+                <ScheduleModalActions>
+                  {drawerTicket.scheduledAt && (
+                    <ScheduleModalRemove type="button" onClick={handleScheduleClear} disabled={scheduleSaving}>
+                      Remover agendamento
+                    </ScheduleModalRemove>
+                  )}
+                  <ScheduleModalCancel type="button" onClick={closeScheduleModal} disabled={scheduleSaving}>
+                    Cancelar
+                  </ScheduleModalCancel>
+                  <ScheduleModalSave type="submit" disabled={scheduleSaving}>
+                    {scheduleSaving ? "Salvando..." : "Salvar"}
+                  </ScheduleModalSave>
+                </ScheduleModalActions>
+              </ScheduleModalFooter>
+            </ScheduleModalForm>
+          </ScheduleModal>
+        </>
+      )}
+
+      {confirmOpen && (
+        <>
+          <ConfirmBackdrop $open={confirmOpen} />
+          <ConfirmDialog
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="confirm-exit-title"
+            $open={confirmOpen}
+            onKeyDown={(e: KeyboardEvent<HTMLElement>) => {
+              if (e.key === "Escape") setConfirmOpen(false);
+            }}
+          >
+            <ConfirmTitle id="confirm-exit-title">Você deseja realmente sair?</ConfirmTitle>
+            <ConfirmActions>
+              <CancelButton type="button" onClick={() => setConfirmOpen(false)}>
+                Cancelar
+              </CancelButton>
+              <ConfirmButton type="button" onClick={onLogout}>
+                Confirmar
+              </ConfirmButton>
+            </ConfirmActions>
+          </ConfirmDialog>
+        </>
+      )}
     </Page>
   );
 }
@@ -1532,6 +1671,7 @@ const MetricProgress = styled.div`
   background: linear-gradient(90deg, #2563eb, #1d4ed8);
   transition: width 0.4s ease;
   &[data-status="IN_PROGRESS"] { background: linear-gradient(90deg, #f59e0b, #c2410c); }
+  &[data-status="OBSERVATION"] { background: linear-gradient(90deg, #0ea5e9, #0369a1); }
   &[data-status="RESOLVED"] { background: linear-gradient(90deg, #10b981, #047857); }
   &[data-status="CLOSED"] { background: linear-gradient(90deg, #94a3b8, #475569); }
 `;
@@ -1674,8 +1814,9 @@ const TicketCard = styled.div`
     pointer-events: none;
   }
   &[data-due="true"] {
-    border-color: rgba(249, 115, 22, 0.8);
-    box-shadow: 0 20px 40px -18px rgba(249, 115, 22, 0.45);
+    border-color: rgba(249, 115, 22, 0.85);
+    background: linear-gradient(180deg, #fff7ed, #ffe6cc 120%);
+    box-shadow: 0 24px 48px -18px rgba(249, 115, 22, 0.55);
     animation: ${DUE_PULSE} 1.4s ease-in-out infinite;
   }
   &:hover {
@@ -1713,6 +1854,7 @@ const StatusBadge = styled.span`
   color: #475569;
   &[data-status="OPEN"] { background: rgba(37, 99, 235, 0.12); color: #1d4ed8; }
   &[data-status="IN_PROGRESS"] { background: rgba(234, 179, 8, 0.14); color: #b45309; }
+  &[data-status="OBSERVATION"] { background: rgba(14, 165, 233, 0.16); color: #0369a1; }
   &[data-status="RESOLVED"] { background: rgba(16, 185, 129, 0.18); color: #047857; }
   &[data-status="CLOSED"] { background: rgba(148, 163, 184, 0.18); color: #334155; }
 `;
@@ -1867,6 +2009,7 @@ const DrawerStatus = styled.span`
   color: #475569;
   &[data-status="OPEN"] { background: rgba(37, 99, 235, 0.12); color: #1d4ed8; }
   &[data-status="IN_PROGRESS"] { background: rgba(234, 179, 8, 0.14); color: #b45309; }
+  &[data-status="OBSERVATION"] { background: rgba(14, 165, 233, 0.16); color: #0369a1; }
   &[data-status="RESOLVED"] { background: rgba(16, 185, 129, 0.18); color: #047857; }
   &[data-status="CLOSED"] { background: rgba(148, 163, 184, 0.18); color: #334155; }
 `;
@@ -2406,18 +2549,112 @@ const ScheduleModalCurrent = styled.p`
 `;
 
 const ScheduleModalFooter = styled.footer`
-  display: flex;
-  flex-wrap: wrap;
-  gap: 12px;
-  align-items: center;
-  justify-content: space-between;
-`;
-
-const ScheduleModalActions = styled.div`
+   display: flex;
+   flex-wrap: wrap;
+   gap: 12px;
+   align-items: center;
+   justify-content: space-between;
+ `;
+ 
+ const ScheduleModalActions = styled.div`
    display: flex;
    gap: 10px;
    align-items: center;
  `;
+
+const ScheduleModalForm = styled.form`
+  display: contents;
+`;
+
+const ScheduleModalLabel = styled.label`
+  display: block;
+  margin-bottom: 6px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: #64748b;
+`;
+
+const ScheduleModalInput = styled.input`
+  width: 100%;
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid rgba(148, 163, 184, 0.4);
+  background: #fff;
+  color: #0f172a;
+  font-size: 0.95rem;
+
+  &:focus {
+    outline: none;
+    border-color: rgba(37, 99, 235, 0.6);
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
+  }
+
+  &:disabled {
+    background: #e2e8f0;
+    cursor: not-allowed;
+  }
+`;
+
+const ScheduleModalNote = styled.p`
+  margin: 0;
+  font-size: 0.85rem;
+  color: #64748b;
+  max-width: 60%;
+
+  @media (max-width: 640px) {
+    max-width: 100%;
+  }
+`;
+
+const ScheduleModalButtonBase = styled.button`
+  padding: 10px 16px;
+  border-radius: 10px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: transform 0.1s ease, box-shadow 0.1s ease;
+  border: none;
+
+  &:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+    transform: none;
+    box-shadow: none;
+  }
+`;
+
+const ScheduleModalCancel = styled(ScheduleModalButtonBase)`
+  background: #e2e8f0;
+  color: #475569;
+  border: 1px solid rgba(148, 163, 184, 0.4);
+
+  &:hover:not(:disabled) {
+    transform: translateY(-1px);
+    box-shadow: 0 12px 24px -18px rgba(148, 163, 184, 0.6);
+  }
+`;
+
+const ScheduleModalSave = styled(ScheduleModalButtonBase)`
+  background: linear-gradient(135deg, #2563eb, #1d4ed8);
+  color: #fff;
+
+  &:hover:not(:disabled) {
+    transform: translateY(-1px);
+    box-shadow: 0 12px 24px -18px rgba(37, 99, 235, 0.6);
+  }
+`;
+
+const ScheduleModalRemove = styled(ScheduleModalButtonBase)`
+  background: rgba(254, 226, 226, 0.8);
+  color: #b91c1c;
+  border: 1px solid rgba(248, 113, 113, 0.4);
+
+  &:hover:not(:disabled) {
+    transform: translateY(-1px);
+    box-shadow: 0 12px 24px -18px rgba(248, 113, 113, 0.6);
+  }
+`;
 
 const ScheduleBadge = styled.span`
   display: inline-flex;
@@ -2451,5 +2688,36 @@ const QuickActionScheduleClear = styled.button`
   &:disabled {
     opacity: 0.5;
     cursor: not-allowed;
+  }
+`;
+
+const ToolbarFilters = styled.div`
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
+  justify-content: flex-end;
+`;
+
+const MineToggle = styled.button<{ "data-active"?: string }>`
+  padding: 10px 16px;
+  border-radius: 999px;
+  border: 1px solid rgba(37, 99, 235, 0.35);
+  background: ${(p) => (p["data-active"] ? "rgba(37, 99, 235, 0.12)" : "#fff")};
+  color: ${(p) => (p["data-active"] ? "#1d4ed8" : "#475569")};
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s ease, color 0.2s ease, transform 0.1s ease, box-shadow 0.1s ease;
+
+  &:hover:not(:disabled) {
+    transform: translateY(-1px);
+    box-shadow: 0 12px 20px -16px rgba(37, 99, 235, 0.35);
+  }
+
+  &:disabled {
+    opacity: 0.55;
+    cursor: not-allowed;
+    transform: none;
+    box-shadow: none;
   }
 `;

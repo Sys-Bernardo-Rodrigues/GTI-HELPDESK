@@ -51,7 +51,7 @@ export async function POST(req: NextRequest, context: { params: ParamsPromise })
   const ticket = await prisma.ticket.findUnique({ where: { id: ticketId }, select: { id: true } });
   if (!ticket) return NextResponse.json({ error: "Ticket não encontrado" }, { status: 404 });
 
-  const body = await req.json().catch(() => null);
+  const body = (await req.json().catch(() => null)) as Record<string, unknown> | null;
   const contentRaw = typeof body?.content === "string" ? body.content.trim() : "";
   if (!contentRaw) {
     return NextResponse.json({ error: "Informe um texto para registrar no ticket." }, { status: 400 });

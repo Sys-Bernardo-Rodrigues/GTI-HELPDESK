@@ -1,11 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
-import type { TicketStatus } from "@prisma/client";
 import { getAuthenticatedUser } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 
+type TicketStatus = "OPEN" | "IN_PROGRESS" | "OBSERVATION" | "RESOLVED" | "CLOSED";
+
 type ParamsPromise = Promise<{ id: string }>;
 
-const VALID_STATUSES: TicketStatus[] = ["OPEN", "IN_PROGRESS", "RESOLVED", "CLOSED"];
+const VALID_STATUSES: TicketStatus[] = ["OPEN", "IN_PROGRESS", "OBSERVATION", "RESOLVED", "CLOSED"];
 
 async function parseId(paramsPromise: ParamsPromise) {
   const params = await paramsPromise;
@@ -21,7 +22,7 @@ export async function PUT(req: NextRequest, context: { params: ParamsPromise }) 
   const id = await parseId(context.params);
   if (!id) return NextResponse.json({ error: "ID inválido" }, { status: 400 });
 
-  const body = await req.json().catch(() => null);
+  const body = (await req.json().catch(() => null)) as Record<string, any> | null;
   const statusRaw = body?.status;
   const statusProvided = typeof statusRaw === "string";
   const status = statusProvided ? statusRaw.toString().toUpperCase() : undefined;

@@ -119,6 +119,7 @@ model FormSubmission {
 enum TicketStatus {
   OPEN
   IN_PROGRESS
+  OBSERVATION
   RESOLVED
   CLOSED
 }

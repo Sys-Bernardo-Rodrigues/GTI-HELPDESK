@@ -41,10 +41,10 @@ export async function PUT(req: NextRequest, context: { params: ParamsPromise }) 
   if (!id) {
     return NextResponse.json({ error: "ID inválido" }, { status: 400 });
   }
-  const body = await req.json().catch(() => null);
-  const title = body?.title?.toString() || undefined;
-  const description = body?.description?.toString() || undefined;
-  const fields = Array.isArray(body?.fields) ? body.fields : undefined;
+  const body = (await req.json().catch(() => null)) as Record<string, unknown> | null;
+  const title = typeof body?.title === "string" ? body.title : body?.title?.toString() || undefined;
+  const description = typeof body?.description === "string" ? body.description : body?.description?.toString() || undefined;
+  const fields = Array.isArray(body?.fields) ? (body?.fields as unknown[]) : undefined;
   const isPublic = typeof body?.isPublic === "boolean" ? Boolean(body.isPublic) : undefined;
 
   const updated = await prisma.form.update({
@@ -81,8 +81,9 @@ export async function DELETE(req: NextRequest, context: { params: ParamsPromise 
   // Fallback 2: tentar id no corpo JSON { id }
   if (formId === null) {
     try {
-      const body = await req.json();
-      const bodyId = Number.parseInt(String(body?.id ?? ""), 10);
+      const body = (await req.json().catch(() => null)) as Record<string, unknown> | null;
+      const rawId = typeof body?.id === "number" || typeof body?.id === "string" ? String(body.id) : "";
+      const bodyId = Number.parseInt(rawId, 10);
       if (Number.isFinite(bodyId) && bodyId > 0) formId = bodyId;
     } catch {}
   }
