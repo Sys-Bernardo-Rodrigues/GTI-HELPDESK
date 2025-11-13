@@ -412,6 +412,9 @@ export default function UsersPage() {
               <NavItem href="/history" aria-label="Histórico">
                 Histórico
               </NavItem>
+              <NavItem href="/relatorios" aria-label="Relatórios">
+                Relatórios
+              </NavItem>
               <NavItem href="/config?section=forms" aria-label="Configurações">
                 Configurações
               </NavItem>

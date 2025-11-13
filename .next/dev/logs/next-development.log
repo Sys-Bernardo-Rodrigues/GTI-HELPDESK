@@ -1,7 +1,19 @@
-[00:00:01.258] Server  LOG      ✓ Ready in 859ms
-[00:00:09.730] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
-[00:00:26.560] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
-[00:00:30.462] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
-[00:00:32.709] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
-[00:00:33.119] Browser ERROR   uncaughtError: ReferenceError: InsightsSection is not defined
-[00:00:36.836] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
+[00:00:01.507] Server  LOG      ✓ Ready in 1073ms
+[00:00:06.678] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
+[00:00:11.424] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
+[00:01:17.586] Server  LOG      ✓ Compiled in 140ms
+[00:01:23.196] Server  LOG      ✓ Compiled in 128ms
+[00:01:28.248] Server  LOG      ✓ Compiled in 122ms
+[00:01:32.437] Server  LOG      ✓ Compiled in 150ms
+[00:01:36.685] Server  LOG      ✓ Compiled in 207ms
+[00:01:54.205] Server  LOG      ✓ Compiled in 146ms
+[00:02:08.328] Server  LOG      ✓ Compiled in 138ms
+[00:02:12.299] Server  LOG      ✓ Compiled in 111ms
+[00:02:16.310] Server  LOG      ✓ Compiled in 105ms
+[00:04:38.135] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
+[00:04:42.388] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
+[00:05:01.694] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
+[00:05:14.334] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
+[00:05:15.393] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
+[00:05:22.787] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
+[00:05:24.237] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold

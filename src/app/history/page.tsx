@@ -38,8 +38,10 @@ type TicketItem = {
 
 type SummaryEntry =
   | { type: "section"; label: string }
-  | { type: "field"; label: string; value: string; isLink: boolean; isPhone: boolean }
+  | { type: "field"; label: string; value: string; isLink: boolean; isPhone: boolean; isEmail: boolean }
   | { type: "text"; value: string };
+
+const PAGE_SIZE = 5;
 
 type FeedbackMessage = { type: "success" | "error"; message: string } | null;
 
@@ -64,6 +66,7 @@ export default function HistoryPage() {
   const [feedback, setFeedback] = useState<FeedbackMessage>(null);
   const [reopeningId, setReopeningId] = useState<number | null>(null);
   const [exporting, setExporting] = useState<boolean>(false);
+  const [currentPage, setCurrentPage] = useState<number>(1);
   const firstLinkRef = useRef<any>(null);
   const menuRef = useRef<any>(null);
   const footerRef = useRef<any>(null);
@@ -143,6 +146,10 @@ export default function HistoryPage() {
     const item = firstMenuItemRef.current as any;
     if (menuOpen && item?.focus) item.focus();
   }, [menuOpen]);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [search, dateFrom, dateTo, formFilter, assigneeFilter, sortOption]);
 
   async function loadTickets(options: { silent?: boolean } = {}) {
     if (options.silent) {
@@ -236,7 +243,6 @@ export default function HistoryPage() {
         "Responsável",
         "Solicitante",
         "Formulário",
-        "Categoria",
         "Criado em",
         "Encerrado em",
         "Tempo de resolução (min)",
@@ -251,7 +257,6 @@ export default function HistoryPage() {
           sanitizeCsv(ticket.assignedTo?.name || ticket.assignedTo?.email || ""),
           sanitizeCsv(ticket.requester?.name || ticket.requester?.email || ""),
           sanitizeCsv(ticket.form?.title || ""),
-          sanitizeCsv(ticket.category?.name || ""),
           formatDate(ticket.createdAt),
           formatDate(ticket.updatedAt),
           resolution,
@@ -339,6 +344,22 @@ export default function HistoryPage() {
     return sorted;
   }, [tickets, search, dateFrom, dateTo, formFilter, assigneeFilter, sortOption]);
 
+  const totalPages = useMemo(() => {
+    if (!filteredTickets.length) return 1;
+    return Math.max(1, Math.ceil(filteredTickets.length / PAGE_SIZE));
+  }, [filteredTickets.length]);
+
+  useEffect(() => {
+    if (currentPage > totalPages) {
+      setCurrentPage(totalPages);
+    }
+  }, [currentPage, totalPages]);
+
+  const paginatedTickets = useMemo(() => {
+    const start = (currentPage - 1) * PAGE_SIZE;
+    return filteredTickets.slice(start, start + PAGE_SIZE);
+  }, [filteredTickets, currentPage]);
+
   const metrics = useMemo(() => {
     const total = tickets.length;
     const now = Date.now();
@@ -403,16 +424,17 @@ export default function HistoryPage() {
   const insights = useMemo(() => {
     if (!tickets.length) return [] as Array<{ title: string; value: string; hint: string }>;
 
-    const categoryCount = new Map<string, number>();
+    const formCount = new Map<string, { title: string; total: number }>();
     const assigneeCount = new Map<string, { label: string; total: number }>();
     let longestTicket: TicketItem | null = null;
     let shortestTicket: TicketItem | null = null;
 
     tickets.forEach((ticket) => {
-      if (ticket.category?.name) {
-        categoryCount.set(ticket.category.name, (categoryCount.get(ticket.category.name) ?? 0) + 1);
-      } else {
-        categoryCount.set("Sem categoria", (categoryCount.get("Sem categoria") ?? 0) + 1);
+      if (ticket.form) {
+        const key = ticket.form.slug || String(ticket.form.id);
+        const title = ticket.form.title || `Formulário #${ticket.form.id}`;
+        const current = formCount.get(key);
+        formCount.set(key, { title, total: current ? current.total + 1 : 1 });
       }
 
       if (ticket.assignedTo) {
@@ -431,16 +453,16 @@ export default function HistoryPage() {
       }
     });
 
-    const topCategory = Array.from(categoryCount.entries()).sort((a, b) => b[1] - a[1])[0];
+    const topForm = Array.from(formCount.values()).sort((a, b) => b.total - a.total)[0];
     const topAssignee = Array.from(assigneeCount.values()).sort((a, b) => b.total - a.total)[0];
 
     const results: Array<{ title: string; value: string; hint: string }> = [];
 
-    if (topCategory) {
+    if (topForm) {
       results.push({
-        title: "Categoria mais recorrente",
-        value: `${topCategory[0]}`,
-        hint: `${topCategory[1]} ticket(s) encerrados` ,
+        title: "Formulário com mais solicitações",
+        value: topForm.title,
+        hint: `${topForm.total} ticket(s) encerrados`,
       });
     }
 
@@ -492,7 +514,8 @@ export default function HistoryPage() {
         const isPhoneLabel = /telefone|celular|whats?/i.test(label);
         const phoneDigits = valueRaw.replace(/[^0-9+]/g, "");
         const isPhone = isPhoneLabel && phoneDigits.length >= 9;
-        items.push({ type: "field", label, value: valueRaw, isLink, isPhone });
+        const isEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(valueRaw);
+        items.push({ type: "field", label, value: valueRaw, isLink, isPhone, isEmail });
       } else {
         items.push({ type: "text", value: line });
       }
@@ -574,11 +597,14 @@ export default function HistoryPage() {
               <NavItem href="/users" aria-label="Usuários">
                 Usuários
               </NavItem>
-              <NavItem href="/config?section=forms" aria-label="Configurações">
-                Configurações
-              </NavItem>
               <NavItem href="/history" aria-label="Histórico" aria-current="page">
                 Histórico
+              </NavItem>
+              <NavItem href="/relatorios" aria-label="Relatórios">
+                Relatórios
+              </NavItem>
+              <NavItem href="/config?section=forms" aria-label="Configurações">
+                Configurações
               </NavItem>
             </MenuScroll>
           </nav>
@@ -675,39 +701,25 @@ export default function HistoryPage() {
             <PageHeader>
               <HeaderBlock>
                 <Title>Histórico de tickets</Title>
-                <Subtitle>Consulte chamados encerrados, visualize o detalhamento completo e reabra quando necessário.</Subtitle>
               </HeaderBlock>
               <HeaderActions>
                 <ExportButton type="button" onClick={handleExport} disabled={loading || exporting}>
                   {exporting ? "Exportando..." : "Exportar CSV"}
                 </ExportButton>
-                <ReloadButton onClick={() => loadTickets({ silent: true })} disabled={loading || refreshing}>
-                  {refreshing ? "Atualizando..." : "Atualizar"}
+                <ReloadButton 
+                  onClick={() => loadTickets({ silent: true })} 
+                  disabled={loading || refreshing}
+                  title={refreshing ? "Atualizando..." : "Atualizar"}
+                  aria-label={refreshing ? "Atualizando..." : "Atualizar"}
+                >
+                  <ReloadIcon $spinning={refreshing} viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M1 4V10H7" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                    <path d="M23 20V14H17" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                    <path d="M20.49 9A9 9 0 0 0 5.64 5.64L1 10M23 14L18.36 18.36A9 9 0 0 1 3.51 15" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                  </ReloadIcon>
                 </ReloadButton>
               </HeaderActions>
             </PageHeader>
-
-            <MetricsGrid role="list" aria-label="Indicadores de desempenho dos tickets encerrados">
-              {metrics.map((metric) => (
-                <MetricCard key={metric.id} role="listitem">
-                  <MetricValue>{metric.value}</MetricValue>
-                  <MetricLabel>{metric.label}</MetricLabel>
-                  <MetricHint>{metric.hint}</MetricHint>
-                </MetricCard>
-              ))}
-            </MetricsGrid>
-
-            {insights.length > 0 && (
-              <InsightsSection aria-label="Principais destaques do histórico">
-                {insights.map((insight, index) => (
-                  <InsightCard key={`${insight.title}-${index}`}>
-                    <InsightTitle>{insight.title}</InsightTitle>
-                    <InsightValue>{insight.value}</InsightValue>
-                    <InsightHint>{insight.hint}</InsightHint>
-                  </InsightCard>
-                ))}
-              </InsightsSection>
-            )}
 
             {feedback && (
               <FeedbackBanner data-type={feedback.type} role="status">
@@ -719,7 +731,6 @@ export default function HistoryPage() {
               <FiltersHeader>
                 <div>
                   <FiltersTitle>Filtros avançados</FiltersTitle>
-                  <FiltersSubtitle>Refine o histórico de tickets encerrados para encontrar os registros desejados.</FiltersSubtitle>
                 </div>
                 <FiltersSummary>
                   <FiltersBadge>{filteredCount.toLocaleString("pt-BR") || 0} resultado(s)</FiltersBadge>
@@ -839,67 +850,146 @@ export default function HistoryPage() {
                   <HistorySkeletonCard key={index} />
                 ))}
               </HistorySkeleton>
-            ) : filteredTickets.length === 0 ? (
+            ) : filteredCount === 0 ? (
               <EmptyState>
                 <strong>Nenhum ticket encerrado encontrado.</strong>
                 <span>Ajuste os filtros ou o período de busca para ampliar os resultados.</span>
               </EmptyState>
             ) : (
-              <HistoryList>
-                {filteredTickets.map((ticket) => {
-                  const resolutionMinutes = getResolutionMinutes(ticket);
-                  const resolutionLabel = resolutionMinutes ? formatDuration(resolutionMinutes) : "—";
-                  const snippet = getSummarySnippet(ticket.description);
-                  return (
-                    <HistoryCard key={ticket.id}>
-                      <HistoryCardHeader>
-                        <HistoryCardTitle>
-                          <span>#{ticket.id}</span>
-                          {ticket.title}
-                        </HistoryCardTitle>
-                        <HistoryStatus>
-                          Encerrado em {formatDate(ticket.updatedAt)}
-                        </HistoryStatus>
-                      </HistoryCardHeader>
-                      <HistoryMetaGrid>
-                        <HistoryMetaItem>
-                          <HistoryMetaLabel>Responsável</HistoryMetaLabel>
-                          <HistoryMetaValue>
-                            {ticket.assignedTo ? ticket.assignedTo.name || ticket.assignedTo.email || "Usuário" : "—"}
-                          </HistoryMetaValue>
-                        </HistoryMetaItem>
-                        <HistoryMetaItem>
-                          <HistoryMetaLabel>Formulário</HistoryMetaLabel>
-                          <HistoryMetaValue>{ticket.form?.title || "—"}</HistoryMetaValue>
-                        </HistoryMetaItem>
-                        <HistoryMetaItem>
-                          <HistoryMetaLabel>Categoria</HistoryMetaLabel>
-                          <HistoryMetaValue>{ticket.category?.name || "—"}</HistoryMetaValue>
-                        </HistoryMetaItem>
-                        <HistoryMetaItem>
-                          <HistoryMetaLabel>Tempo de resolução</HistoryMetaLabel>
-                          <HistoryMetaValue>{resolutionLabel}</HistoryMetaValue>
-                        </HistoryMetaItem>
-                      </HistoryMetaGrid>
-                      <HistoryDescription>
-                        {snippet}
-                      </HistoryDescription>
-                      <HistoryActions>
-                        <GhostButton type="button" onClick={() => openDrawer(ticket)}>
-                          Ver detalhes
-                        </GhostButton>
-                        <PrimaryButton
-                          type="button"
-                          onClick={() => handleReopen(ticket)}
-                          disabled={reopeningId === ticket.id}
-                        >
-                          {reopeningId === ticket.id ? "Reabrindo..." : "Reabrir ticket"}
-                        </PrimaryButton>
-                      </HistoryActions>
-                    </HistoryCard>
-                  );
-                })}
-              </HistoryList>
+              <>
+                <HistoryList>
+                  {paginatedTickets.map((ticket) => {
+                    const resolutionMinutes = getResolutionMinutes(ticket);
+                    const resolutionLabel = resolutionMinutes ? formatDuration(resolutionMinutes) : "—";
+                    const formFields = parseFormFields(ticket.description);
+                    return (
+                      <HistoryCard key={ticket.id}>
+                        <HistoryCardHeader>
+                          <HistoryCardTitle>
+                            <span>#{ticket.id}</span>
+                            {ticket.title}
+                          </HistoryCardTitle>
+                        </HistoryCardHeader>
+                        <HistoryMetaGrid>
+                          <HistoryMetaItem>
+                            <HistoryMetaLabel>Responsável</HistoryMetaLabel>
+                            <HistoryMetaValue>
+                              {ticket.assignedTo ? ticket.assignedTo.name || ticket.assignedTo.email || "Usuário" : "—"}
+                            </HistoryMetaValue>
+                          </HistoryMetaItem>
+                          <HistoryMetaItem>
+                            <HistoryMetaLabel>Formulário</HistoryMetaLabel>
+                            <HistoryMetaValue>{ticket.form?.title || "—"}</HistoryMetaValue>
+                          </HistoryMetaItem>
+                          <HistoryMetaItem>
+                            <HistoryMetaLabel>Tempo de resolução</HistoryMetaLabel>
+                            <HistoryMetaValue>{resolutionLabel}</HistoryMetaValue>
+                          </HistoryMetaItem>
+                          <HistoryMetaItem>
+                            <HistoryMetaLabel>
+                              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
+                                <line x1="16" y1="2" x2="16" y2="6"/>
+                                <line x1="8" y1="2" x2="8" y2="6"/>
+                                <line x1="3" y1="10" x2="21" y2="10"/>
+                              </svg>
+                              Abertura
+                            </HistoryMetaLabel>
+                            <HistoryMetaDateValue>{formatDate(ticket.createdAt)}</HistoryMetaDateValue>
+                          </HistoryMetaItem>
+                          <HistoryMetaItem>
+                            <HistoryMetaLabel>
+                              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>
+                              </svg>
+                              Encerramento
+                            </HistoryMetaLabel>
+                            <HistoryMetaDateValue>{formatDate(ticket.updatedAt)}</HistoryMetaDateValue>
+                          </HistoryMetaItem>
+                        </HistoryMetaGrid>
+                        {formFields.length > 0 ? (
+                          <HistoryFormFields>
+                            {formFields.map((field, idx) => (
+                              <HistoryFormField key={idx}>
+                                <HistoryFormFieldLabel>
+                                  {field.isPhone && (
+                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                      <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/>
+                                    </svg>
+                                  )}
+                                  {field.isEmail && (
+                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                      <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/>
+                                      <polyline points="22,6 12,13 2,6"/>
+                                    </svg>
+                                  )}
+                                  {field.isLink && (
+                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                      <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/>
+                                      <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/>
+                                    </svg>
+                                  )}
+                                  {field.label}
+                                </HistoryFormFieldLabel>
+                                <HistoryFormFieldValue>
+                                  {field.isLink ? (
+                                    <HistoryFormLink href={field.value.startsWith("http") ? field.value : `${getBrowserOrigin()}${field.value}`} target="_blank" rel="noreferrer">
+                                      Ver arquivo
+                                    </HistoryFormLink>
+                                  ) : field.isEmail ? (
+                                    <HistoryFormLink as="a" href={`mailto:${field.value}`} style={{ background: "transparent", padding: 0 }}>
+                                      {field.value}
+                                    </HistoryFormLink>
+                                  ) : (
+                                    field.value
+                                  )}
+                                </HistoryFormFieldValue>
+                              </HistoryFormField>
+                            ))}
+                          </HistoryFormFields>
+                        ) : (
+                          <HistoryDescription>
+                            {getSummarySnippet(ticket.description)}
+                          </HistoryDescription>
+                        )}
+                        <HistoryActions>
+                          <GhostButton type="button" onClick={() => openDrawer(ticket)}>
+                            Ver detalhes
+                          </GhostButton>
+                          <PrimaryButton
+                            type="button"
+                            onClick={() => handleReopen(ticket)}
+                            disabled={reopeningId === ticket.id}
+                          >
+                            {reopeningId === ticket.id ? "Reabrindo..." : "Reabrir ticket"}
+                          </PrimaryButton>
+                        </HistoryActions>
+                      </HistoryCard>
+                    );
+                  })}
+                </HistoryList>
+                {totalPages > 1 && (
+                  <PaginationBar aria-label="Paginação do histórico">
+                    <PaginationButton
+                      type="button"
+                      onClick={() => setCurrentPage((page) => Math.max(1, page - 1))}
+                      disabled={currentPage === 1}
+                    >
+                      Anterior
+                    </PaginationButton>
+                    <PaginationStatus>
+                      Página {currentPage} de {totalPages}
+                    </PaginationStatus>
+                    <PaginationButton
+                      type="button"
+                      onClick={() => setCurrentPage((page) => Math.min(totalPages, page + 1))}
+                      disabled={currentPage === totalPages}
+                    >
+                      Próxima
+                    </PaginationButton>
+                  </PaginationBar>
+                )}
+              </>
             )}
           </MainCard>
         </Content>
@@ -918,150 +1008,179 @@ export default function HistoryPage() {
             </DrawerStatus>
           </DrawerHeader>
 
-          <DrawerSection>
-            <SectionTitle>Resumo</SectionTitle>
-            {summaryEntries.length === 0 ? (
-              <EmptySummary>Nenhum detalhe adicional registrado.</EmptySummary>
-            ) : (
-              <SummaryWrapper>
-                {summaryEntries.map((entry, index) => {
-                  if (entry.type === "section") {
-                    return (
-                      <SummarySectionHeading key={`section-${index}`}>
-                        {entry.label}
-                      </SummarySectionHeading>
-                    );
-                  }
-                  if (entry.type === "text") {
-                    return (
-                      <SummaryText key={`text-${index}`}>{entry.value}</SummaryText>
-                    );
-                  }
-                  return (
-                    <SummaryRow key={`field-${index}`}>
-                      <SummaryLabel>{entry.label}</SummaryLabel>
-                      <SummaryRowContent>
-                        {entry.isLink ? (
-                          <SummaryLink
-                            href={entry.value.startsWith("http") ? entry.value : `${getBrowserOrigin()}${entry.value}`}
-                            target="_blank"
-                            rel="noreferrer"
-                          >
-                            Abrir arquivo
+          <DrawerContent role="region" aria-label="Informações do ticket">
+            <DrawerGrid>
+              <DrawerColumn>
+                <DrawerSection>
+                  <SectionTitle>Resumo</SectionTitle>
+                  {summaryEntries.length === 0 ? (
+                    <EmptySummary>Nenhum detalhe adicional registrado.</EmptySummary>
+                  ) : (
+                    <SummaryWrapper>
+                      {summaryEntries.map((entry, index) => {
+                        if (entry.type === "section") {
+                          return (
+                            <SummarySectionHeading key={`section-${index}`}>
+                              {entry.label}
+                            </SummarySectionHeading>
+                          );
+                        }
+                        if (entry.type === "text") {
+                          return (
+                            <SummaryText key={`text-${index}`}>{entry.value}</SummaryText>
+                          );
+                        }
+                        return (
+                          <SummaryRow key={`field-${index}`}>
+                            <SummaryLabel>
+                              {entry.isPhone && (
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                  <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/>
+                                </svg>
+                              )}
+                              {entry.isEmail && (
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                  <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/>
+                                  <polyline points="22,6 12,13 2,6"/>
+                                </svg>
+                              )}
+                              {entry.isLink && (
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                  <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/>
+                                  <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/>
+                                </svg>
+                              )}
+                              {entry.label}
+                            </SummaryLabel>
+                            <SummaryRowContent>
+                              {entry.isLink ? (
+                                <SummaryLink
+                                  href={entry.value.startsWith("http") ? entry.value : `${getBrowserOrigin()}${entry.value}`}
+                                  target="_blank"
+                                  rel="noreferrer"
+                                >
+                                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                    <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/>
+                                    <polyline points="15 3 21 3 21 9"/>
+                                    <line x1="10" y1="14" x2="21" y2="3"/>
+                                  </svg>
+                                  Abrir arquivo
+                                </SummaryLink>
+                              ) : entry.isEmail ? (
+                                <SummaryLink as="a" href={`mailto:${entry.value}`} style={{ background: "transparent", padding: 0 }}>
+                                  {entry.value || "-"}
+                                </SummaryLink>
+                              ) : (
+                                <SummaryValue>{entry.value || "-"}</SummaryValue>
+                              )}
+                              {entry.isPhone && (
+                                <WhatsappButton type="button" onClick={() => openWhatsapp(entry.value)}>
+                                  <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                                    <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.041-.024c-2.788-1.552-4.636-4.067-5.435-6.644l-.002-.009c-1.39-3.7-.256-7.684 2.994-10.44a9.825 9.825 0 0112.807.094c3.25 2.756 4.384 6.74 2.994 10.44l-.002.009c-.799 2.577-2.647 5.092-5.435 6.644l-.041.024a9.87 9.87 0 01-5.031 1.378m5.421-15.403c-2.115 0-4.197.585-6.001 1.691l-.048.028c-2.567 1.428-4.27 3.745-4.998 6.298l-.002.009c-1.28 3.4-.177 7.05 2.754 9.57a9.125 9.125 0 0011.95-.086c2.931-2.52 4.034-6.17 2.754-9.57l-.002-.009c-.728-2.553-2.431-4.87-4.998-6.298l-.048-.028a9.125 9.125 0 00-6.001-1.691"/>
+                                  </svg>
+                                  Chamar no WhatsApp
+                                </WhatsappButton>
+                              )}
+                            </SummaryRowContent>
+                          </SummaryRow>
+                        );
+                      })}
+                    </SummaryWrapper>
+                  )}
+                </DrawerSection>
+              </DrawerColumn>
+
+              <DrawerColumn>
+                <DrawerSection>
+                  <SectionTitle>Detalhes básicos</SectionTitle>
+                  <DetailGrid>
+                    <DetailItem>
+                      <DetailLabel>Status</DetailLabel>
+                      <DetailValue>{STATUS_LABELS[drawerTicket.status]}</DetailValue>
+                    </DetailItem>
+                    <DetailItem>
+                      <DetailLabel>Responsável</DetailLabel>
+                      <DetailValue>
+                        {drawerTicket.assignedTo
+                          ? `${drawerTicket.assignedTo.name || "Usuário"}${drawerTicket.assignedTo.email ? ` · ${drawerTicket.assignedTo.email}` : ""}`
+                          : "—"}
+                      </DetailValue>
+                    </DetailItem>
+                    <DetailItem>
+                      <DetailLabel>Criado em</DetailLabel>
+                      <DetailValue>{formatDate(drawerTicket.createdAt)}</DetailValue>
+                    </DetailItem>
+                    <DetailItem>
+                      <DetailLabel>Encerrado em</DetailLabel>
+                      <DetailValue>{formatDate(drawerTicket.updatedAt)}</DetailValue>
+                    </DetailItem>
+                    <DetailItem>
+                      <DetailLabel>Formulário</DetailLabel>
+                      <DetailValue>
+                        {drawerTicket.form ? (
+                          <SummaryLink href={`/forms/${drawerTicket.form.slug}`} target="_blank" rel="noreferrer">
+                            {drawerTicket.form.title}
                           </SummaryLink>
                         ) : (
-                          <SummaryValue>{entry.value || "-"}</SummaryValue>
+                          "—"
                         )}
-                        {entry.isPhone && (
-                          <WhatsappButton type="button" onClick={() => openWhatsapp(entry.value)}>
-                            Chamar no WhatsApp
-                          </WhatsappButton>
-                        )}
-                      </SummaryRowContent>
-                    </SummaryRow>
-                  );
-                })}
-              </SummaryWrapper>
-            )}
-          </DrawerSection>
+                      </DetailValue>
+                    </DetailItem>
+                    {drawerTicket.scheduledAt && (
+                      <DetailItem>
+                        <DetailLabel>Agendado para</DetailLabel>
+                        <DetailValue>{formatDate(drawerTicket.scheduledAt)}</DetailValue>
+                      </DetailItem>
+                    )}
+                    {drawerTicket.scheduledNote && (
+                      <DetailItem>
+                        <DetailLabel>Observação do agendamento</DetailLabel>
+                        <DetailValue>{drawerTicket.scheduledNote}</DetailValue>
+                      </DetailItem>
+                    )}
+                  </DetailGrid>
 
-          <DrawerSection>
-            <SectionTitle>Detalhes básicos</SectionTitle>
-            <DetailGrid>
-              <DetailItem>
-                <DetailLabel>Status</DetailLabel>
-                <DetailValue>{STATUS_LABELS[drawerTicket.status]}</DetailValue>
-              </DetailItem>
-              <DetailItem>
-                <DetailLabel>Solicitante</DetailLabel>
-                <DetailValue>
-                  {drawerTicket.requester
-                    ? `${drawerTicket.requester.name || "Usuário"}${drawerTicket.requester.email ? ` · ${drawerTicket.requester.email}` : ""}`
-                    : "—"}
-                </DetailValue>
-              </DetailItem>
-              <DetailItem>
-                <DetailLabel>Responsável</DetailLabel>
-                <DetailValue>
-                  {drawerTicket.assignedTo
-                    ? `${drawerTicket.assignedTo.name || "Usuário"}${drawerTicket.assignedTo.email ? ` · ${drawerTicket.assignedTo.email}` : ""}`
-                    : "—"}
-                </DetailValue>
-              </DetailItem>
-              <DetailItem>
-                <DetailLabel>Categoria</DetailLabel>
-                <DetailValue>{drawerTicket.category?.name || "—"}</DetailValue>
-              </DetailItem>
-              <DetailItem>
-                <DetailLabel>Criado em</DetailLabel>
-                <DetailValue>{formatDate(drawerTicket.createdAt)}</DetailValue>
-              </DetailItem>
-              <DetailItem>
-                <DetailLabel>Encerrado em</DetailLabel>
-                <DetailValue>{formatDate(drawerTicket.updatedAt)}</DetailValue>
-              </DetailItem>
-              <DetailItem>
-                <DetailLabel>Formulário</DetailLabel>
-                <DetailValue>
-                  {drawerTicket.form ? (
-                    <SummaryLink href={`/forms/${drawerTicket.form.slug}`} target="_blank" rel="noreferrer">
-                      {drawerTicket.form.title}
-                    </SummaryLink>
+                  <DrawerStatsGrid>
+                    <DrawerStatCard>
+                      <DrawerStatLabel>Tempo de resolução</DrawerStatLabel>
+                      <DrawerStatValue>{drawerResolutionLabel}</DrawerStatValue>
+                    </DrawerStatCard>
+                    <DrawerStatCard>
+                      <DrawerStatLabel>Atualizações registradas</DrawerStatLabel>
+                      <DrawerStatValue>{drawerUpdates.length}</DrawerStatValue>
+                    </DrawerStatCard>
+                    {drawerTicket.assignedTo && (
+                      <DrawerStatCard>
+                        <DrawerStatLabel>Responsável</DrawerStatLabel>
+                        <DrawerStatValue>{drawerTicket.assignedTo.name || drawerTicket.assignedTo.email || "Usuário"}</DrawerStatValue>
+                      </DrawerStatCard>
+                    )}
+                  </DrawerStatsGrid>
+                </DrawerSection>
+              </DrawerColumn>
+
+              <DrawerColumn>
+                <DrawerSection>
+                  <SectionTitle>Atualizações</SectionTitle>
+                  {drawerUpdates.length === 0 ? (
+                    <EmptySummary>Nenhuma atualização registrada.</EmptySummary>
                   ) : (
-                    "—"
+                    <UpdatesList>
+                      {drawerUpdates.map((update) => (
+                        <UpdateItem key={update.id}>
+                          <UpdateMeta>
+                            <UpdateAuthor>{update.author?.name || update.author?.email || "Equipe"}</UpdateAuthor>
+                            <UpdateTimestamp>{formatDate(update.createdAt)}</UpdateTimestamp>
+                          </UpdateMeta>
+                          <UpdateContent>{update.content}</UpdateContent>
+                        </UpdateItem>
+                      ))}
+                    </UpdatesList>
                   )}
-                </DetailValue>
-              </DetailItem>
-              {drawerTicket.scheduledAt && (
-                <DetailItem>
-                  <DetailLabel>Agendado para</DetailLabel>
-                  <DetailValue>{formatDate(drawerTicket.scheduledAt)}</DetailValue>
-                </DetailItem>
-              )}
-              {drawerTicket.scheduledNote && (
-                <DetailItem>
-                  <DetailLabel>Observação do agendamento</DetailLabel>
-                  <DetailValue>{drawerTicket.scheduledNote}</DetailValue>
-                </DetailItem>
-              )}
-            </DetailGrid>
-
-            <DrawerStatsGrid>
-              <DrawerStatCard>
-                <DrawerStatLabel>Tempo de resolução</DrawerStatLabel>
-                <DrawerStatValue>{drawerResolutionLabel}</DrawerStatValue>
-              </DrawerStatCard>
-              <DrawerStatCard>
-                <DrawerStatLabel>Atualizações registradas</DrawerStatLabel>
-                <DrawerStatValue>{drawerUpdates.length}</DrawerStatValue>
-              </DrawerStatCard>
-              {drawerTicket.assignedTo && (
-                <DrawerStatCard>
-                  <DrawerStatLabel>Responsável</DrawerStatLabel>
-                  <DrawerStatValue>{drawerTicket.assignedTo.name || drawerTicket.assignedTo.email || "Usuário"}</DrawerStatValue>
-                </DrawerStatCard>
-              )}
-            </DrawerStatsGrid>
-          </DrawerSection>
-
-          <DrawerSection>
-            <SectionTitle>Atualizações</SectionTitle>
-            {drawerUpdates.length === 0 ? (
-              <EmptySummary>Nenhuma atualização registrada.</EmptySummary>
-            ) : (
-              <UpdatesList>
-                {drawerUpdates.map((update) => (
-                  <UpdateItem key={update.id}>
-                    <UpdateMeta>
-                      <UpdateAuthor>{update.author?.name || update.author?.email || "Equipe"}</UpdateAuthor>
-                      <UpdateTimestamp>{formatDate(update.createdAt)}</UpdateTimestamp>
-                    </UpdateMeta>
-                    <UpdateContent>{update.content}</UpdateContent>
-                  </UpdateItem>
-                ))}
-              </UpdatesList>
-            )}
-          </DrawerSection>
+                </DrawerSection>
+              </DrawerColumn>
+            </DrawerGrid>
+          </DrawerContent>
 
           <DrawerActions>
             <PrimaryButton
@@ -1142,6 +1261,35 @@ function getSummarySnippet(text: string): string {
   const normalized = text.replace(/\s+/g, " ").trim();
   if (!normalized) return "Sem descrição registrada para este ticket.";
   return normalized.length > 180 ? `${normalized.slice(0, 180)}…` : normalized;
+}
+
+function parseFormFields(description: string): Array<{ label: string; value: string; isLink: boolean; isPhone: boolean; isEmail: boolean }> {
+  if (!description) return [];
+  const lines = description.split(/\r?\n/g);
+  const fields: Array<{ label: string; value: string; isLink: boolean; isPhone: boolean; isEmail: boolean }> = [];
+  
+  for (const rawLine of lines) {
+    const line = rawLine.trim();
+    if (!line) continue;
+    if (/^formulário:|^enviado em:|^campos adicionais:?$/i.test(line)) continue;
+    
+    const colonIndex = line.indexOf(":");
+    if (colonIndex > -1) {
+      const label = line.slice(0, colonIndex).trim();
+      const valueRaw = line.slice(colonIndex + 1).trim() || "-";
+      if (!valueRaw || valueRaw === "-") continue;
+      
+      const isLink = /^https?:\/\//i.test(valueRaw) || valueRaw.startsWith("/uploads/") || valueRaw.startsWith("/files/");
+      const isPhoneLabel = /telefone|celular|whats?/i.test(label);
+      const phoneDigits = valueRaw.replace(/[^0-9+]/g, "");
+      const isPhone = isPhoneLabel && phoneDigits.length >= 9;
+      const isEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(valueRaw);
+      
+      fields.push({ label, value: valueRaw.length > 50 ? `${valueRaw.slice(0, 50)}…` : valueRaw, isLink, isPhone, isEmail });
+    }
+  }
+  
+  return fields.slice(0, 5); // Limitar a 5 campos principais
 }
 
 function sanitizeCsv(value: string | null | undefined): string {
@@ -1361,15 +1509,39 @@ const HeaderActions = styled.div`
 `;
 
 const ReloadButton = styled.button`
-  padding: 10px 16px;
+  width: 40px;
+  height: 40px;
+  padding: 0;
   border-radius: 10px;
   border: 1px solid rgba(37, 99, 235, 0.4);
   background: rgba(37, 99, 235, 0.08);
   color: #1d4ed8;
-  font-weight: 600;
   cursor: pointer;
-  &:hover { background: rgba(37, 99, 235, 0.14); }
-  &:disabled { opacity: 0.6; cursor: default; }
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform 0.1s ease, background 0.2s ease;
+  &:hover:not(:disabled) { 
+    background: rgba(37, 99, 235, 0.14);
+    transform: scale(1.05);
+  }
+  &:disabled {
+    opacity: 0.6;
+    cursor: default;
+  }
+`;
+
+const ReloadIcon = styled.svg<{ $spinning?: boolean }>`
+  width: 20px;
+  height: 20px;
+  transition: transform 0.3s ease;
+  ${(p) => p.$spinning && `
+    animation: spin 1s linear infinite;
+  `}
+  @keyframes spin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+  }
 `;
 
 const FiltersBar = styled.section`
@@ -1606,24 +1778,92 @@ const HistoryStatus = styled.span`
 
 const HistoryMetaGrid = styled.div`
   display: grid;
-  gap: 12px;
-  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 16px;
+  grid-template-columns: repeat(5, 1fr);
+  
+  @media (max-width: 1400px) {
+    grid-template-columns: repeat(3, 1fr);
+  }
+  
+  @media (max-width: 900px) {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  
+  @media (max-width: 600px) {
+    grid-template-columns: 1fr;
+  }
 `;
 
 const HistoryMetaItem = styled.div`
   display: grid;
-  gap: 4px;
+  gap: 6px;
 `;
 
 const HistoryMetaLabel = styled.span`
-  font-size: 0.75rem;
+  font-size: 0.7rem;
   text-transform: uppercase;
-  color: #94a3b8;
-  letter-spacing: 0.05em;
+  color: #64748b;
+  letter-spacing: 0.06em;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  
+  svg {
+    flex-shrink: 0;
+    color: #2563eb;
+  }
 `;
 
 const HistoryMetaValue = styled.span`
   color: #0f172a;
+  font-size: 0.9rem;
+  font-weight: 500;
+`;
+
+const HistoryMetaDateValue = styled(HistoryMetaValue)`
+  font-family: 'SF Mono', 'Monaco', 'Inconsolata', 'Roboto Mono', monospace;
+  font-weight: 600;
+`;
+
+const HistoryDatesGrid = styled.div`
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 12px;
+  padding: 14px;
+  border-radius: 10px;
+  background: linear-gradient(135deg, rgba(37, 99, 235, 0.05), rgba(59, 130, 246, 0.03));
+  border: 1px solid rgba(37, 99, 235, 0.15);
+  margin-top: 8px;
+`;
+
+const HistoryDateItem = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+`;
+
+const HistoryDateLabel = styled.span`
+  font-size: 0.7rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: #64748b;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  
+  svg {
+    flex-shrink: 0;
+    color: #2563eb;
+  }
+`;
+
+const HistoryDateValue = styled.span`
+  color: #0f172a;
+  font-size: 0.95rem;
+  font-weight: 600;
+  font-family: 'SF Mono', 'Monaco', 'Inconsolata', 'Roboto Mono', monospace;
 `;
 
 const HistoryDescription = styled.p`
@@ -1632,11 +1872,106 @@ const HistoryDescription = styled.p`
   line-height: 1.5;
 `;
 
+const HistoryFormFields = styled.div`
+  display: grid;
+  gap: 12px;
+  padding: 16px;
+  border-radius: 12px;
+  background: linear-gradient(180deg, #ffffff, rgba(248, 250, 252, 0.6) 100%);
+  border: 1px solid rgba(148, 163, 184, 0.2);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+`;
+
+const HistoryFormField = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  background: #ffffff;
+  border: 1px solid rgba(148, 163, 184, 0.12);
+  transition: all 0.15s ease;
+  &:hover {
+    border-color: rgba(37, 99, 235, 0.25);
+    box-shadow: 0 1px 4px rgba(37, 99, 235, 0.08);
+  }
+`;
+
+const HistoryFormFieldLabel = styled.span`
+  font-size: 0.7rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: #64748b;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+`;
+
+const HistoryFormFieldValue = styled.span`
+  color: #0f172a;
+  font-size: 0.95rem;
+  font-weight: 500;
+  word-break: break-word;
+  line-height: 1.4;
+`;
+
+const HistoryFormLink = styled.a`
+  color: #2563eb;
+  font-weight: 600;
+  text-decoration: none;
+  padding: 4px 8px;
+  border-radius: 6px;
+  background: rgba(37, 99, 235, 0.1);
+  display: inline-flex;
+  align-items: center;
+  transition: all 0.2s ease;
+  &:hover {
+    background: rgba(37, 99, 235, 0.15);
+  }
+`;
+
 const HistoryActions = styled.div`
   display: flex;
   flex-wrap: wrap;
   gap: 10px;
   justify-content: flex-end;
+`;
+
+const PaginationBar = styled.nav`
+  margin-top: 24px;
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+`;
+
+const PaginationButton = styled.button`
+  padding: 10px 16px;
+  border-radius: 999px;
+  border: 1px solid rgba(148, 163, 184, 0.35);
+  background: #fff;
+  color: #475569;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.18s ease, transform 0.1s ease, box-shadow 0.1s ease;
+
+  &:hover:not(:disabled) {
+    background: rgba(148, 163, 184, 0.16);
+    transform: translateY(-1px);
+    box-shadow: 0 10px 20px -18px rgba(15, 23, 42, 0.45);
+  }
+
+  &:disabled {
+    opacity: 0.55;
+    cursor: not-allowed;
+  }
+`;
+
+const PaginationStatus = styled.span`
+  color: #475569;
+  font-weight: 600;
 `;
 
 const PrimaryButton = styled.button`
@@ -1902,6 +2237,49 @@ const DrawerStatus = styled.span`
   &[data-status="CLOSED"] { background: rgba(148, 163, 184, 0.24); color: #334155; }
 `;
 
+const DrawerContent = styled.div`
+  flex: 1;
+  display: grid;
+  overflow-y: auto;
+  padding-right: 10px;
+  margin-right: -6px;
+
+  &::-webkit-scrollbar {
+    width: 6px;
+  }
+
+  &::-webkit-scrollbar-thumb {
+    background: rgba(148, 163, 184, 0.6);
+    border-radius: 999px;
+  }
+
+  &::-webkit-scrollbar-track {
+    background: rgba(226, 232, 240, 0.4);
+    border-radius: 999px;
+  }
+`;
+
+const DrawerGrid = styled.div`
+  display: grid;
+  gap: 24px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  align-items: flex-start;
+
+  @media (max-width: 1280px) {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  @media (max-width: 960px) {
+    grid-template-columns: 1fr;
+  }
+`;
+
+const DrawerColumn = styled.div`
+  display: grid;
+  gap: 24px;
+  min-width: 0;
+`;
+
 const DrawerSection = styled.section`
   display: grid;
   gap: 12px;
@@ -1915,57 +2293,93 @@ const SectionTitle = styled.h3`
 
 const SummaryWrapper = styled.div`
   display: grid;
-  gap: 10px;
-  padding: 12px;
-  border-radius: 12px;
-  border: 1px solid rgba(148, 163, 184, 0.25);
-  background: #f8fafc;
+  gap: 14px;
+  padding: 16px;
+  border-radius: 14px;
+  border: 1px solid rgba(148, 163, 184, 0.2);
+  background: linear-gradient(180deg, #ffffff, #f8fafc 100%);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
 `;
 
 const SummaryRow = styled.div`
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 8px;
+  padding: 14px 16px;
+  border-radius: 10px;
+  background: #ffffff;
+  border: 1px solid rgba(148, 163, 184, 0.15);
+  transition: all 0.2s ease;
+  &:hover {
+    border-color: rgba(37, 99, 235, 0.3);
+    box-shadow: 0 2px 6px rgba(37, 99, 235, 0.08);
+  }
 `;
 
 const SummaryRowContent = styled.div`
   display: flex;
   flex-wrap: wrap;
-  gap: 8px;
+  gap: 10px;
   align-items: center;
 `;
 
 const SummaryLabel = styled.span`
-  font-size: 0.75rem;
-  letter-spacing: 0.08em;
+  font-size: 0.8rem;
+  letter-spacing: 0.05em;
   text-transform: uppercase;
-  color: #94a3b8;
+  color: #64748b;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 6px;
 `;
 
 const SummaryValue = styled.span`
   color: #0f172a;
   word-break: break-word;
+  font-size: 0.95rem;
+  line-height: 1.5;
+  font-weight: 500;
 `;
 
 const SummaryLink = styled.a`
   color: #2563eb;
   font-weight: 600;
   text-decoration: none;
-  &:hover { text-decoration: underline; }
+  padding: 6px 12px;
+  border-radius: 8px;
+  background: rgba(37, 99, 235, 0.1);
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  transition: all 0.2s ease;
+  &:hover { 
+    background: rgba(37, 99, 235, 0.15);
+    transform: translateY(-1px);
+  }
 `;
 
 const SummarySectionHeading = styled.span`
   display: block;
   font-weight: 700;
   color: #0f172a;
-  padding-top: 8px;
-  border-top: 1px dashed rgba(148, 163, 184, 0.6);
+  font-size: 1rem;
+  padding: 12px 16px;
+  margin-top: 8px;
+  border-top: 2px solid rgba(148, 163, 184, 0.3);
+  border-radius: 8px;
+  background: rgba(37, 99, 235, 0.05);
 `;
 
 const SummaryText = styled.p`
   margin: 0;
   color: #475569;
-  line-height: 1.5;
+  line-height: 1.6;
+  font-size: 0.95rem;
+  padding: 12px 16px;
+  border-radius: 8px;
+  background: rgba(248, 250, 252, 0.8);
+  border-left: 3px solid rgba(37, 99, 235, 0.3);
 `;
 
 const EmptySummary = styled.p`
@@ -2023,14 +2437,21 @@ const WhatsappButton = styled.button`
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  padding: 8px 12px;
+  padding: 8px 14px;
   border-radius: 8px;
-  border: 1px solid rgba(37, 211, 102, 0.4);
-  background: rgba(37, 211, 102, 0.12);
+  border: 1px solid rgba(37, 211, 102, 0.5);
+  background: rgba(37, 211, 102, 0.15);
   color: #128c7e;
   font-weight: 600;
+  font-size: 0.9rem;
   cursor: pointer;
-  &:hover { background: rgba(37, 211, 102, 0.2); }
+  transition: all 0.2s ease;
+  &:hover { 
+    background: rgba(37, 211, 102, 0.25);
+    border-color: rgba(37, 211, 102, 0.7);
+    transform: translateY(-1px);
+    box-shadow: 0 2px 6px rgba(37, 211, 102, 0.2);
+  }
 `;
 
 const UpdatesList = styled.ul`
@@ -2103,4 +2524,58 @@ const DrawerStatsGrid = styled.div`
   display: grid;
   gap: 12px;
   grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
-`
+`;
+
+const DrawerStatCard = styled.article`
+  display: grid;
+  gap: 6px;
+  padding: 14px 16px;
+  border-radius: 12px;
+  border: 1px solid rgba(148, 163, 184, 0.28);
+  background: linear-gradient(180deg, rgba(226, 232, 240, 0.55), #fff 130%);
+  box-shadow: 0 14px 26px -24px rgba(15, 23, 42, 0.65);
+`;
+
+const DrawerStatLabel = styled.span`
+  font-size: 0.85rem;
+  color: #475569;
+  font-weight: 500;
+`;
+
+const DrawerStatValue = styled.strong`
+  font-size: clamp(1.05rem, 1.8vw, 1.35rem);
+  color: #0f172a;
+`;
+
+const InsightsSection = styled.section`
+  display: grid;
+  gap: 14px;
+  margin: 26px 0 18px;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+`;
+
+const InsightCard = styled.article`
+  display: grid;
+  gap: 6px;
+  padding: 16px 18px;
+  border-radius: 14px;
+  border: 1px solid rgba(3, 105, 161, 0.2);
+  background: linear-gradient(180deg, rgba(224, 242, 254, 0.6), #fff 120%);
+  box-shadow: 0 18px 32px -32px rgba(30, 64, 175, 0.55);
+`;
+
+const InsightTitle = styled.h3`
+  margin: 0;
+  font-size: 0.95rem;
+  color: #0f172a;
+`;
+
+const InsightValue = styled.strong`
+  font-size: clamp(1.15rem, 1.8vw, 1.45rem);
+  color: #1d4ed8;
+`;
+
+const InsightHint = styled.span`
+  font-size: 0.85rem;
+  color: #475569;
+`;

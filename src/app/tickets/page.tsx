@@ -2,6 +2,7 @@
 
 import { ChangeEvent, DragEvent, FormEvent, KeyboardEvent, MouseEvent as ReactMouseEvent, useEffect, useMemo, useRef, useState } from "react";
 import styled, { keyframes } from "styled-components";
+import { useSound } from "@/lib/sounds";
 
 type TicketStatus = "OPEN" | "IN_PROGRESS" | "OBSERVATION" | "RESOLVED" | "CLOSED";
 
@@ -32,12 +33,13 @@ type UserOption = { id: number; name: string; email: string };
 
 type SummaryEntry =
   | { type: "section"; label: string }
-  | { type: "field"; label: string; value: string; isLink: boolean; isPhone: boolean }
+  | { type: "field"; label: string; value: string; isLink: boolean; isPhone: boolean; isEmail: boolean }
   | { type: "text"; value: string };
 
 type FeedbackMessage = { type: "success" | "error"; message: string } | null;
 
 const STATUS_FLOW: TicketStatus[] = ["OPEN", "IN_PROGRESS", "OBSERVATION", "RESOLVED", "CLOSED"];
+const OVERDUE_THRESHOLD_MS = 48 * 60 * 60 * 1000; // 48 horas
 
 const STATUS_DETAILS: Record<
   TicketStatus,
@@ -199,6 +201,17 @@ function parseDateTimeLocal(value: string): string | null {
   return date.toISOString();
 }
 
+function getTicketAgeMs(ticket: TicketItem, nowTs: number): number {
+  const createdAt = new Date(ticket.createdAt).getTime();
+  if (!Number.isFinite(createdAt)) return 0;
+  return Math.max(0, nowTs - createdAt);
+}
+
+function isTicketOverdue(ticket: TicketItem, nowTs: number): boolean {
+  if (ticket.status === "CLOSED") return false;
+  return getTicketAgeMs(ticket, nowTs) >= OVERDUE_THRESHOLD_MS;
+}
+
 function getBrowserWindow(): any {
   if (typeof globalThis !== "undefined" && (globalThis as any).window) {
     return (globalThis as any).window;
@@ -234,7 +247,44 @@ function openWhatsapp(raw: string) {
   }
 }
 
+const RefreshButton = styled.button`
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  border-radius: 10px;
+  border: 1px solid rgba(37, 99, 235, 0.4);
+  background: rgba(37, 99, 235, 0.08);
+  color: #1d4ed8;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform 0.1s ease, background 0.2s ease;
+  &:hover:not(:disabled) { 
+    background: rgba(37, 99, 235, 0.14);
+    transform: scale(1.05);
+  }
+  &:disabled {
+    opacity: 0.6;
+    cursor: default;
+  }
+`;
+
+const RefreshIcon = styled.svg<{ $spinning?: boolean }>`
+  width: 20px;
+  height: 20px;
+  transition: transform 0.3s ease;
+  ${(p) => p.$spinning && `
+    animation: spin 1s linear infinite;
+  `}
+  @keyframes spin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+  }
+`;
+
 export default function TicketsPage() {
+  const sounds = useSound();
   const [sidebarOpen, setSidebarOpen] = useState<boolean>(true);
   const [userMenuOpen, setUserMenuOpen] = useState<boolean>(false);
   const [confirmOpen, setConfirmOpen] = useState<boolean>(false);
@@ -248,6 +298,7 @@ export default function TicketsPage() {
   const [search, setSearch] = useState<string>("");
   const [statusFilter, setStatusFilter] = useState<TicketStatus | "ALL">("ALL");
   const [onlyMine, setOnlyMine] = useState<boolean>(false);
+  const [onlyOverdue, setOnlyOverdue] = useState<boolean>(false);
   const [feedback, setFeedback] = useState<FeedbackMessage>(null);
   const [drawerOpen, setDrawerOpen] = useState<boolean>(false);
   const [drawerTicket, setDrawerTicket] = useState<TicketItem | null>(null);
@@ -436,6 +487,7 @@ export default function TicketsPage() {
       const matchesAssignee =
         !onlyMine || (sessionUser?.id != null && ticket.assignedTo?.id === sessionUser.id);
       if (!matchesAssignee) return false;
+      if (onlyOverdue && !isTicketOverdue(ticket, now)) return false;
       if (!term) return true;
       const content = [
         ticket.title,
@@ -451,7 +503,7 @@ export default function TicketsPage() {
         .join(" ");
       return content.includes(term);
     });
-  }, [tickets, statusFilter, search, onlyMine, sessionUser?.id]);
+  }, [tickets, statusFilter, search, onlyMine, sessionUser?.id, onlyOverdue, now]);
 
   const groupedTickets = useMemo(() => {
     return BOARD_STATUSES.reduce<Record<TicketStatus, TicketItem[]>>((acc, status) => {
@@ -475,6 +527,11 @@ export default function TicketsPage() {
         };
       }),
     [activeTickets],
+  );
+
+  const overdueTickets = useMemo(
+    () => activeTickets.filter((ticket) => isTicketOverdue(ticket, now)),
+    [activeTickets, now],
   );
 
   async function mutateTicket(
@@ -504,12 +561,21 @@ export default function TicketsPage() {
         throw new Error(json?.error || "Erro ao atualizar ticket.");
       }
       const updated = normalizeTicket(json);
+      const previousTicket = drawerTicket?.id === ticketId ? drawerTicket : tickets.find(t => t.id === ticketId);
+      const wasClosed = previousTicket?.status === "CLOSED";
+      const isNowClosed = updated.status === "CLOSED";
+      
       setTickets((prev) => prev.map((ticket) => (ticket.id === updated.id ? updated : ticket)));
       if (drawerTicket && drawerTicket.id === updated.id) {
         setDrawerTicket(updated);
       }
       if (source === "drawer" || source === "schedule") {
         setFeedback({ type: "success", message: "Ticket atualizado com sucesso." });
+        if (isNowClosed && !wasClosed) {
+          sounds.playTicketClosed();
+        } else {
+          sounds.playTicketUpdated();
+        }
       }
       return true;
     } catch (err: any) {
@@ -518,6 +584,7 @@ export default function TicketsPage() {
         setScheduleError(message);
       } else {
         setFeedback({ type: "error", message });
+        sounds.playError();
       }
       return false;
     } finally {
@@ -539,6 +606,7 @@ export default function TicketsPage() {
     setScheduleError("");
     setScheduleModalOpen(false);
     setDrawerOpen(true);
+    sounds.playClick();
   }
 
   function closeDrawer() {
@@ -564,6 +632,7 @@ export default function TicketsPage() {
     }
     if (Object.keys(updates).length === 0) {
       setFeedback({ type: "error", message: "Nenhuma alteração para salvar." });
+      sounds.playError();
       return;
     }
     mutateTicket(drawerTicket.id, updates, "drawer");
@@ -671,9 +740,11 @@ export default function TicketsPage() {
       );
       setUpdateMessage("");
       setFeedback({ type: "success", message: "Atualização registrada com sucesso." });
+      sounds.playSuccess();
     } catch (err: any) {
       const message = err?.message || "Não foi possível salvar a atualização.";
       setFeedback({ type: "error", message });
+      sounds.playError();
     } finally {
       setUpdateSaving(false);
     }
@@ -756,7 +827,8 @@ export default function TicketsPage() {
         const isPhoneLabel = /telefone|celular|whats?/i.test(label);
         const phoneDigits = valueRaw.replace(/[^0-9+]/g, "");
         const isPhone = isPhoneLabel && phoneDigits.length >= 9;
-        items.push({ type: "field", label, value: valueRaw, isLink, isPhone });
+        const isEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(valueRaw);
+        items.push({ type: "field", label, value: valueRaw, isLink, isPhone, isEmail });
       } else {
         items.push({ type: "text", value: line });
       }
@@ -801,6 +873,9 @@ export default function TicketsPage() {
               </NavItem>
               <NavItem href="/history" aria-label="Histórico">
                 Histórico
+              </NavItem>
+              <NavItem href="/relatorios" aria-label="Relatórios">
+                Relatórios
               </NavItem>
               <NavItem href="/config?section=forms" aria-label="Configurações">
                 Configurações
@@ -897,29 +972,22 @@ export default function TicketsPage() {
             <PageHeader>
               <div>
                 <Title>Central de Tickets</Title>
-                <Subtitle>
-                  Monitore e atualize os chamados gerados pelos formulários em um pipeline moderno.
-                </Subtitle>
               </div>
               <HeaderActions>
-                <RefreshButton onClick={() => loadTickets({ silent: true })} disabled={refreshing}>
-                  {refreshing ? "Atualizando..." : "Atualizar"}
+                <RefreshButton 
+                  onClick={() => loadTickets({ silent: true })} 
+                  disabled={refreshing}
+                  title={refreshing ? "Atualizando..." : "Atualizar"}
+                  aria-label={refreshing ? "Atualizando..." : "Atualizar"}
+                >
+                  <RefreshIcon $spinning={refreshing} viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M1 4V10H7" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                    <path d="M23 20V14H17" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                    <path d="M20.49 9A9 9 0 0 0 5.64 5.64L1 10M23 14L18.36 18.36A9 9 0 0 1 3.51 15" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                  </RefreshIcon>
                 </RefreshButton>
               </HeaderActions>
             </PageHeader>
-
-            <MetricsGrid>
-              {metrics.map((metric) => (
-                <MetricCard key={metric.status}>
-                  <MetricLabel>{metric.label}</MetricLabel>
-                  <MetricValue>{metric.count}</MetricValue>
-                  <MetricBar>
-                    <MetricProgress style={{ width: `${metric.percent}%` }} data-status={metric.status} />
-                  </MetricBar>
-                  <MetricFoot>{metric.percent}% do total</MetricFoot>
-                </MetricCard>
-              ))}
-            </MetricsGrid>
 
             <Toolbar>
               <SearchInput
@@ -963,6 +1031,18 @@ export default function TicketsPage() {
                     Meus tickets
                   </MineToggle>
                 )}
+                <OverdueToggle
+                  type="button"
+                  onClick={() => setOnlyOverdue((prev) => !prev)}
+                  data-active={onlyOverdue ? "true" : undefined}
+                  aria-pressed={onlyOverdue ? "true" : "false"}
+                  title="Mostrar apenas tickets abertos há mais de 48 horas"
+                >
+                  Tickets atrasados
+                  <OverdueCount data-highlight={overdueTickets.length > 0 ? "true" : undefined}>
+                    {overdueTickets.length.toLocaleString("pt-BR")}
+                  </OverdueCount>
+                </OverdueToggle>
               </ToolbarFilters>
             </Toolbar>
 
@@ -1016,11 +1096,13 @@ export default function TicketsPage() {
                           const hasSchedule = Boolean(scheduleDate);
                           const scheduleDue = scheduleDate ? scheduleDate.getTime() <= now : false;
                           const scheduleLabel = scheduleDate ? formatDate(scheduleDate.toISOString()) : null;
+                          const overdue = isTicketOverdue(ticket, now);
                           return (
                             <TicketCard
                               key={ticket.id}
                               data-pending={pendingTicketId === ticket.id}
                               data-due={scheduleDue ? "true" : undefined}
+                              data-overdue={overdue ? "true" : undefined}
                               role="button"
                               tabIndex={0}
                               draggable
@@ -1035,6 +1117,7 @@ export default function TicketsPage() {
                                 }
                               }}
                             >
+                              {overdue && <OverdueBadge>Pendente há 48h+</OverdueBadge>}
                               <TicketHeader>
                                 <TicketId>#{ticket.id}</TicketId>
                                 <StatusBadge data-status={ticket.status}>
@@ -1120,7 +1203,26 @@ export default function TicketsPage() {
                         }
                         return (
                           <SummaryRow key={`field-${index}`}>
-                            <SummaryLabel>{entry.label}</SummaryLabel>
+                            <SummaryLabel>
+                              {entry.isPhone && (
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                  <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/>
+                                </svg>
+                              )}
+                              {entry.isEmail && (
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                  <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/>
+                                  <polyline points="22,6 12,13 2,6"/>
+                                </svg>
+                              )}
+                              {entry.isLink && (
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                  <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/>
+                                  <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/>
+                                </svg>
+                              )}
+                              {entry.label}
+                            </SummaryLabel>
                             <SummaryRowContent>
                               {entry.isLink ? (
                                 <SummaryLink
@@ -1128,7 +1230,16 @@ export default function TicketsPage() {
                                   target="_blank"
                                   rel="noreferrer"
                                 >
+                                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                    <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/>
+                                    <polyline points="15 3 21 3 21 9"/>
+                                    <line x1="10" y1="14" x2="21" y2="3"/>
+                                  </svg>
                                   Abrir arquivo
+                                </SummaryLink>
+                              ) : entry.isEmail ? (
+                                <SummaryLink as="a" href={`mailto:${entry.value}`} style={{ background: "transparent", padding: 0 }}>
+                                  {entry.value || "-"}
                                 </SummaryLink>
                               ) : (
                                 <SummaryValue>{entry.value || "-"}</SummaryValue>
@@ -1138,6 +1249,9 @@ export default function TicketsPage() {
                                   type="button"
                                   onClick={() => openWhatsapp(entry.value)}
                                 >
+                                  <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                                    <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.041-.024c-2.788-1.552-4.636-4.067-5.435-6.644l-.002-.009c-1.39-3.7-.256-7.684 2.994-10.44a9.825 9.825 0 0112.807.094c3.25 2.756 4.384 6.74 2.994 10.44l-.002.009c-.799 2.577-2.647 5.092-5.435 6.644l-.041.024a9.87 9.87 0 01-5.031 1.378m5.421-15.403c-2.115 0-4.197.585-6.001 1.691l-.048.028c-2.567 1.428-4.27 3.745-4.998 6.298l-.002.009c-1.28 3.4-.177 7.05 2.754 9.57a9.125 9.125 0 0011.95-.086c2.931-2.52 4.034-6.17 2.754-9.57l-.002-.009c-.728-2.553-2.431-4.87-4.998-6.298l-.048-.028a9.125 9.125 0 00-6.001-1.691"/>
+                                  </svg>
                                   Chamar no WhatsApp
                                 </WhatsappButton>
                               )}
@@ -1615,22 +1729,6 @@ const HeaderActions = styled.div`
   align-items: center;
 `;
 
-const RefreshButton = styled.button`
-  padding: 10px 16px;
-  border-radius: 10px;
-  border: 1px solid rgba(37, 99, 235, 0.4);
-  background: rgba(37, 99, 235, 0.08);
-  color: #1d4ed8;
-  font-weight: 600;
-  cursor: pointer;
-  transition: transform 0.1s ease, background 0.2s ease;
-  &:hover { background: rgba(37, 99, 235, 0.14); }
-  &:disabled {
-    opacity: 0.6;
-    cursor: default;
-  }
-`;
-
 const MetricsGrid = styled.section`
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
@@ -1683,6 +1781,49 @@ const MetricFoot = styled.span`
   color: #94a3b8;
 `;
 
+const OverdueCard = styled.article<{ "data-empty"?: string }>`
+  margin: 18px 0 6px;
+  padding: 18px 20px;
+  border-radius: 14px;
+  border: 1px solid rgba(148, 163, 184, 0.2);
+  background: #fff;
+  box-shadow: 0 14px 28px -22px rgba(15, 23, 42, 0.35);
+  display: grid;
+  gap: 10px;
+  border-left: 4px solid ${(p) => (p["data-empty"] ? "rgba(16, 185, 129, 0.85)" : "rgba(248, 113, 113, 0.85)")};
+`;
+
+const OverdueCardHeader = styled.header`
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+`;
+
+const OverdueCardTitle = styled.h3`
+  margin: 0;
+  font-size: 1rem;
+  color: #0f172a;
+`;
+
+const OverdueCardBody = styled.p`
+  margin: 0;
+  color: #475569;
+  line-height: 1.45;
+`;
+
+const OverdueChip = styled.span`
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 42px;
+  padding: 6px 12px;
+  border-radius: 999px;
+  background: rgba(248, 113, 113, 0.2);
+  color: #b91c1c;
+  font-weight: 700;
+`;
+
 const Toolbar = styled.section`
   display: flex;
   flex-wrap: wrap;
@@ -1702,22 +1843,32 @@ const SearchInput = styled.input`
 
 const StatusFilterList = styled.div`
   display: flex;
-  gap: 8px;
+  gap: 10px;
   flex-wrap: wrap;
+  align-items: center;
 `;
 
 const StatusChip = styled.button`
-  padding: 8px 12px;
+  height: 40px;
+  padding: 0 16px;
   border-radius: 999px;
   border: 1px solid rgba(148, 163, 184, 0.35);
   background: #fff;
   color: #475569;
   cursor: pointer;
-  font-size: 0.85rem;
-  transition: background 0.2s ease, transform 0.1s ease;
+  font-size: 0.9rem;
+  font-weight: 500;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+  &:hover {
+    background: rgba(148, 163, 184, 0.08);
+    border-color: rgba(148, 163, 184, 0.5);
+  }
   &[data-active="true"] {
-    background: rgba(37, 99, 235, 0.12);
-    border-color: rgba(37, 99, 235, 0.4);
+    background: rgba(37, 99, 235, 0.15);
+    border-color: rgba(37, 99, 235, 0.5);
     color: #1d4ed8;
     font-weight: 600;
   }
@@ -1813,6 +1964,12 @@ const TicketCard = styled.div`
     opacity: 0.6;
     pointer-events: none;
   }
+  &[data-overdue="true"] {
+    border-color: rgba(248, 113, 113, 0.85);
+    background: linear-gradient(180deg, #fee2e2, #fecaca 120%);
+    box-shadow: 0 28px 54px -20px rgba(239, 68, 68, 0.55);
+    animation: none;
+  }
   &[data-due="true"] {
     border-color: rgba(249, 115, 22, 0.85);
     background: linear-gradient(180deg, #fff7ed, #ffe6cc 120%);
@@ -1830,6 +1987,18 @@ const TicketCard = styled.div`
     outline: 3px solid rgba(37, 99, 235, 0.45);
     outline-offset: 3px;
   }
+`;
+
+const OverdueBadge = styled.span`
+  align-self: flex-start;
+  padding: 6px 10px;
+  border-radius: 999px;
+  background: rgba(239, 68, 68, 0.15);
+  color: #b91c1c;
+  font-weight: 700;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
 `;
 
 const TicketHeader = styled.div`
@@ -2151,73 +2320,114 @@ const SectionTitle = styled.h3`
 
 const SummaryWrapper = styled.div`
   display: grid;
-  gap: 10px;
-  padding: 12px;
-  border: 1px solid rgba(148, 163, 184, 0.25);
-  border-radius: 12px;
-  background: #f8fafc;
+  gap: 14px;
+  padding: 16px;
+  border-radius: 14px;
+  border: 1px solid rgba(148, 163, 184, 0.2);
+  background: linear-gradient(180deg, #ffffff, #f8fafc 100%);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
 `;
 
 const SummaryRow = styled.div`
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 8px;
+  padding: 14px 16px;
+  border-radius: 10px;
+  background: #ffffff;
+  border: 1px solid rgba(148, 163, 184, 0.15);
+  transition: all 0.2s ease;
+  &:hover {
+    border-color: rgba(37, 99, 235, 0.3);
+    box-shadow: 0 2px 6px rgba(37, 99, 235, 0.08);
+  }
 `;
 
 const SummaryRowContent = styled.div`
   display: flex;
   flex-wrap: wrap;
-  gap: 8px;
+  gap: 10px;
   align-items: center;
 `;
 
 const SummaryLabel = styled.span`
-  font-size: 0.75rem;
+  font-size: 0.8rem;
+  letter-spacing: 0.05em;
   text-transform: uppercase;
-  letter-spacing: 0.08em;
-  color: #94a3b8;
+  color: #64748b;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 6px;
 `;
 
 const SummaryValue = styled.span`
   color: #0f172a;
   word-break: break-word;
+  font-size: 0.95rem;
+  line-height: 1.5;
+  font-weight: 500;
 `;
 
 const SummaryLink = styled.a`
   color: #2563eb;
   font-weight: 600;
   text-decoration: none;
-  &:hover { text-decoration: underline; }
+  padding: 6px 12px;
+  border-radius: 8px;
+  background: rgba(37, 99, 235, 0.1);
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  transition: all 0.2s ease;
+  &:hover { 
+    background: rgba(37, 99, 235, 0.15);
+    transform: translateY(-1px);
+  }
 `;
 
 const WhatsappButton = styled.button`
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  padding: 8px 12px;
+  padding: 8px 14px;
   border-radius: 8px;
-  border: 1px solid rgba(37, 211, 102, 0.4);
-  background: rgba(37, 211, 102, 0.12);
+  border: 1px solid rgba(37, 211, 102, 0.5);
+  background: rgba(37, 211, 102, 0.15);
   color: #128c7e;
   font-weight: 600;
+  font-size: 0.9rem;
   cursor: pointer;
-  transition: background 0.2s ease;
-  &:hover { background: rgba(37, 211, 102, 0.2); }
+  transition: all 0.2s ease;
+  &:hover { 
+    background: rgba(37, 211, 102, 0.25);
+    border-color: rgba(37, 211, 102, 0.7);
+    transform: translateY(-1px);
+    box-shadow: 0 2px 6px rgba(37, 211, 102, 0.2);
+  }
 `;
 
 const SummarySectionHeading = styled.span`
   display: block;
-  font-size: 0.85rem;
   font-weight: 700;
   color: #0f172a;
-  padding-top: 8px;
-  border-top: 1px dashed rgba(148, 163, 184, 0.6);
+  font-size: 1rem;
+  padding: 12px 16px;
+  margin-top: 8px;
+  border-top: 2px solid rgba(148, 163, 184, 0.3);
+  border-radius: 8px;
+  background: rgba(37, 99, 235, 0.05);
 `;
 
 const SummaryText = styled.p`
   margin: 0;
   color: #475569;
-  line-height: 1.5;
+  line-height: 1.6;
+  font-size: 0.95rem;
+  padding: 12px 16px;
+  border-radius: 8px;
+  background: rgba(248, 250, 252, 0.8);
+  border-left: 3px solid rgba(37, 99, 235, 0.3);
 `;
 
 const EmptySummary = styled.p`
@@ -2700,24 +2910,68 @@ const ToolbarFilters = styled.div`
 `;
 
 const MineToggle = styled.button<{ "data-active"?: string }>`
-  padding: 10px 16px;
+  height: 40px;
+  padding: 0 16px;
   border-radius: 999px;
-  border: 1px solid rgba(37, 99, 235, 0.35);
-  background: ${(p) => (p["data-active"] ? "rgba(37, 99, 235, 0.12)" : "#fff")};
+  border: 1px solid rgba(37, 99, 235, 0.4);
+  background: ${(p) => (p["data-active"] ? "rgba(37, 99, 235, 0.15)" : "#fff")};
   color: ${(p) => (p["data-active"] ? "#1d4ed8" : "#475569")};
-  font-weight: 600;
+  font-size: 0.9rem;
+  font-weight: ${(p) => (p["data-active"] ? "600" : "500")};
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   cursor: pointer;
-  transition: background 0.2s ease, color 0.2s ease, transform 0.1s ease, box-shadow 0.1s ease;
+  transition: all 0.2s ease;
 
   &:hover:not(:disabled) {
-    transform: translateY(-1px);
-    box-shadow: 0 12px 20px -16px rgba(37, 99, 235, 0.35);
+    background: ${(p) => (p["data-active"] ? "rgba(37, 99, 235, 0.2)" : "rgba(37, 99, 235, 0.08)")};
+    border-color: rgba(37, 99, 235, 0.6);
   }
 
   &:disabled {
     opacity: 0.55;
     cursor: not-allowed;
-    transform: none;
-    box-shadow: none;
   }
+`;
+
+const OverdueToggle = styled.button<{ "data-active"?: string }>`
+  height: 40px;
+  padding: 0 16px;
+  border-radius: 999px;
+  border: 1px solid rgba(248, 113, 113, 0.5);
+  background: ${(p) => (p["data-active"] ? "rgba(254, 202, 202, 0.6)" : "#fff")};
+  color: ${(p) => (p["data-active"] ? "#b91c1c" : "#991b1b")};
+  font-size: 0.9rem;
+  font-weight: ${(p) => (p["data-active"] ? "600" : "500")};
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+
+  &:hover:not(:disabled) {
+    background: ${(p) => (p["data-active"] ? "rgba(254, 202, 202, 0.8)" : "rgba(254, 226, 226, 0.4)")};
+    border-color: rgba(248, 113, 113, 0.7);
+  }
+
+  &:disabled {
+    opacity: 0.55;
+    cursor: not-allowed;
+  }
+`;
+
+const OverdueCount = styled.span<{ "data-highlight"?: string }>`
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 24px;
+  height: 24px;
+  padding: 0 8px;
+  border-radius: 999px;
+  font-size: 0.8rem;
+  font-weight: 700;
+  background: ${(p) => (p["data-highlight"] ? "rgba(239, 68, 68, 0.2)" : "rgba(148, 163, 184, 0.2)")};
+  color: ${(p) => (p["data-highlight"] ? "#b91c1c" : "#475569")};
 `;

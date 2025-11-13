@@ -2,6 +2,7 @@
 
 import { useEffect, useState, use } from "react";
 import styled from "styled-components";
+import { useSound } from "@/lib/sounds";
 
 type Field = { id: number; label: string; type: "TEXT"|"TEXTAREA"|"SELECT"|"RADIO"|"CHECKBOX"|"FILE"; options?: string|null; required: boolean };
 
@@ -25,6 +26,7 @@ const Toast = styled.div<{ $type: "success" | "error" }>`
 `;
 
 export default function PublicFormPage({ params }: { params: Promise<{ slug: string }> }) {
+  const sounds = useSound();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [title, setTitle] = useState("");
@@ -71,12 +73,14 @@ export default function PublicFormPage({ params }: { params: Promise<{ slug: str
       setSuccess(true);
       setTicketId(j?.ticketId ?? null);
       setToast({ type: "success", message: "Formulário enviado com sucesso." });
+      sounds.playTicketCreated();
       // desativa campos imediatamente após o toast
       setDeactivated(true);
       // ação persistente tratada no servidor; em caso de falha, notificar e reativar
       if (j?.postActionStatus === "error") {
         setToast({ type: "error", message: j?.postActionMessage || "Não foi possível desativar o formulário." });
         setDeactivated(false);
+        sounds.playError();
       }
       // limpar e ocultar toast após 2.5s
       setTimeout(() => setToast(null), 2500);
@@ -85,6 +89,7 @@ export default function PublicFormPage({ params }: { params: Promise<{ slug: str
       const errMsg = j?.error || "Falha ao enviar formulário.";
       setError(errMsg);
       setToast({ type: "error", message: errMsg });
+      sounds.playError();
       setTimeout(() => setToast(null), 2500);
     }
   }

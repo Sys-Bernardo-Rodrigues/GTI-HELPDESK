@@ -25,7 +25,7 @@ export default function ConfigPage() {
   const [confirmOpen, setConfirmOpen] = useState<boolean>(false);
   // Estado do builder de formulários
   type BuilderField = { tempId: string; label: string; type: "TEXT"|"TEXTAREA"|"SELECT"|"RADIO"|"CHECKBOX"|"FILE"; options?: string; required: boolean };
-  const [formsList, setFormsList] = useState<Array<{ id: number; title: string; slug: string; link: string; createdAt?: string; isPublic?: boolean; createdByName?: string | null; createdByEmail?: string | null }>>([]);
+  const [formsList, setFormsList] = useState<Array<{ id: number; numericId?: number; title: string; slug: string; link: string; createdAt?: string; isPublic?: boolean; createdByName?: string | null; createdByEmail?: string | null }>>([]);
   const [formTitle, setFormTitle] = useState<string>("");
   const [formDesc, setFormDesc] = useState<string>("");
   const [builderFields, setBuilderFields] = useState<BuilderField[]>([]);
@@ -55,15 +55,14 @@ export default function ConfigPage() {
   // Fechar modal com ESC e gerenciar foco básico
   useEffect(() => {
     const globalWindow = typeof globalThis !== "undefined" ? (globalThis as any).window : undefined;
-    const doc: Document | undefined = globalWindow?.document;
-    if (!createOpen || !doc) return;
+    if (!createOpen || !globalWindow) return;
     const onKey = (event: KeyboardEvent) => {
       if ("key" in event && (event as unknown as { key?: string }).key === "Escape") {
         setCreateOpen(false);
       }
     };
-    doc.addEventListener("keydown", onKey);
-    return () => doc.removeEventListener("keydown", onKey);
+    globalWindow.addEventListener("keydown", onKey);
+    return () => globalWindow.removeEventListener("keydown", onKey);
   }, [createOpen]);
 
   // Garantir que a URL contenha ?section=forms quando acessado sem query
@@ -100,8 +99,9 @@ export default function ConfigPage() {
     const val = String(u);
     if (val.startsWith("data:")) return val;
     if (/^https?:\/\//i.test(val)) return val;
-    if (typeof window !== "undefined") {
-      const origin = window.location.origin;
+    const appWindow = typeof globalThis !== "undefined" ? (globalThis as any).window : undefined;
+    if (appWindow) {
+      const origin = appWindow.location.origin;
       if (val.startsWith("/")) return `${origin}${val}`;
       return `${origin}/${val}`;
     }
@@ -110,12 +110,16 @@ export default function ConfigPage() {
 
   // Persistir estado do sidebar e buscar dados do usuário, igual ao /home
   useEffect(() => {
-    const saved = localStorage.getItem("sidebar_open");
+    const storage = typeof globalThis !== "undefined" ? (globalThis as any).localStorage : undefined;
+    if (!storage) return;
+    const saved = storage.getItem("sidebar_open");
     if (saved !== null) setOpen(saved === "true");
   }, []);
 
   useEffect(() => {
-    localStorage.setItem("sidebar_open", String(open));
+    const storage = typeof globalThis !== "undefined" ? (globalThis as any).localStorage : undefined;
+    if (!storage) return;
+    storage.setItem("sidebar_open", String(open));
   }, [open]);
 
   useEffect(() => {
@@ -123,8 +127,8 @@ export default function ConfigPage() {
       try {
         const res = await fetch("/api/session");
         if (res.ok) {
-          const json = await res.json();
-          setUser(json.user);
+          const json = (await res.json()) as Record<string, any>;
+          setUser(json?.user ?? null);
         }
       } catch {}
     })();
@@ -135,7 +139,7 @@ export default function ConfigPage() {
       try {
         const res = await fetch("/api/profile");
         if (res.ok) {
-          const json = await res.json();
+          const json = (await res.json()) as Record<string, any>;
           setAvatarUrl(resolveAvatarUrl(json?.avatarUrl || ""));
         }
       } catch {}
@@ -148,7 +152,7 @@ export default function ConfigPage() {
     try {
       const res = await fetch("/api/forms");
       if (res.ok) {
-        const json = await res.json();
+        const json = (await res.json()) as Record<string, any>;
         const items = (json.items || []).map((i: any) => ({
           id: i.id,
           numericId: Number(i.id),
@@ -179,24 +183,26 @@ export default function ConfigPage() {
   }, [section]);
   // Atualizar automaticamente ao voltar o foco para a aba
   useEffect(() => {
+    const doc = typeof globalThis !== "undefined" ? (globalThis as any).document : undefined;
+    if (!doc) return;
     function onVisibility() {
-      if (document.visibilityState === "visible") {
+      if (doc.visibilityState === "visible") {
         // atualiza sessão (nome do criador) e formulários
         (async () => {
           try {
             const res = await fetch("/api/session");
             if (res.ok) {
-              const json = await res.json();
-              setUser(json.user);
+              const json = (await res.json()) as Record<string, any>;
+              setUser(json?.user ?? null);
             }
           } catch {}
+          await loadForms();
         })();
-        if (section === "forms") loadForms();
       }
     }
-    document.addEventListener("visibilitychange", onVisibility);
-    return () => document.removeEventListener("visibilitychange", onVisibility);
-  }, [section]);
+    doc.addEventListener("visibilitychange", onVisibility);
+    return () => doc.removeEventListener("visibilitychange", onVisibility);
+  }, []);
 
   function addField() {
     setBuilderFields((prev) => [...prev, { tempId: Math.random().toString(36).slice(2), label: "Novo campo", type: "TEXT", options: "", required: true }]);
@@ -235,21 +241,28 @@ export default function ConfigPage() {
 
   function copyFormLink(slug: string) {
     try {
-      const link = `${window.location.origin}/forms/${slug}`;
-      const write = navigator.clipboard?.writeText(link);
+      const appWindow = typeof globalThis !== "undefined" ? (globalThis as any).window : undefined;
+      const appNavigator = typeof globalThis !== "undefined" ? (globalThis as any).navigator : undefined;
+      if (!appWindow) throw new Error("Ambiente sem window");
+      const link = `${appWindow.location.origin}/forms/${slug}`;
+      const clipboard = appNavigator?.clipboard;
+      const write = clipboard?.writeText?.(link);
       if (write && typeof write.then === "function") {
-        write
-          .then(() => {
-            setFormsFeedback({ type: "success", text: "Link copiado para a área de transferência." });
-          })
-          .catch(() => {
-            setFormsFeedback({ type: "success", text: "Link copiado para a área de transferência." });
-        });
+        write.then(() => setFormsFeedback({ type: "success", text: "Link copiado" })).catch(() => setFormsFeedback({ type: "error", text: "Falha ao copiar link" }));
       } else {
-        setFormsFeedback({ type: "success", text: "Link copiado para a área de transferência." });
+        const doc = typeof globalThis !== "undefined" ? (globalThis as any).document : undefined;
+        if (!doc) throw new Error("Ambiente sem document");
+        const input = doc.createElement("input");
+        input.value = link;
+        doc.body.appendChild(input);
+        input.select();
+        input.setSelectionRange(0, 99999);
+        doc.execCommand("copy");
+        doc.body.removeChild(input);
+        setFormsFeedback({ type: "success", text: "Link copiado" });
       }
-    } catch {
-      setFormsFeedback({ type: "error", text: "Não foi possível copiar o link." });
+    } catch (err: any) {
+      setFormsFeedback({ type: "error", text: err?.message || "Erro ao copiar link" });
     }
   }
 
@@ -265,30 +278,22 @@ export default function ConfigPage() {
     setFormsFeedback(null);
   }
 
-  async function toggleFormVisibility(form: { id: number; isPublic: boolean }) {
+  async function toggleFormVisibility(form: { id: number; isPublic?: boolean }) {
     setToggleVisibilityLoading(true);
     try {
-      if (form.isPublic) {
-        const res = await fetch(`/api/forms/${form.id}`, { method: "DELETE" });
-        if (!res.ok) {
-          const json = await res.json().catch(() => null);
-          throw new Error(json?.error || "Falha ao desativar formulário");
-        }
-        await loadForms();
-        setFormsFeedback({ type: "success", text: "Formulário desativado com sucesso." });
-      } else {
-        const res = await fetch(`/api/forms/${form.id}`, {
-          method: "PUT",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ isPublic: true }),
-        });
-        if (!res.ok) {
-          const json = await res.json().catch(() => null);
-          throw new Error(json?.error || "Falha ao reativar formulário");
-        }
-        await loadForms();
-        setFormsFeedback({ type: "success", text: "Formulário reativado com sucesso." });
-      }
+      const res = await fetch(`/api/forms/${form.id}/visibility`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ isPublic: !Boolean(form.isPublic) }),
+      });
+      const json = (await res.json().catch(() => null)) as Record<string, any> | null;
+      if (!res.ok) throw new Error(json?.error || "Falha ao atualizar visibilidade");
+      setFormsList((prev) =>
+        prev.map((f) =>
+          f.id === form.id ? { ...f, isPublic: json?.isPublic ?? !Boolean(form.isPublic) } : f
+        )
+      );
+      setFormsFeedback({ type: "success", text: "Formulário atualizado com sucesso." });
     } catch (err: any) {
       setFormsFeedback({ type: "error", text: err?.message || "Erro ao atualizar formulário" });
     } finally {
@@ -330,20 +335,25 @@ export default function ConfigPage() {
     try {
       const res = await fetch(`/api/forms/${formId}?t=${Date.now()}`);
       if (!res.ok) {
-        const json = await res.json().catch(() => null);
+        const json = (await res.json().catch(() => null)) as Record<string, any> | null;
         throw new Error(json?.error || "Falha ao carregar formulário");
       }
-      const data = await res.json();
+      const data = (await res.json()) as Record<string, any>;
       setEditTitle(data?.title ?? "");
       setEditDesc(data?.description ?? "");
       const mapped: BuilderField[] = Array.isArray(data?.fields)
-        ? data.fields.map((field: any) => ({
-            tempId: `${field.id ?? Math.random().toString(36).slice(2)}`,
-            label: String(field.label ?? "Campo"),
-            type: String(field.type ?? "TEXT"),
-            options: field.options ?? "",
-            required: Boolean(field.required),
-          }))
+        ? data.fields.map((field: any) => {
+            const rawType = String(field.type ?? "TEXT").toUpperCase();
+            const allowed = ["TEXT", "TEXTAREA", "SELECT", "RADIO", "CHECKBOX", "FILE"] as const;
+            const normalizedType = allowed.includes(rawType as BuilderField["type"]) ? (rawType as BuilderField["type"]) : "TEXT";
+            return {
+              tempId: `${field.id ?? Math.random().toString(36).slice(2)}`,
+              label: String(field.label ?? "Campo"),
+              type: normalizedType,
+              options: field.options ?? "",
+              required: Boolean(field.required),
+            };
+          })
         : [];
       setEditBuilderFields(mapped);
     } catch (err: any) {
@@ -383,7 +393,7 @@ export default function ConfigPage() {
         body: JSON.stringify(payload),
       });
       if (!res.ok) {
-        const json = await res.json().catch(() => null);
+        const json = (await res.json().catch(() => null)) as Record<string, any> | null;
         throw new Error(json?.error || "Falha ao salvar formulário");
       }
       await loadForms();
@@ -400,7 +410,7 @@ export default function ConfigPage() {
 
   useEffect(() => {
     if (open && firstLinkRef.current) {
-      firstLinkRef.current.focus();
+      (firstLinkRef.current as unknown as { focus?: () => void })?.focus?.();
     }
   }, [open]);
 
@@ -413,29 +423,35 @@ export default function ConfigPage() {
       await fetch("/api/logout", { method: "POST" });
     } catch {}
     setMenuOpen(false);
-    window.location.assign("/");
+    const appWindow = typeof globalThis !== "undefined" ? (globalThis as any).window : undefined;
+    appWindow?.location?.assign("/");
   }
 
   // fechar menu ao clicar fora
   useEffect(() => {
-    function onDocDown(e: MouseEvent | TouchEvent) {
-      const target = e.target as Node;
-      if (menuRef.current && !menuRef.current.contains(target) && footerRef.current && !footerRef.current.contains(target)) {
+    const doc = typeof globalThis !== "undefined" ? (globalThis as any).document : undefined;
+    if (!doc) return;
+    function onDocDown(event: MouseEvent | TouchEvent) {
+      const target = event.target as unknown as HTMLElement | null;
+      if (!target) return;
+      const menuContains = (menuRef.current as unknown as { contains?: (el: HTMLElement) => boolean })?.contains?.(target);
+      const footerContains = (footerRef.current as unknown as { contains?: (el: HTMLElement) => boolean })?.contains?.(target);
+      if (!menuContains && !footerContains) {
         setMenuOpen(false);
       }
     }
-    document.addEventListener("mousedown", onDocDown);
-    document.addEventListener("touchstart", onDocDown);
+    doc.addEventListener("mousedown", onDocDown);
+    doc.addEventListener("touchstart", onDocDown);
     return () => {
-      document.removeEventListener("mousedown", onDocDown);
-      document.removeEventListener("touchstart", onDocDown);
+      doc.removeEventListener("mousedown", onDocDown);
+      doc.removeEventListener("touchstart", onDocDown);
     };
   }, []);
 
   // acessibilidade: foco no primeiro item quando abrir menu
   useEffect(() => {
     if (menuOpen && firstMenuItemRef.current) {
-      firstMenuItemRef.current.focus();
+      (firstMenuItemRef.current as unknown as { focus?: () => void })?.focus?.();
     }
   }, [menuOpen]);
 
@@ -533,7 +549,9 @@ export default function ConfigPage() {
   }, [section, loading, error]);
 
   const activeForm = manageFormId ? formsList.find((f) => f.id === manageFormId) ?? null : null;
-  const baseUrl = typeof window !== "undefined" ? window.location.origin : "";
+  const baseUrl = typeof globalThis !== "undefined" && (globalThis as any).window
+    ? ((globalThis as any).window?.location?.origin ?? "")
+    : "";
 
   return (
     <Page>
@@ -563,6 +581,9 @@ export default function ConfigPage() {
               </NavItem>
               <NavItem href="/history" aria-label="Histórico">
                 Histórico
+              </NavItem>
+              <NavItem href="/relatorios" aria-label="Relatórios">
+                Relatórios
               </NavItem>
               <NavItem href="/config?section=forms" aria-label="Configurações" aria-current="page">
                 Configurações
@@ -604,7 +625,11 @@ export default function ConfigPage() {
               role="menuitem"
               tabIndex={0}
               ref={firstMenuItemRef as any}
-              onClick={() => { setMenuOpen(false); window.location.assign("/profile"); }}
+              onClick={() => {
+                setMenuOpen(false);
+                const appWindow = typeof globalThis !== "undefined" ? (globalThis as any).window : undefined;
+                appWindow?.location?.assign("/profile");
+              }}
             >
               Perfil
             </UserMenuItem>
@@ -769,7 +794,10 @@ export default function ConfigPage() {
                   type="text"
                   placeholder="Ex.: Solicitação de suporte"
                   value={formTitle}
-                  onChange={(e) => setFormTitle(e.target.value)}
+                  onChange={(event) => {
+                    const value = (event.currentTarget as unknown as { value?: string }).value ?? "";
+                    setFormTitle(value);
+                  }}
                 />
               </Field>
               <Field>
@@ -779,7 +807,10 @@ export default function ConfigPage() {
                   type="text"
                   placeholder="Breve descrição"
                   value={formDesc}
-                  onChange={(e) => setFormDesc(e.target.value)}
+                  onChange={(event) => {
+                    const value = (event.currentTarget as unknown as { value?: string }).value ?? "";
+                    setFormDesc(value);
+                  }}
                 />
               </Field>
 
@@ -793,14 +824,23 @@ export default function ConfigPage() {
                         <Input
                           type="text"
                           value={bf.label}
-                          onChange={(e) => updateField(bf.tempId, { label: e.target.value })}
+                          onChange={(event) => {
+                            const value = (event.currentTarget as unknown as { value?: string }).value ?? "";
+                            updateField(bf.tempId, { label: value });
+                          }}
                         />
                       </Field>
                       <Field>
                         <Label>Tipo</Label>
                         <select
                           value={bf.type}
-                          onChange={(e) => updateField(bf.tempId, { type: e.target.value as any })}
+                          onChange={(event) => {
+                            const value = (event.currentTarget as unknown as { value?: string }).value ?? "TEXT";
+                            const normalized = ["TEXT", "TEXTAREA", "SELECT", "RADIO", "CHECKBOX", "FILE"].includes(value)
+                              ? (value as BuilderField["type"])
+                              : "TEXT";
+                            updateField(bf.tempId, { type: normalized });
+                          }}
                           style={{ width: "100%", padding: "10px", borderRadius: 10, border: "1px solid var(--border)", background: "#fff" }}
                         >
                           <option value="TEXT">Texto</option>
@@ -818,7 +858,10 @@ export default function ConfigPage() {
                             type="text"
                             placeholder="Ex.: Suporte, Comercial, Financeiro"
                             value={bf.options || ""}
-                            onChange={(e) => updateField(bf.tempId, { options: e.target.value })}
+                            onChange={(event) => {
+                              const value = (event.currentTarget as unknown as { value?: string }).value ?? "";
+                              updateField(bf.tempId, { options: value });
+                            }}
                           />
                         </Field>
                       )}
@@ -829,7 +872,10 @@ export default function ConfigPage() {
                         <input
                           type="checkbox"
                           checked={bf.required}
-                          onChange={(e) => updateField(bf.tempId, { required: e.target.checked })}
+                          onChange={(event) => {
+                            const checked = Boolean((event.currentTarget as unknown as { checked?: boolean }).checked);
+                            updateField(bf.tempId, { required: checked });
+                          }}
                         />
                         <span>Obrigatório</span>
                       </label>
@@ -974,7 +1020,10 @@ export default function ConfigPage() {
                     id="edit-form-title-input"
                     type="text"
                     value={editTitle}
-                    onChange={(e) => setEditTitle(e.target.value)}
+                    onChange={(event) => {
+                      const value = (event.currentTarget as unknown as { value?: string }).value ?? "";
+                      setEditTitle(value);
+                    }}
                   />
                 </Field>
                 <Field>
@@ -983,7 +1032,10 @@ export default function ConfigPage() {
                     id="edit-form-desc-input"
                     type="text"
                     value={editDesc}
-                    onChange={(e) => setEditDesc(e.target.value)}
+                    onChange={(event) => {
+                      const value = (event.currentTarget as unknown as { value?: string }).value ?? "";
+                      setEditDesc(value);
+                    }}
                   />
                 </Field>
                 <SectionTitle>Campos</SectionTitle>
@@ -996,14 +1048,23 @@ export default function ConfigPage() {
                           <Input
                             type="text"
                             value={bf.label}
-                            onChange={(e) => editUpdateField(bf.tempId, { label: e.target.value })}
+                            onChange={(event) => {
+                              const value = (event.currentTarget as unknown as { value?: string }).value ?? "";
+                              editUpdateField(bf.tempId, { label: value });
+                            }}
                           />
                         </Field>
                         <Field>
                           <Label>Tipo</Label>
                           <select
                             value={bf.type}
-                            onChange={(e) => editUpdateField(bf.tempId, { type: e.target.value as any })}
+                            onChange={(event) => {
+                              const value = (event.currentTarget as unknown as { value?: string }).value ?? "TEXT";
+                              const normalized = ["TEXT", "TEXTAREA", "SELECT", "RADIO", "CHECKBOX", "FILE"].includes(value)
+                                ? (value as BuilderField["type"])
+                                : "TEXT";
+                              editUpdateField(bf.tempId, { type: normalized });
+                            }}
                             style={{ width: "100%", padding: "10px", borderRadius: 10, border: "1px solid var(--border)", background: "#fff" }}
                           >
                             <option value="TEXT">Texto</option>
@@ -1020,7 +1081,10 @@ export default function ConfigPage() {
                             <Input
                               type="text"
                               value={bf.options || ""}
-                              onChange={(e) => editUpdateField(bf.tempId, { options: e.target.value })}
+                              onChange={(event) => {
+                                const value = (event.currentTarget as unknown as { value?: string }).value ?? "";
+                                editUpdateField(bf.tempId, { options: value });
+                              }}
                             />
                           </Field>
                         )}
@@ -1031,7 +1095,10 @@ export default function ConfigPage() {
                           <input
                             type="checkbox"
                             checked={bf.required}
-                            onChange={(e) => editUpdateField(bf.tempId, { required: e.target.checked })}
+                            onChange={(event) => {
+                              const checked = Boolean((event.currentTarget as unknown as { checked?: boolean }).checked);
+                              editUpdateField(bf.tempId, { required: checked });
+                            }}
                           />
                           <span>Obrigatório</span>
                         </label>
