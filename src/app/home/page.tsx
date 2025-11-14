@@ -459,6 +459,155 @@ const UrgentBadge = styled.span`
   margin-left: auto;
 `;
 
+const ChatContainer = styled.div`
+  grid-column: span 12;
+  height: 600px;
+  background: #fff;
+  border-radius: 16px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--border);
+
+  @media (max-width: 960px) {
+    height: 500px;
+  }
+`;
+
+const ChatHeader = styled.div`
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px;
+  border-bottom: 1px solid var(--border);
+  background: linear-gradient(135deg, var(--primary-600), var(--primary-800));
+  color: #fff;
+  border-radius: 16px 16px 0 0;
+`;
+
+const ChatHeaderTitle = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-weight: 700;
+  font-size: 1rem;
+`;
+
+const ChatHeaderActions = styled.div`
+  display: flex;
+  gap: 8px;
+`;
+
+const ChatMessages = styled.div`
+  flex: 1;
+  overflow-y: auto;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  background: #f8fafc;
+`;
+
+const ChatMessage = styled.div<{ $isUser: boolean }>`
+  display: flex;
+  justify-content: ${(p) => (p.$isUser ? "flex-end" : "flex-start")};
+`;
+
+const MessageBubble = styled.div<{ $isUser: boolean }>`
+  max-width: 80%;
+  padding: 12px 16px;
+  border-radius: 16px;
+  background: ${(p) => (p.$isUser ? "var(--primary-600)" : "#fff")};
+  color: ${(p) => (p.$isUser ? "#fff" : "#1e293b")};
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  font-size: 0.875rem;
+  line-height: 1.5;
+  white-space: pre-wrap;
+  word-wrap: break-word;
+`;
+
+const ChatInputContainer = styled.div`
+  padding: 16px;
+  border-top: 1px solid var(--border);
+  background: #fff;
+  border-radius: 0 0 16px 16px;
+`;
+
+const ChatInputForm = styled.form`
+  display: flex;
+  gap: 8px;
+`;
+
+const ChatInput = styled.input`
+  flex: 1;
+  padding: 12px 16px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  font-size: 0.875rem;
+  outline: none;
+  transition: border-color 0.2s ease;
+
+  &:focus {
+    border-color: var(--primary-600);
+  }
+`;
+
+const ChatSendButton = styled.button`
+  padding: 12px 20px;
+  border: none;
+  background: var(--primary-600);
+  color: #fff;
+  border-radius: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s ease;
+
+  &:hover:not(:disabled) {
+    background: var(--primary-700);
+  }
+
+  &:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
+`;
+
+
+const LoadingDots = styled.div`
+  display: flex;
+  gap: 4px;
+  padding: 12px 16px;
+
+  span {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: #94a3b8;
+    animation: bounce 1.4s infinite ease-in-out both;
+
+    &:nth-child(1) {
+      animation-delay: -0.32s;
+    }
+
+    &:nth-child(2) {
+      animation-delay: -0.16s;
+    }
+
+    &:nth-child(3) {
+      animation-delay: 0s;
+    }
+  }
+
+  @keyframes bounce {
+    0%, 80%, 100% {
+      transform: scale(0);
+    }
+    40% {
+      transform: scale(1);
+    }
+  }
+`;
+
 type TicketItem = {
   id: number;
   title: string;
@@ -501,6 +650,11 @@ export default function HomePage() {
   const [tickets, setTickets] = useState<TicketItem[]>([]);
   const [events, setEvents] = useState<EventItem[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
+  const [chatMessages, setChatMessages] = useState<Array<{ role: "user" | "assistant"; content: string }>>([]);
+  const [chatInput, setChatInput] = useState<string>("");
+  const [chatLoading, setChatLoading] = useState<boolean>(false);
+  const chatMessagesEndRef = useRef<HTMLDivElement | null>(null);
+  const chatInputRef = useRef<HTMLInputElement | null>(null);
   const firstLinkRef = useRef<HTMLAnchorElement | null>(null);
   const footerRef = useRef<HTMLElement | null>(null);
   const menuRef = useRef<HTMLDivElement | null>(null);
@@ -687,6 +841,57 @@ export default function HomePage() {
       return `${origin}/${val}`;
     }
     return val;
+  }
+
+  // Scroll para o final das mensagens do chat
+  useEffect(() => {
+    if (chatMessagesEndRef.current) {
+      chatMessagesEndRef.current.scrollIntoView({ behavior: "smooth" });
+    }
+  }, [chatMessages]);
+
+  // Focar no input quando o chat abrir
+  useEffect(() => {
+    if (chatInputRef.current) {
+      setTimeout(() => chatInputRef.current?.focus(), 100);
+    }
+  }, []);
+
+  // Enviar mensagem no chat
+  async function handleChatSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    if (!chatInput.trim() || chatLoading) return;
+
+    const userMessage = chatInput.trim();
+    setChatInput("");
+    setChatMessages((prev) => [...prev, { role: "user", content: userMessage }]);
+    setChatLoading(true);
+
+    try {
+      const res = await fetch("/api/chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ message: userMessage }),
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        setChatMessages((prev) => [...prev, { role: "assistant", content: data.message }]);
+      } else {
+        const error = await res.json();
+        setChatMessages((prev) => [
+          ...prev,
+          { role: "assistant", content: `Erro: ${error.error || "Não foi possível processar sua mensagem"}` },
+        ]);
+      }
+    } catch (error) {
+      setChatMessages((prev) => [
+        ...prev,
+        { role: "assistant", content: "Erro ao conectar com o assistente. Tente novamente." },
+      ]);
+    } finally {
+      setChatLoading(false);
+    }
   }
 
   useEffect(() => {
@@ -968,6 +1173,72 @@ export default function HomePage() {
           )}
         </Sidebar>
         <Content>
+          <ChatContainer>
+            <ChatHeader>
+              <ChatHeaderTitle>
+                <span>🤖</span>
+                <span>Elffo</span>
+              </ChatHeaderTitle>
+            </ChatHeader>
+            <ChatMessages>
+              {chatMessages.length === 0 && (
+                <ChatMessage $isUser={false}>
+                  <MessageBubble $isUser={false}>
+                    Olá! Sou o Elffo, assistente virtual do sistema. Posso ajudá-lo a encontrar informações sobre:
+                    {"\n\n"}
+                    📚 Base de conhecimento (descriptografada)
+                    {"\n"}
+                    📁 Arquivos e downloads
+                    {"\n"}
+                    🎫 Tickets e chamados
+                    {"\n"}
+                    📅 Agenda e compromissos
+                    {"\n"}
+                    🔐 Senhas e credenciais (descriptografadas)
+                    {"\n"}
+                    📝 Histórico e atualizações
+                    {"\n"}
+                    📊 Estatísticas do sistema
+                    {"\n"}
+                    📈 Relatórios detalhados
+                    {"\n\n"}
+                    Como posso ajudá-lo hoje?
+                  </MessageBubble>
+                </ChatMessage>
+              )}
+              {chatMessages.map((msg, idx) => (
+                <ChatMessage key={idx} $isUser={msg.role === "user"}>
+                  <MessageBubble $isUser={msg.role === "user"}>{msg.content}</MessageBubble>
+                </ChatMessage>
+              ))}
+              {chatLoading && (
+                <ChatMessage $isUser={false}>
+                  <LoadingDots>
+                    <span></span>
+                    <span></span>
+                    <span></span>
+                  </LoadingDots>
+                </ChatMessage>
+              )}
+              <div ref={chatMessagesEndRef} />
+            </ChatMessages>
+            <ChatInputContainer>
+              <ChatInputForm onSubmit={handleChatSubmit}>
+                <ChatInput
+                  ref={chatInputRef}
+                  type="text"
+                  value={chatInput}
+                  onChange={(e) => setChatInput(e.target.value)}
+                  placeholder="Digite sua pergunta..."
+                  disabled={chatLoading}
+                />
+                <ChatSendButton type="submit" disabled={chatLoading || !chatInput.trim()}>
+                  Enviar
+                </ChatSendButton>
+              </ChatInputForm>
+            </ChatInputContainer>
+          </ChatContainer>
+
           <Card>
             <CardHeader>
               <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
@@ -1166,6 +1437,7 @@ export default function HomePage() {
         </Content>
       </Shell>
       <Overlay $show={open} onClick={() => setOpen(false)} aria-hidden={!open} />
+      
     </Page>
   );
 }

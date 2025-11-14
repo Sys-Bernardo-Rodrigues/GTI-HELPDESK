@@ -107,12 +107,9 @@ export async function GET() {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    console.log(`[GET /api/base/passwords] Buscando senhas para usuário ${auth.id}`);
+    console.log(`[GET /api/base/passwords] Buscando senhas de todos os usuários`);
 
     const passwords = await prisma.passwordVault.findMany({
-      where: {
-        createdById: auth.id, // Apenas senhas criadas pelo usuário autenticado
-      },
       include: {
         createdBy: {
           select: {
