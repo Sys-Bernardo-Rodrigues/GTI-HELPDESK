@@ -1,74 +1,42 @@
-[00:00:02.104] Server  LOG      ✓ Ready in 1401ms
-[00:00:07.087] Server  LOG      ○ Compiling /base ...
-[00:00:08.705] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
-[00:00:34.491] Server  LOG     [GET /api/base/passwords] Buscando senhas para usuário 2
-[00:00:34.498] Server  LOG     [GET /api/base/passwords] Encontradas 0 senhas
-[00:00:34.499] Server  LOG     [GET /api/base/passwords] Retornando 0 senhas mapeadas
-[00:01:55.238] Server  LOG      ✓ Compiled in 165ms
-[00:01:58.316] Server  LOG      ✓ Compiled in 289ms
-[00:02:02.338] Server  LOG      ✓ Compiled in 187ms
-[00:02:07.189] Server  LOG      ✓ Compiled in 224ms
-[00:02:44.408] Server  LOG      ✓ Compiled in 157ms
-[00:03:08.086] Server  LOG      ✓ Compiled in 160ms
-[00:03:11.974] Server  LOG      ✓ Compiled in 226ms
-[00:03:15.919] Server  LOG      ✓ Compiled in 245ms
-[00:03:19.030] Server  LOG      ✓ Compiled in 155ms
-[00:03:22.564] Server  LOG      ✓ Compiled in 294ms
-[00:03:25.727] Server  LOG      ✓ Compiled in 279ms
-[00:03:28.824] Server  LOG      ✓ Compiled in 305ms
-[00:03:31.651] Server  LOG      ✓ Compiled in 227ms
-[00:03:35.196] Server  LOG      ✓ Compiled in 171ms
-[00:03:38.612] Server  LOG      ✓ Compiled in 216ms
-[00:03:41.950] Server  LOG      ✓ Compiled in 239ms
-[00:03:44.834] Server  LOG      ✓ Compiled in 270ms
-[00:03:47.640] Server  LOG      ✓ Compiled in 235ms
-[00:03:50.703] Server  LOG      ✓ Compiled in 233ms
-[00:03:53.927] Server  LOG      ✓ Compiled in 283ms
-[00:03:57.009] Server  LOG      ✓ Compiled in 169ms
-[00:04:00.193] Server  LOG      ✓ Compiled in 188ms
-[00:04:11.372] Server  LOG      ✓ Compiled in 152ms
-[00:04:14.571] Server  LOG      ✓ Compiled in 359ms
-[00:04:17.551] Server  LOG      ✓ Compiled in 182ms
-[00:04:20.562] Server  LOG      ✓ Compiled in 284ms
-[00:04:24.193] Server  LOG      ✓ Compiled in 277ms
-[00:04:27.256] Server  LOG      ✓ Compiled in 221ms
-[00:04:30.911] Server  LOG      ✓ Compiled in 197ms
-[00:04:35.467] Server  LOG      ✓ Compiled in 166ms
-[00:04:38.698] Server  LOG      ✓ Compiled in 271ms
-[00:06:53.526] Server  LOG     [GET /api/base/passwords] Buscando senhas para usuário 2
-[00:06:53.531] Server  LOG     [GET /api/base/passwords] Encontradas 0 senhas
-[00:06:53.531] Server  LOG     [GET /api/base/passwords] Retornando 0 senhas mapeadas
-[00:08:37.608] Server  LOG      ✓ Compiled in 207ms
-[00:08:40.385] Server  LOG      ✓ Compiled in 170ms
-[00:08:43.172] Server  LOG      ✓ Compiled in 230ms
-[00:08:45.703] Server  LOG      ✓ Compiled in 205ms
-[00:08:55.827] Server  LOG      ✓ Compiled in 142ms
-[00:09:10.316] Server  LOG      ✓ Compiled in 279ms
-[00:09:13.800] Server  LOG      ✓ Compiled in 402ms
-[00:09:17.074] Server  LOG      ✓ Compiled in 173ms
-[00:11:08.767] Server  LOG     [GET /api/base/passwords] Buscando senhas para usuário 2
-[00:11:08.780] Server  LOG     [GET /api/base/passwords] Encontradas 0 senhas
-[00:11:08.783] Server  LOG     [GET /api/base/passwords] Retornando 0 senhas mapeadas
-[00:11:35.893] Server  LOG     [GET /api/base/passwords] Buscando senhas para usuário 2
-[00:11:35.902] Server  LOG     [GET /api/base/passwords] Encontradas 0 senhas
-[00:11:35.903] Server  LOG     [GET /api/base/passwords] Retornando 0 senhas mapeadas
-[00:12:45.944] Server  LOG     [GET /api/base/passwords] Buscando senhas para usuário 2
-[00:12:45.957] Server  LOG     [GET /api/base/passwords] Encontradas 1 senhas
-[00:12:46.437] Server  LOG     [GET /api/base/passwords] Retornando 1 senhas mapeadas
-[00:13:35.595] Server  LOG      ✓ Compiled in 375ms
-[00:13:40.502] Server  LOG      ✓ Compiled in 525ms
-[00:13:43.126] Server  LOG      ✓ Compiled in 350ms
-[00:13:48.242] Server  LOG     [GET /api/base/passwords] Buscando senhas para usuário 2
-[00:13:48.250] Server  LOG     [GET /api/base/passwords] Encontradas 1 senhas
-[00:13:48.988] Server  LOG     [GET /api/base/passwords] Retornando 1 senhas mapeadas
-[00:13:49.691] Server  LOG      ✓ Compiled in 752ms
-[00:13:54.105] Server  LOG      ✓ Compiled in 225ms
-[00:14:31.139] Server  LOG     [GET /api/base/passwords] Buscando senhas para usuário 2
-[00:14:31.155] Server  LOG     [GET /api/base/passwords] Encontradas 1 senhas
-[00:14:31.651] Server  LOG     [GET /api/base/passwords] Retornando 1 senhas mapeadas
-[00:14:42.601] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
-[00:15:53.746] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
-[00:17:03.302] Server  LOG      ✓ Compiled in 232ms
-[00:17:15.566] Server  LOG      ✓ Compiled in 174ms
-[00:17:17.873] Server  LOG      ✓ Compiled in 140ms
-[00:17:32.685] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
+[00:00:02.379] Server  LOG      ✓ Ready in 1598ms
+[00:00:12.289] Server  LOG      ○ Compiling /base ...
+[00:00:15.934] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
+[00:00:51.421] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
+[00:01:39.297] Server  LOG      ✓ Compiled in 36ms
+[00:01:58.408] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
+[00:01:59.644] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
+[00:03:04.840] Server  LOG      ✓ Compiled in 55ms
+[00:03:17.713] Server  LOG      ✓ Compiled in 32ms
+[00:05:03.058] Server  LOG      ✓ Compiled in 23ms
+[00:05:05.066] Server  LOG      ✓ Compiled in 69ms
+[00:05:49.229] Server  LOG      ✓ Compiled in 27ms
+[00:05:51.924] Server  LOG      ✓ Compiled in 30ms
+[00:05:55.081] Server  LOG      ✓ Compiled in 28ms
+[00:06:55.354] Server  LOG      ✓ Compiled in 28ms
+[00:07:29.198] Server  LOG      ✓ Compiled in 35ms
+[00:08:01.055] Server  LOG      ✓ Compiled in 21ms
+[00:08:06.159] Server  LOG      ✓ Compiled in 19ms
+[00:09:23.209] Server  LOG      ✓ Compiled in 25ms
+[00:10:19.011] Server  LOG      ✓ Compiled in 34ms
+[00:10:20.567] Server  LOG      ✓ Compiled in 33ms
+[00:10:26.746] Server  LOG      ✓ Compiled in 23ms
+[00:12:07.783] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
+[00:12:15.687] Server  LOG      ✓ Compiled in 307ms
+[00:12:16.836] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
+[00:12:19.772] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
+[00:13:06.279] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
+[00:13:12.119] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
+[00:13:19.104] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
+[00:13:21.913] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
+[00:13:25.477] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
+[00:15:02.222] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
+[00:15:12.423] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
+[00:15:14.611] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
+[00:15:18.914] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
+[00:15:23.263] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
+[00:15:33.668] Server  LOG      ✓ Compiled in 162ms
+[00:16:56.903] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
+[00:16:57.862] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
+[00:17:26.058] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
+[00:17:30.118] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
+[00:17:37.522] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold

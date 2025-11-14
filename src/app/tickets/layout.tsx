@@ -10,3 +10,4 @@ export default async function TicketsLayout({ children }: { children: ReactNode 
   return <>{children}</>;
 }
 
+

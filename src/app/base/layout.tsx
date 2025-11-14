@@ -10,3 +10,4 @@ export default async function BaseLayout({ children }: { children: ReactNode }) 
   return <>{children}</>;
 }
 
+

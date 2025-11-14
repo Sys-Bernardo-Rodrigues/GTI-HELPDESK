@@ -23,3 +23,4 @@ console.log("3. Use variáveis de ambiente em produção");
 console.log("4. Faça backup seguro desta chave");
 console.log("5. Sem esta chave, os dados criptografados não poderão ser recuperados!\n");
 
+

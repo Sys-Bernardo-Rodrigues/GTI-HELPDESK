@@ -575,25 +575,46 @@ export default function ConfigPage() {
           <nav role="navigation" aria-label="Navegação principal">
             <MenuScroll>
               <NavItem ref={firstLinkRef} href="/home" aria-label="Início">
-                Início
+                <svg viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/>
+                </svg>
+                <span>Início</span>
               </NavItem>
               <NavItem href="/tickets" aria-label="Tickets">
-                Tickets
+                <svg viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M20 6h-2.18c.11-.31.18-.65.18-1a2.996 2.996 0 0 0-5.5-1.65l-.5.67-.5-.68C10.96 2.54 10 2 9 2 7.34 2 6 3.34 6 5c0 .35.07.69.18 1H4c-1.11 0-1.99.89-1.99 2L2 19c0 1.11.89 2 2 2h16c1.11 0 2-.89 2-2V8c0-1.11-.89-2-2-2zm-5-2c.55 0 1 .45 1 1s-.45 1-1 1-1-.45-1-1 .45-1 1-1zM9 4c.55 0 1 .45 1 1s-.45 1-1 1-1-.45-1-1 .45-1 1-1zm11 15H4v-2h16v2zm0-5H4V8h5.08L7 10.83 8.62 12 11 8.76l1-1.36 1 1.36L15.38 12 17 10.83 14.92 8H20v6z"/>
+                </svg>
+                <span>Tickets</span>
               </NavItem>
               <NavItem href="/users" aria-label="Usuários">
-                Usuários
+                <svg viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z"/>
+                </svg>
+                <span>Usuários</span>
               </NavItem>
               <NavItem href="/base" aria-label="Base de Conhecimento">
-                Base
+                <svg viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-5 14H7v-2h7v2zm3-4H7v-2h10v2zm0-4H7V7h10v2z"/>
+                </svg>
+                <span>Base</span>
               </NavItem>
               <NavItem href="/history" aria-label="Histórico">
-                Histórico
+                <svg viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M13 3c-4.97 0-9 4.03-9 9H1l3.89 3.89.07.14L9 12H6c0-3.87 3.13-7 7-7s7 3.13 7 7-3.13 7-7 7c-1.93 0-3.68-.79-4.94-2.06l-1.42 1.42C8.27 19.99 10.51 21 13 21c4.97 0 9-4.03 9-9s-4.03-9-9-9zm-1 5v5l4.28 2.54.72-1.21-3.5-2.08V8H12z"/>
+                </svg>
+                <span>Histórico</span>
               </NavItem>
               <NavItem href="/relatorios" aria-label="Relatórios">
-                Relatórios
+                <svg viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zM9 17H7v-7h2v7zm4 0h-2V7h2v10zm4 0h-2v-4h2v4z"/>
+                </svg>
+                <span>Relatórios</span>
               </NavItem>
               <NavItem href="/config?section=forms" aria-label="Configurações" aria-current="page">
-                Configurações
+                <svg viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58c.18-.14.23-.41.12-.61l-1.92-3.32c-.12-.22-.37-.29-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54c-.04-.24-.24-.41-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96c-.22-.08-.47 0-.59.22L2.74 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.05.3-.07.62-.07.94s.02.64.07.94l-2.03 1.58c-.18.14-.23.41-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58zM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6z"/>
+                </svg>
+                <span>Config</span>
               </NavItem>
             </MenuScroll>
           </nav>
@@ -1171,7 +1192,7 @@ const Brand = styled.div`
 
 const Shell = styled.div`
   display: grid;
-  grid-template-columns: 240px 1fr;
+  grid-template-columns: 100px 1fr;
   gap: 16px;
   padding: 16px;
   @media (max-width: 960px) {
@@ -1184,11 +1205,11 @@ const Sidebar = styled.aside<{ $open: boolean }>`
   border-right: 1px solid var(--border);
   box-shadow: 2px 0 12px rgba(0,0,0,0.06);
   border-radius: 12px;
-  padding: 16px;
+  padding: 12px 8px;
   display: flex;
   flex-direction: column;
   height: calc(100dvh - 72px);
-  overflow: hidden;
+  overflow: visible;
   position: sticky;
   top: 72px;
   align-self: start;
@@ -1199,7 +1220,7 @@ const Sidebar = styled.aside<{ $open: boolean }>`
     top: 56px;
     left: 0;
     right: auto;
-    width: min(82vw, 300px);
+    width: min(82vw, 240px);
     height: calc(100dvh - 56px);
     border-radius: 0 12px 12px 0;
     transform: translateX(${(p) => (p.$open ? "0" : "-105%")});
@@ -1211,38 +1232,51 @@ const Sidebar = styled.aside<{ $open: boolean }>`
 const MenuScroll = styled.div`
   flex: 1;
   overflow-y: auto;
+  overflow-x: visible;
   padding-right: 4px;
 `;
 
 const NavItem = styled.a`
   display: flex;
+  flex-direction: column;
   align-items: center;
-  gap: 10px;
-  padding: 10px 12px;
-  border-radius: 10px;
+  justify-content: center;
+  gap: 4px;
+  padding: 10px 4px;
+  border-radius: 8px;
   color: inherit;
   text-decoration: none;
+  font-size: 0.7rem;
+  font-weight: 500;
+  transition: all 0.2s ease;
+  width: 100%;
   &:hover { background: #f3f4f6; }
   &[aria-current="page"] { background: #eef2f7; font-weight: 600; }
   &:focus { outline: none; }
   &:focus-visible { outline: none; }
+
+  svg {
+    flex-shrink: 0;
+    width: 20px;
+    height: 20px;
+  }
 `;
 
 const UserFooter = styled.footer`
   border-top: 1px solid var(--border);
-  padding-top: 12px;
-  display: grid;
-  grid-template-columns: 80px 1fr;
+  padding-top: 10px;
+  display: flex;
+  flex-direction: column;
   align-items: center;
-  gap: 12px;
+  gap: 6px;
   margin-top: auto;
   cursor: pointer;
   user-select: none;
 `;
 
 const Avatar = styled.div`
-  width: 80px;
-  height: 80px;
+  width: 48px;
+  height: 48px;
   border-radius: 50%;
   background: #e5e7eb;
   display: grid;
@@ -1251,12 +1285,18 @@ const Avatar = styled.div`
   font-weight: 700;
   user-select: none;
   overflow: hidden;
+  flex-shrink: 0;
+  font-size: 0.875rem;
   img { width: 100%; height: 100%; object-fit: cover; }
 `;
 
 const UserName = styled.div`
-  font-size: 16px;
+  font-size: 0.7rem;
   font-weight: 600;
+  text-align: center;
+  word-break: break-word;
+  max-width: 100%;
+  line-height: 1.2;
 `;
 
 const MenuToggle = styled.button`
@@ -1531,9 +1571,9 @@ const Skeleton = styled.div`
 
 // Menu do usuário (igual ao /home)
 const UserMenu = styled.div<{ $open: boolean }>`
-  position: absolute;
-  left: 16px;
-  bottom: 96px; /* aparece acima do footer */
+  position: fixed;
+  left: 108px;
+  bottom: 96px;
   background: #fff;
   border: 1px solid var(--border);
   border-radius: 12px;
@@ -1544,7 +1584,11 @@ const UserMenu = styled.div<{ $open: boolean }>`
   opacity: ${(p) => (p.$open ? 1 : 0)};
   pointer-events: ${(p) => (p.$open ? "auto" : "none")};
   transition: opacity .18s ease, transform .18s ease;
-  z-index: 25;
+  z-index: 100;
+
+  @media (max-width: 960px) {
+    left: 16px;
+  }
 `;
 
 const UserMenuItem = styled.button<{ $variant?: "danger" }>`

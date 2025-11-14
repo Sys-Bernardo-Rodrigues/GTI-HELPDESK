@@ -10,3 +10,4 @@ export default async function RelatoriosLayout({ children }: { children: ReactNo
   return <>{children}</>;
 }
 
+

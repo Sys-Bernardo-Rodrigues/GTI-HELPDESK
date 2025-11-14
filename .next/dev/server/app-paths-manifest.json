@@ -1,6 +1,4 @@
 {
-  "/api/base/files/route": "app/api/base/files/route.js",
-  "/api/base/passwords/route": "app/api/base/passwords/route.js",
   "/api/base/route": "app/api/base/route.js",
   "/api/forms/route": "app/api/forms/route.js",
   "/api/profile/route": "app/api/profile/route.js",
@@ -8,7 +6,9 @@
   "/api/tickets/route": "app/api/tickets/route.js",
   "/api/users/route": "app/api/users/route.js",
   "/base/page": "app/base/page.js",
+  "/config/page": "app/config/page.js",
   "/history/page": "app/history/page.js",
+  "/home/page": "app/home/page.js",
   "/relatorios/page": "app/relatorios/page.js",
   "/tickets/page": "app/tickets/page.js",
   "/users/page": "app/users/page.js"
