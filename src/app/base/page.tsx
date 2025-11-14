@@ -1198,6 +1198,12 @@ export default function BasePage() {
                 </svg>
                 <span>Base</span>
               </NavItem>
+              <NavItem href="/agenda" aria-label="Agenda">
+                <svg viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M19 4h-1V2h-2v2H8V2H6v2H5c-1.11 0-1.99.9-1.99 2L3 20c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 16H5V9h14v11zM5 7V6h14v1H5zm7 6H7v-2h5v2z"/>
+                </svg>
+                <span>Agenda</span>
+              </NavItem>
               <NavItem href="/history" aria-label="Histórico">
                 <svg viewBox="0 0 24 24" fill="currentColor">
                   <path d="M13 3c-4.97 0-9 4.03-9 9H1l3.89 3.89.07.14L9 12H6c0-3.87 3.13-7 7-7s7 3.13 7 7-3.13 7-7 7c-1.93 0-3.68-.79-4.94-2.06l-1.42 1.42C8.27 19.99 10.51 21 13 21c4.97 0 9-4.03 9-9s-4.03-9-9-9zm-1 5v5l4.28 2.54.72-1.21-3.5-2.08V8H12z"/>
@@ -3776,6 +3782,8 @@ const ConfirmButton = styled.button`
 
 const UserMenu = styled.div<{ $open: boolean }>`
   position: fixed;
+  left: 108px;
+  bottom: 96px;
   background: #fff;
   border: 1px solid var(--border);
   border-radius: 12px;
@@ -3786,10 +3794,10 @@ const UserMenu = styled.div<{ $open: boolean }>`
   opacity: ${(p) => (p.$open ? 1 : 0)};
   pointer-events: ${(p) => (p.$open ? "auto" : "none")};
   transition: opacity .18s ease, transform .18s ease;
-  z-index: 99999;
+  z-index: 100;
 
   @media (max-width: 960px) {
-    left: 16px !important;
+    left: 16px;
     bottom: 96px !important;
   }
 `;

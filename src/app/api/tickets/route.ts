@@ -10,8 +10,8 @@ export async function GET() {
     const tickets = await prisma.ticket.findMany({
       orderBy: { createdAt: "desc" },
       include: {
-        user: { select: { id: true, name: true, email: true } },
-        assignedTo: { select: { id: true, name: true, email: true } },
+        user: { select: { id: true, name: true, email: true, avatarUrl: true } },
+        assignedTo: { select: { id: true, name: true, email: true, avatarUrl: true } },
         category: { select: { id: true, name: true } },
         submission: {
           select: {
@@ -40,11 +40,12 @@ export async function GET() {
       scheduledAt: ticket.scheduledAt,
       scheduledNote: ticket.scheduledNote,
       requester: ticket.user
-        ? { id: ticket.user.id, name: ticket.user.name, email: ticket.user.email }
+        ? { id: ticket.user.id, name: ticket.user.name, email: ticket.user.email, avatarUrl: ticket.user.avatarUrl }
         : null,
       assignedTo: ticket.assignedTo
-        ? { id: ticket.assignedTo.id, name: ticket.assignedTo.name, email: ticket.assignedTo.email }
+        ? { id: ticket.assignedTo.id, name: ticket.assignedTo.name, email: ticket.assignedTo.email, avatarUrl: ticket.assignedTo.avatarUrl }
         : null,
+      userId: ticket.userId,
       category: ticket.category
         ? { id: ticket.category.id, name: ticket.category.name }
         : null,
