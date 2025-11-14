@@ -30,6 +30,9 @@ model User {
   assignedTickets        Ticket[]       @relation("TicketAssignedTo")
   tickets                Ticket[]
   TicketUpdate           TicketUpdate[]
+  documents              Document[]
+  files                  File[]
+  passwords              PasswordVault[]
 }
 
 model Category {
@@ -131,4 +134,57 @@ enum FieldType {
   RADIO
   CHECKBOX
   FILE
+}
+
+model Document {
+  id          Int      @id @default(autoincrement())
+  title       String
+  content     String   @db.LongText
+  category    String?
+  tags        String?
+  createdById Int
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  createdBy   User     @relation(fields: [createdById], references: [id])
+
+  @@index([createdById], map: "Document_createdById_fkey")
+  @@index([category])
+}
+
+model File {
+  id          Int      @id @default(autoincrement())
+  name        String
+  originalName String
+  mimeType    String
+  size        Int
+  path        String
+  category    String?
+  tags        String?
+  description String?  @db.Text
+  createdById Int
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  createdBy   User     @relation(fields: [createdById], references: [id])
+
+  @@index([createdById], map: "File_createdById_fkey")
+  @@index([category])
+  @@index([mimeType])
+}
+
+model PasswordVault {
+  id          Int      @id @default(autoincrement())
+  title       String
+  username    String?  @db.Text
+  password    String   @db.Text
+  url         String?  @db.Text
+  notes       String?  @db.Text
+  category    String?
+  tags        String?
+  createdById Int
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  createdBy   User     @relation(fields: [createdById], references: [id])
+
+  @@index([createdById], map: "PasswordVault_createdById_fkey")
+  @@index([category])
 }

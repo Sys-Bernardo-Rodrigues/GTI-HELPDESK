@@ -768,6 +768,9 @@ export default function ProfilePage() {
               <NavItem href="/users" aria-label="Usuários">
                 Usuários
               </NavItem>
+              <NavItem href="/base" aria-label="Base de Conhecimento">
+                Base
+              </NavItem>
               <NavItem href="/history" aria-label="Histórico">
                 Histórico
               </NavItem>

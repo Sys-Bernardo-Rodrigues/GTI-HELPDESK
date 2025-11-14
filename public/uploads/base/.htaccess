@@ -1,0 +1,12 @@
+# Bloquear acesso direto aos arquivos criptografados
+# Os arquivos devem ser baixados apenas através da API autenticada
+# que descriptografa antes de servir
+
+<FilesMatch "\.enc$">
+    Require all denied
+</FilesMatch>
+
+# Alternativa para servidores Apache sem mod_authz_core:
+# Order Deny,Allow
+# Deny from all
+

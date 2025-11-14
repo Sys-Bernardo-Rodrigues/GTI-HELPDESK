@@ -33,6 +33,7 @@ export default function AppHeader({ open, onToggle }: Props) {
         <NavLink href="/home" aria-label="Início">Início</NavLink>
         <NavLink href="/tickets" aria-label="Tickets">Tickets</NavLink>
         <NavLink href="/users" aria-label="Usuários">Usuários</NavLink>
+        <NavLink href="/base" aria-label="Base de Conhecimento">Base</NavLink>
         <NavLink href="/history" aria-label="Histórico">Histórico</NavLink>
         <NavLink href="/config" aria-label="Configurações">Configurações</NavLink>
       </MainNav>

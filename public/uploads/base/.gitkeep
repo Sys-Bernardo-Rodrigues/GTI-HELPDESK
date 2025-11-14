@@ -1,0 +1,4 @@
+# Este diretório armazena arquivos criptografados da base de conhecimento
+# Os arquivos são criptografados usando AES-256-GCM antes de serem salvos aqui
+# NUNCA commite arquivos deste diretório no Git
+
