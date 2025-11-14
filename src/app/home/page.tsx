@@ -1,6 +1,8 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
+import { useRouter } from "next/navigation";
 import styled from "styled-components";
 import NotificationBell from "@/components/NotificationBell";
 
@@ -111,6 +113,85 @@ const NavItem = styled.a`
   }
 `;
 
+const NavItemButton = styled.button`
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  padding: 10px 4px;
+  border-radius: 8px;
+  border: none;
+  background: transparent;
+  color: inherit;
+  text-decoration: none;
+  font-size: 0.7rem;
+  font-weight: 500;
+  transition: all 0.2s ease;
+  width: 100%;
+  cursor: pointer;
+  position: relative;
+  &:hover { background: #f3f4f6; }
+  &:focus { outline: none; }
+  &:focus-visible { outline: none; }
+
+  svg {
+    flex-shrink: 0;
+    width: 20px;
+    height: 20px;
+  }
+`;
+
+const ConfigSubmenu = styled.div<{ $open: boolean }>`
+  position: fixed;
+  background: #fff;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  box-shadow: 0 12px 28px rgba(0,0,0,0.12);
+  min-width: 180px;
+  padding: 8px;
+  transform: translateY(${(p) => (p.$open ? "0" : "8px")});
+  opacity: ${(p) => (p.$open ? 1 : 0)};
+  pointer-events: ${(p) => (p.$open ? "auto" : "none")};
+  transition: opacity .18s ease, transform .18s ease;
+  z-index: 9999;
+
+  @media (max-width: 960px) {
+    left: 16px !important;
+    top: auto !important;
+    bottom: 96px !important;
+  }
+`;
+
+const ConfigSubmenuItem = styled.a`
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border: none;
+  background: transparent;
+  border-radius: 8px;
+  cursor: pointer;
+  text-align: left;
+  color: inherit;
+  text-decoration: none;
+  font-size: 0.9rem;
+  &:hover {
+    background: #f3f4f6;
+  }
+  &:active {
+    background: #e9ecef;
+  }
+  &:focus { outline: none; }
+  &:focus-visible { outline: none; }
+
+  svg {
+    flex-shrink: 0;
+    opacity: 0.8;
+  }
+`;
+
 const UserFooter = styled.footer`
   border-top: 1px solid var(--border);
   padding-top: 10px;
@@ -203,6 +284,7 @@ const Muted = styled.p`
 `;
 
 export default function HomePage() {
+  const router = useRouter();
   const [open, setOpen] = useState<boolean>(true);
   const [menuOpen, setMenuOpen] = useState<boolean>(false);
   const [user, setUser] = useState<{ id: number; email: string; name: string | null } | null>(null);
@@ -211,6 +293,7 @@ export default function HomePage() {
   const footerRef = useRef<HTMLElement | null>(null);
   const menuRef = useRef<HTMLDivElement | null>(null);
   const [confirmOpen, setConfirmOpen] = useState<boolean>(false);
+  const [configSubmenuOpen, setConfigSubmenuOpen] = useState<boolean>(false);
 
   // Normaliza URLs do avatar (data URI, http(s), caminhos relativos)
   function resolveAvatarUrl(u?: string): string {
@@ -302,6 +385,50 @@ export default function HomePage() {
     }
   }, [menuOpen]);
 
+  // Posicionar menu de config
+  useEffect(() => {
+    if (!configSubmenuOpen) return;
+    const updatePosition = () => {
+      const buttonEl = typeof window !== "undefined" && document?.getElementById("config-menu-button");
+      const menuEl = typeof window !== "undefined" && document?.getElementById("config-submenu");
+      if (buttonEl && menuEl) {
+        const rect = (buttonEl as HTMLElement).getBoundingClientRect();
+        const menu = menuEl as HTMLElement;
+        menu.style.left = `${rect.right + 8}px`;
+        menu.style.top = `${rect.top}px`;
+      }
+    };
+    updatePosition();
+    if (typeof window !== "undefined") {
+      window.addEventListener("resize", updatePosition);
+      window.addEventListener("scroll", updatePosition, true);
+      return () => {
+        window.removeEventListener("resize", updatePosition);
+        window.removeEventListener("scroll", updatePosition, true);
+      };
+    }
+  }, [configSubmenuOpen]);
+
+  // Fechar menu ao clicar fora
+  useEffect(() => {
+    if (!configSubmenuOpen) return;
+    function onDocDown(event: MouseEvent | TouchEvent) {
+      const target = event.target as unknown as HTMLElement | null;
+      if (!target) return;
+      const menuContains = document?.getElementById("config-submenu")?.contains?.(target);
+      const buttonContains = document?.getElementById("config-menu-button")?.contains?.(target);
+      if (!menuContains && !buttonContains) {
+        setConfigSubmenuOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", onDocDown);
+    document.addEventListener("touchstart", onDocDown);
+    return () => {
+      document.removeEventListener("mousedown", onDocDown);
+      document.removeEventListener("touchstart", onDocDown);
+    };
+  }, [configSubmenuOpen]);
+
   return (
     <Page>
       <TopBar role="navigation" aria-label="Barra de navegação">
@@ -365,12 +492,59 @@ export default function HomePage() {
                 </svg>
                 <span>Relatórios</span>
               </NavItem>
-              <NavItem href="/config?section=forms" aria-label="Configurações">
-                <svg viewBox="0 0 24 24" fill="currentColor">
-                  <path d="M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58c.18-.14.23-.41.12-.61l-1.92-3.32c-.12-.22-.37-.29-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54c-.04-.24-.24-.41-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96c-.22-.08-.47 0-.59.22L2.74 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.05.3-.07.62-.07.94s.02.64.07.94l-2.03 1.58c-.18.14-.23.41-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58zM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6z"/>
-                </svg>
-                <span>Config</span>
-              </NavItem>
+              <div style={{ position: "relative" }}>
+                <NavItemButton
+                  type="button"
+                  id="config-menu-button"
+                  aria-label="Configurações"
+                  aria-expanded={configSubmenuOpen}
+                  aria-haspopup="true"
+                  onClick={() => setConfigSubmenuOpen(!configSubmenuOpen)}
+                >
+                  <svg viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58c.18-.14.23-.41.12-.61l-1.92-3.32c-.12-.22-.37-.29-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54c-.04-.24-.24-.41-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96c-.22-.08-.47 0-.59.22L2.74 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.05.3-.07.62-.07.94s.02.64.07.94l-2.03 1.58c-.18.14-.23.41-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58zM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6z"/>
+                  </svg>
+                  <span>Config</span>
+                </NavItemButton>
+                {typeof window !== "undefined" && document && configSubmenuOpen && createPortal(
+                  <ConfigSubmenu
+                    id="config-submenu"
+                    role="menu"
+                    aria-labelledby="config-menu-button"
+                    $open={configSubmenuOpen}
+                  >
+                    <ConfigSubmenuItem
+                      role="menuitem"
+                      tabIndex={0}
+                      href="/config?section=forms"
+                      onClick={() => {
+                        setConfigSubmenuOpen(false);
+                        router.push("/config?section=forms");
+                      }}
+                    >
+                      <svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16">
+                        <path d="M14 2H6c-1.1 0-1.99.9-1.99 2L4 20c0 1.1.89 2 1.99 2H18c1.1 0 2-.9 2-2V8l-6-6zm2 16H8v-2h8v2zm0-4H8v-2h8v2zm-3-5V3.5L18.5 9H13z"/>
+                      </svg>
+                      Formulários
+                    </ConfigSubmenuItem>
+                    <ConfigSubmenuItem
+                      role="menuitem"
+                      tabIndex={0}
+                      href="/config?section=webhooks"
+                      onClick={() => {
+                        setConfigSubmenuOpen(false);
+                        router.push("/config?section=webhooks");
+                      }}
+                    >
+                      <svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16">
+                        <path d="M17.71 7.71L12 2h-1v7.59L6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 11 14.41V22h1l5.71-5.71-4.3-4.29 4.3-4.29zM13 3.83l3.88 3.88-3.88 3.88V3.83zm0 12.34v-7.76l3.88 3.88L13 16.17z"/>
+                      </svg>
+                      Webhooks
+                    </ConfigSubmenuItem>
+                  </ConfigSubmenu>,
+                  document.body
+                )}
+              </div>
             </MenuScroll>
           </nav>
           <UserFooter

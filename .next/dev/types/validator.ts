@@ -416,6 +416,33 @@ type RouteHandlerConfig<Route extends AppRouteHandlerRoutes = AppRouteHandlerRou
   type __Unused = __Check
 }
 
+// Validate ../../../src/app/api/webhooks/[id]/route.ts
+{
+  type __IsExpected<Specific extends RouteHandlerConfig<"/api/webhooks/[id]">> = Specific
+  const handler = {} as typeof import("../../../src/app/api/webhooks/[id]/route.js")
+  type __Check = __IsExpected<typeof handler>
+  // @ts-ignore
+  type __Unused = __Check
+}
+
+// Validate ../../../src/app/api/webhooks/receive/[token]/route.ts
+{
+  type __IsExpected<Specific extends RouteHandlerConfig<"/api/webhooks/receive/[token]">> = Specific
+  const handler = {} as typeof import("../../../src/app/api/webhooks/receive/[token]/route.js")
+  type __Check = __IsExpected<typeof handler>
+  // @ts-ignore
+  type __Unused = __Check
+}
+
+// Validate ../../../src/app/api/webhooks/route.ts
+{
+  type __IsExpected<Specific extends RouteHandlerConfig<"/api/webhooks">> = Specific
+  const handler = {} as typeof import("../../../src/app/api/webhooks/route.js")
+  type __Check = __IsExpected<typeof handler>
+  // @ts-ignore
+  type __Unused = __Check
+}
+
 
 
 

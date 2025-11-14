@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import styled, { keyframes } from "styled-components";
 import NotificationBell from "@/components/NotificationBell";
 import Link from "next/link";
@@ -224,6 +225,31 @@ export default function BasePage() {
       firstMenuItemRef.current.focus();
     }
   }, [menuOpen]);
+
+  // Posicionar menu do usuário quando renderizado via portal
+  useEffect(() => {
+    if (!menuOpen) return;
+    const updatePosition = () => {
+      const footerEl = footerRef.current;
+      const menuEl = typeof window !== "undefined" && document?.getElementById("user-menu");
+      if (footerEl && menuEl) {
+        const rect = (footerEl as HTMLElement).getBoundingClientRect();
+        const menu = menuEl as HTMLElement;
+        menu.style.left = `${rect.left + rect.width + 8}px`;
+        menu.style.bottom = `${window.innerHeight - rect.bottom}px`;
+      }
+    };
+    updatePosition();
+    if (typeof window !== "undefined") {
+      window.addEventListener("resize", updatePosition);
+      window.addEventListener("scroll", updatePosition, true);
+      return () => {
+        window.removeEventListener("resize", updatePosition);
+        window.removeEventListener("scroll", updatePosition, true);
+      };
+    }
+  }, [menuOpen]);
+
 
   useEffect(() => {
     function onVisibility() {
@@ -1212,30 +1238,33 @@ export default function BasePage() {
             </Avatar>
             <UserName aria-label="Nome do usuário">{sessionUser?.name ?? sessionUser?.email ?? "Usuário"}</UserName>
           </UserFooter>
-          <UserMenu
-            id="user-menu"
-            role="menu"
-            aria-labelledby="user-menu-button"
-            $open={menuOpen}
-            ref={menuRef as any}
-          >
-            <UserMenuItem
-              role="menuitem"
-              tabIndex={0}
-              ref={firstMenuItemRef as any}
-              onClick={() => { setMenuOpen(false); window.location.assign("/profile"); }}
+          {typeof window !== "undefined" && document && menuOpen && createPortal(
+            <UserMenu
+              id="user-menu"
+              role="menu"
+              aria-labelledby="user-menu-button"
+              $open={menuOpen}
+              ref={menuRef as any}
             >
-              Perfil
-            </UserMenuItem>
-            <UserMenuItem
-              role="menuitem"
-              tabIndex={0}
-              $variant="danger"
-              onClick={() => { setMenuOpen(false); setConfirmOpen(true); }}
-            >
-              Sair
-            </UserMenuItem>
-          </UserMenu>
+              <UserMenuItem
+                role="menuitem"
+                tabIndex={0}
+                ref={firstMenuItemRef as any}
+                onClick={() => { setMenuOpen(false); window.location.assign("/profile"); }}
+              >
+                Perfil
+              </UserMenuItem>
+              <UserMenuItem
+                role="menuitem"
+                tabIndex={0}
+                $variant="danger"
+                onClick={() => { setMenuOpen(false); setConfirmOpen(true); }}
+              >
+                Sair
+              </UserMenuItem>
+            </UserMenu>,
+            document.body
+          )}
         </Sidebar>
         <Overlay $show={sidebarOpen} onClick={() => setSidebarOpen(false)} aria-hidden={!sidebarOpen} />
         <Content>
@@ -2873,6 +2902,7 @@ const MainCard = styled.section`
     0 8px 24px rgba(0, 0, 0, 0.04),
     0 0 0 1px rgba(255, 255, 255, 0.5) inset;
   position: relative;
+  z-index: 1;
   transition: box-shadow 0.3s ease;
 
   &:hover {
@@ -3746,8 +3776,6 @@ const ConfirmButton = styled.button`
 
 const UserMenu = styled.div<{ $open: boolean }>`
   position: fixed;
-  left: 108px;
-  bottom: 96px;
   background: #fff;
   border: 1px solid var(--border);
   border-radius: 12px;
@@ -3758,24 +3786,30 @@ const UserMenu = styled.div<{ $open: boolean }>`
   opacity: ${(p) => (p.$open ? 1 : 0)};
   pointer-events: ${(p) => (p.$open ? "auto" : "none")};
   transition: opacity .18s ease, transform .18s ease;
-  z-index: 100;
+  z-index: 99999;
 
   @media (max-width: 960px) {
-    left: 16px;
+    left: 16px !important;
+    bottom: 96px !important;
   }
 `;
 
 const UserMenuItem = styled.button<{ $variant?: "danger" }>`
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 10px;
   padding: 10px 12px;
-  border-radius: 8px;
-  border: 0;
+  border: none;
   background: transparent;
-  text-align: left;
+  border-radius: 8px;
   cursor: pointer;
-  color: ${(p) => (p.$variant === "danger" ? "#dc2626" : "inherit")};
-  &:hover { background: #f3f4f6; }
+  text-align: left;
+  color: ${(p) => (p.$variant === "danger" ? "#B00000" : "inherit")};
+  &:hover { background: ${(p) => (p.$variant === "danger" ? "#ffe5e5" : "#f3f4f6")}; }
+  &:active { background: ${(p) => (p.$variant === "danger" ? "#ffcccc" : "#e9ecef")}; }
   &:focus { outline: none; }
-  &:focus-visible { outline: 2px solid var(--primary-600); }
+  &:focus-visible { outline: none; }
 `;
 
 const TabsContainer = styled.div`

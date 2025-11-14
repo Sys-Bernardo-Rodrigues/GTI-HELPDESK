@@ -1,12 +1,13 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import styled from "styled-components";
 import { useRouter, useSearchParams } from "next/navigation";
 import NotificationBell from "@/components/NotificationBell";
 // Remover header/aside custom e usar o mesmo padrão visual do /home
 
-type SectionKey = "general" | "appearance" | "notifications" | "security" | "integrations" | "forms";
+type SectionKey = "general" | "appearance" | "notifications" | "security" | "integrations" | "forms" | "webhooks";
 
 export default function ConfigPage() {
   const params = useSearchParams();
@@ -24,6 +25,7 @@ export default function ConfigPage() {
   const [error, setError] = useState<string>("");
   const [menuOpen, setMenuOpen] = useState<boolean>(false);
   const [confirmOpen, setConfirmOpen] = useState<boolean>(false);
+  const [configSubmenuOpen, setConfigSubmenuOpen] = useState<boolean>(false);
   // Estado do builder de formulários
   type BuilderField = { tempId: string; label: string; type: "TEXT"|"TEXTAREA"|"SELECT"|"RADIO"|"CHECKBOX"|"FILE"; options?: string; required: boolean };
   const [formsList, setFormsList] = useState<Array<{ id: number; numericId?: number; title: string; slug: string; link: string; createdAt?: string; isPublic?: boolean; createdByName?: string | null; createdByEmail?: string | null }>>([]);
@@ -45,12 +47,39 @@ export default function ConfigPage() {
   const [editLoading, setEditLoading] = useState<boolean>(false);
   const [editSaving, setEditSaving] = useState<boolean>(false);
   const [editError, setEditError] = useState<string>("");
+  // Estado do gerenciamento de webhooks
+  const [webhooksList, setWebhooksList] = useState<Array<{ id: number; name: string; description?: string | null; token: string; isActive: boolean; link: string; createdAt?: string; createdByName?: string | null; createdByEmail?: string | null }>>([]);
+  const [webhookName, setWebhookName] = useState<string>("");
+  const [webhookDesc, setWebhookDesc] = useState<string>("");
+  const [savingWebhook, setSavingWebhook] = useState<boolean>(false);
+  const [createWebhookOpen, setCreateWebhookOpen] = useState<boolean>(false);
+  const [webhooksFeedback, setWebhooksFeedback] = useState<{ type: "success" | "error"; text: string } | null>(null);
+  const [manageWebhookOpen, setManageWebhookOpen] = useState<boolean>(false);
+  const [manageWebhookId, setManageWebhookId] = useState<number | null>(null);
+  const [webhooksLoading, setWebhooksLoading] = useState<boolean>(false);
+  const [toggleWebhookLoading, setToggleWebhookLoading] = useState<boolean>(false);
+  const [editWebhookOpen, setEditWebhookOpen] = useState<boolean>(false);
+  const [editWebhookId, setEditWebhookId] = useState<number | null>(null);
+  const [editWebhookName, setEditWebhookName] = useState<string>("");
+  const [editWebhookDesc, setEditWebhookDesc] = useState<string>("");
+  const [editWebhookLoading, setEditWebhookLoading] = useState<boolean>(false);
+  const [editWebhookSaving, setEditWebhookSaving] = useState<boolean>(false);
+  const [editWebhookError, setEditWebhookError] = useState<string>("");
+  const [webhookHelpOpen, setWebhookHelpOpen] = useState<boolean>(false);
+  const [testingWebhook, setTestingWebhook] = useState<boolean>(false);
+  const [testResult, setTestResult] = useState<{ success: boolean; message: string; ticketId?: number } | null>(null);
 
   useEffect(() => {
     if (!formsFeedback) return;
     const timer = setTimeout(() => setFormsFeedback(null), 2400);
     return () => clearTimeout(timer);
   }, [formsFeedback]);
+
+  useEffect(() => {
+    if (!webhooksFeedback) return;
+    const timer = setTimeout(() => setWebhooksFeedback(null), 2400);
+    return () => clearTimeout(timer);
+  }, [webhooksFeedback]);
 
 
   // Fechar modal com ESC e gerenciar foco básico
@@ -180,8 +209,63 @@ export default function ConfigPage() {
   useEffect(() => {
     if (section === "forms") {
       loadForms();
+    } else if (section === "webhooks") {
+      loadWebhooks();
     }
   }, [section]);
+
+  // Abrir submenu de config quando estiver em forms ou webhooks
+  useEffect(() => {
+    if (section === "forms" || section === "webhooks") {
+      setConfigSubmenuOpen(true);
+    }
+  }, [section]);
+
+  // Posicionar menu de config
+  useEffect(() => {
+    if (!configSubmenuOpen) return;
+    const updatePosition = () => {
+      const buttonEl = typeof globalThis !== "undefined" && (globalThis as any).document?.getElementById("config-menu-button");
+      const menuEl = typeof globalThis !== "undefined" && (globalThis as any).document?.getElementById("config-submenu");
+      if (buttonEl && menuEl) {
+        const rect = (buttonEl as HTMLElement).getBoundingClientRect();
+        const menu = menuEl as HTMLElement;
+        menu.style.left = `${rect.right + 8}px`;
+        menu.style.top = `${rect.top}px`;
+      }
+    };
+    updatePosition();
+    const appWindow = typeof globalThis !== "undefined" ? (globalThis as any).window : undefined;
+    if (appWindow) {
+      appWindow.addEventListener("resize", updatePosition);
+      appWindow.addEventListener("scroll", updatePosition, true);
+      return () => {
+        appWindow.removeEventListener("resize", updatePosition);
+        appWindow.removeEventListener("scroll", updatePosition, true);
+      };
+    }
+  }, [configSubmenuOpen]);
+
+  // Fechar menu ao clicar fora
+  useEffect(() => {
+    const doc = typeof globalThis !== "undefined" ? (globalThis as any).document : undefined;
+    if (!doc || !configSubmenuOpen) return;
+    function onDocDown(event: MouseEvent | TouchEvent) {
+      const target = event.target as unknown as HTMLElement | null;
+      if (!target) return;
+      const menuContains = (typeof globalThis !== "undefined" && (globalThis as any).document?.getElementById("config-submenu")?.contains?.(target));
+      const buttonContains = (typeof globalThis !== "undefined" && (globalThis as any).document?.querySelector('[aria-label="Configurações"]')?.contains?.(target));
+      if (!menuContains && !buttonContains) {
+        setConfigSubmenuOpen(false);
+      }
+    }
+    doc.addEventListener("mousedown", onDocDown);
+    doc.addEventListener("touchstart", onDocDown);
+    return () => {
+      doc.removeEventListener("mousedown", onDocDown);
+      doc.removeEventListener("touchstart", onDocDown);
+    };
+  }, [configSubmenuOpen]);
   // Atualizar automaticamente ao voltar o foco para a aba
   useEffect(() => {
     const doc = typeof globalThis !== "undefined" ? (globalThis as any).document : undefined;
@@ -407,6 +491,237 @@ export default function ConfigPage() {
     }
   }
 
+  // Funções para gerenciar webhooks
+  async function loadWebhooks() {
+    setWebhooksLoading(true);
+    try {
+      const res = await fetch("/api/webhooks");
+      if (res.ok) {
+        const json = (await res.json()) as Record<string, any>;
+        const items = (json.items || []).map((i: any) => ({
+          id: i.id,
+          name: i.name,
+          description: i.description ?? null,
+          token: i.token,
+          isActive: Boolean(i.isActive),
+          link: i.link,
+          createdAt: i.createdAt,
+          createdByName: i.createdByName ?? null,
+          createdByEmail: i.createdByEmail ?? null,
+        }));
+        setWebhooksList(items);
+        setWebhooksFeedback(null);
+        setError("");
+      }
+    } catch (err: any) {
+      setError(err?.message || "Erro ao carregar webhooks");
+    } finally {
+      setWebhooksLoading(false);
+    }
+  }
+
+  async function saveWebhook() {
+    if (!webhookName.trim()) {
+      setError("Informe um nome para o webhook");
+      return;
+    }
+    setSavingWebhook(true);
+    try {
+      const payload = {
+        name: webhookName.trim(),
+        description: webhookDesc.trim() || null,
+      };
+      const res = await fetch("/api/webhooks", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) });
+      if (!res.ok) throw new Error("Falha ao salvar webhook");
+      await loadWebhooks();
+      setWebhookName(""); setWebhookDesc("");
+      setCreateWebhookOpen(false);
+      setWebhooksFeedback({ type: "success", text: "Webhook criado com sucesso." });
+    } catch (e: any) {
+      setError(e?.message || "Erro ao salvar");
+    } finally {
+      setSavingWebhook(false);
+    }
+  }
+
+  function copyWebhookLink(token: string) {
+    try {
+      const appWindow = typeof globalThis !== "undefined" ? (globalThis as any).window : undefined;
+      const appNavigator = typeof globalThis !== "undefined" ? (globalThis as any).navigator : undefined;
+      if (!appWindow) throw new Error("Ambiente sem window");
+      const link = `${appWindow.location.origin}/api/webhooks/receive/${token}`;
+      const clipboard = appNavigator?.clipboard;
+      const write = clipboard?.writeText?.(link);
+      if (write && typeof write.then === "function") {
+        write.then(() => setWebhooksFeedback({ type: "success", text: "Link copiado" })).catch(() => setWebhooksFeedback({ type: "error", text: "Falha ao copiar link" }));
+      } else {
+        const doc = typeof globalThis !== "undefined" ? (globalThis as any).document : undefined;
+        if (!doc) throw new Error("Ambiente sem document");
+        const input = doc.createElement("input");
+        input.value = link;
+        doc.body.appendChild(input);
+        input.select();
+        input.setSelectionRange(0, 99999);
+        doc.execCommand("copy");
+        doc.body.removeChild(input);
+        setWebhooksFeedback({ type: "success", text: "Link copiado" });
+      }
+    } catch (err: any) {
+      setWebhooksFeedback({ type: "error", text: err?.message || "Erro ao copiar link" });
+    }
+  }
+
+  function openManageWebhook(id: number) {
+    setManageWebhookId(id);
+    setManageWebhookOpen(true);
+    setWebhooksFeedback(null);
+  }
+
+  function closeManageWebhook() {
+    setManageWebhookOpen(false);
+    setManageWebhookId(null);
+    setWebhooksFeedback(null);
+    setTestResult(null);
+  }
+
+  async function toggleWebhookVisibility(webhook: { id: number; isActive?: boolean }) {
+    setToggleWebhookLoading(true);
+    try {
+      const res = await fetch(`/api/webhooks/${webhook.id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ isActive: !Boolean(webhook.isActive) }),
+      });
+      const json = (await res.json().catch(() => null)) as Record<string, any> | null;
+      if (!res.ok) throw new Error(json?.error || "Falha ao atualizar webhook");
+      setWebhooksList((prev) =>
+        prev.map((w) =>
+          w.id === webhook.id ? { ...w, isActive: json?.isActive ?? !Boolean(webhook.isActive) } : w
+        )
+      );
+      setWebhooksFeedback({ type: "success", text: "Webhook atualizado com sucesso." });
+    } catch (err: any) {
+      setWebhooksFeedback({ type: "error", text: err?.message || "Erro ao atualizar webhook" });
+    } finally {
+      setToggleWebhookLoading(false);
+    }
+  }
+
+  function closeEditWebhookModal() {
+    if (editWebhookSaving) return;
+    setEditWebhookOpen(false);
+    setEditWebhookId(null);
+    setEditWebhookName("");
+    setEditWebhookDesc("");
+    setEditWebhookError("");
+  }
+
+  async function openEditWebhookModal(webhookId: number) {
+    setEditWebhookId(webhookId);
+    setEditWebhookOpen(true);
+    setEditWebhookLoading(true);
+    setEditWebhookError("");
+    setWebhooksFeedback(null);
+    try {
+      const res = await fetch(`/api/webhooks/${webhookId}?t=${Date.now()}`);
+      if (!res.ok) {
+        const json = (await res.json().catch(() => null)) as Record<string, any> | null;
+        throw new Error(json?.error || "Falha ao carregar webhook");
+      }
+      const data = (await res.json()) as Record<string, any>;
+      setEditWebhookName(data?.name ?? "");
+      setEditWebhookDesc(data?.description ?? "");
+    } catch (err: any) {
+      setEditWebhookError(err?.message || "Erro ao carregar webhook");
+    } finally {
+      setEditWebhookLoading(false);
+    }
+  }
+
+  async function startEditWebhook(webhookId: number) {
+    closeManageWebhook();
+    await openEditWebhookModal(webhookId);
+  }
+
+  async function saveEditedWebhook() {
+    if (!editWebhookId) return;
+    if (!editWebhookName.trim()) {
+      setEditWebhookError("Informe um nome para o webhook.");
+      return;
+    }
+    setEditWebhookSaving(true);
+    setEditWebhookError("");
+    try {
+      const payload = {
+        name: editWebhookName.trim(),
+        description: editWebhookDesc.trim() || null,
+      };
+      const res = await fetch(`/api/webhooks/${editWebhookId}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      if (!res.ok) {
+        const json = (await res.json().catch(() => null)) as Record<string, any> | null;
+        throw new Error(json?.error || "Falha ao salvar webhook");
+      }
+      await loadWebhooks();
+      setWebhooksFeedback({ type: "success", text: "Webhook atualizado com sucesso." });
+      closeEditWebhookModal();
+    } catch (err: any) {
+      setEditWebhookError(err?.message || "Erro ao salvar webhook");
+    } finally {
+      setEditWebhookSaving(false);
+    }
+  }
+
+  async function testWebhook(token: string) {
+    setTestingWebhook(true);
+    setTestResult(null);
+    try {
+      const testPayload = {
+        title: "Teste de Webhook",
+        description: "Este é um teste de webhook enviado pela interface de configuração.",
+        source: "Interface de Teste",
+        timestamp: new Date().toISOString(),
+        test: true
+      };
+
+      const res = await fetch(`/api/webhooks/receive/${token}`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(testPayload),
+      });
+
+      const data = (await res.json().catch(() => ({}))) as Record<string, any>;
+
+      if (res.ok) {
+        setTestResult({
+          success: true,
+          message: "Webhook testado com sucesso!",
+          ticketId: data.ticketId || undefined,
+        });
+        setWebhooksFeedback({ type: "success", text: `Webhook testado! Ticket #${data.ticketId || "N/A"} criado.` });
+      } else {
+        setTestResult({
+          success: false,
+          message: data.error || "Erro ao testar webhook",
+        });
+        setWebhooksFeedback({ type: "error", text: data.error || "Erro ao testar webhook" });
+      }
+    } catch (err: any) {
+      setTestResult({
+        success: false,
+        message: err?.message || "Erro ao testar webhook",
+      });
+      setWebhooksFeedback({ type: "error", text: err?.message || "Erro ao testar webhook" });
+    } finally {
+      setTestingWebhook(false);
+    }
+  }
+
   
 
   useEffect(() => {
@@ -546,10 +861,19 @@ export default function ConfigPage() {
             </Muted>
           </div>
         );
+      case "webhooks":
+        return (
+          <div>
+            <SectionTitle>Webhooks</SectionTitle>
+            <Muted>Configure webhooks para receber notificações de outros sistemas e criar tickets automaticamente.
+            </Muted>
+          </div>
+        );
     }
   }, [section, loading, error]);
 
   const activeForm = manageFormId ? formsList.find((f) => f.id === manageFormId) ?? null : null;
+  const activeWebhook = manageWebhookId ? webhooksList.find((w) => w.id === manageWebhookId) ?? null : null;
   const baseUrl = typeof globalThis !== "undefined" && (globalThis as any).window
     ? ((globalThis as any).window?.location?.origin ?? "")
     : "";
@@ -610,12 +934,62 @@ export default function ConfigPage() {
                 </svg>
                 <span>Relatórios</span>
               </NavItem>
-              <NavItem href="/config?section=forms" aria-label="Configurações" aria-current="page">
-                <svg viewBox="0 0 24 24" fill="currentColor">
-                  <path d="M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58c.18-.14.23-.41.12-.61l-1.92-3.32c-.12-.22-.37-.29-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54c-.04-.24-.24-.41-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96c-.22-.08-.47 0-.59.22L2.74 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.05.3-.07.62-.07.94s.02.64.07.94l-2.03 1.58c-.18.14-.23.41-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58zM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6z"/>
-                </svg>
-                <span>Config</span>
-              </NavItem>
+              <div style={{ position: "relative" }}>
+                <NavItemButton
+                  type="button"
+                  id="config-menu-button"
+                  aria-label="Configurações"
+                  aria-expanded={configSubmenuOpen}
+                  aria-haspopup="true"
+                  onClick={() => setConfigSubmenuOpen(!configSubmenuOpen)}
+                  $active={section === "forms" || section === "webhooks"}
+                >
+                  <svg viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58c.18-.14.23-.41.12-.61l-1.92-3.32c-.12-.22-.37-.29-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54c-.04-.24-.24-.41-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96c-.22-.08-.47 0-.59.22L2.74 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.05.3-.07.62-.07.94s.02.64.07.94l-2.03 1.58c-.18.14-.23.41-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58zM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6z"/>
+                  </svg>
+                  <span>Config</span>
+                </NavItemButton>
+{typeof globalThis !== "undefined" && (globalThis as any).document && configSubmenuOpen && createPortal(
+                <ConfigSubmenu
+                  id="config-submenu"
+                  role="menu"
+                  aria-labelledby="config-menu-button"
+                  $open={configSubmenuOpen}
+                >
+                  <ConfigSubmenuItem
+                    role="menuitem"
+                    tabIndex={0}
+                    href="/config?section=forms"
+                    onClick={() => {
+                      setConfigSubmenuOpen(false);
+                      router.push("/config?section=forms");
+                    }}
+                    $active={section === "forms"}
+                  >
+                    <svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16">
+                      <path d="M14 2H6c-1.1 0-1.99.9-1.99 2L4 20c0 1.1.89 2 1.99 2H18c1.1 0 2-.9 2-2V8l-6-6zm2 16H8v-2h8v2zm0-4H8v-2h8v2zm-3-5V3.5L18.5 9H13z"/>
+                    </svg>
+                    Formulários
+                  </ConfigSubmenuItem>
+                  <ConfigSubmenuItem
+                    role="menuitem"
+                    tabIndex={0}
+                    href="/config?section=webhooks"
+                    onClick={() => {
+                      setConfigSubmenuOpen(false);
+                      router.push("/config?section=webhooks");
+                    }}
+                    $active={section === "webhooks"}
+                  >
+                    <svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16">
+                      <path d="M17.71 7.71L12 2h-1v7.59L6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 11 14.41V22h1l5.71-5.71-4.3-4.29 4.3-4.29zM13 3.83l3.88 3.88-3.88 3.88V3.83zm0 12.34v-7.76l3.88 3.88L13 16.17z"/>
+                    </svg>
+                    Webhooks
+                  </ConfigSubmenuItem>
+                </ConfigSubmenu>,
+                (globalThis as any).document.body
+              )}
+              </div>
             </MenuScroll>
           </nav>
           <UserFooter
@@ -691,7 +1065,7 @@ export default function ConfigPage() {
         </Sidebar>
         <Overlay $show={open} onClick={() => setOpen(false)} />
         <Content>
-          {section !== "forms" && (
+          {section !== "forms" && section !== "webhooks" && (
             <Card aria-labelledby="config-title">
               <CardHeader>
                 <HeaderIcon aria-hidden>⚙️</HeaderIcon>
@@ -789,6 +1163,99 @@ export default function ConfigPage() {
                           </FormsCell>
                         </tr>
                   ))}
+                    </tbody>
+                  </FormsTable>
+                </FormsScroll>
+              </Card>
+            </FormsWrapper>
+          )}
+          {section === "webhooks" && (
+            <FormsWrapper>
+              <Card aria-labelledby="webhooks-card-title">
+                <CardHeader>
+                  <HeaderIcon aria-hidden>🔗</HeaderIcon>
+                  <div>
+                    <CardTitle id="webhooks-card-title">Webhooks</CardTitle>
+                    <Muted>Configure webhooks para receber notificações de outros sistemas e criar tickets automaticamente.</Muted>
+                  </div>
+                  <HeaderActions>
+                    <HelpButton type="button" onClick={() => setWebhookHelpOpen(true)} aria-label="Ajuda sobre webhooks">
+                      <svg viewBox="0 0 24 24" fill="currentColor" width="18" height="18">
+                        <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 17h-2v-2h2v2zm2.07-7.75l-.9.92C13.45 12.9 13 13.5 13 15h-2v-.5c0-1.1.45-2.1 1.17-2.83l1.24-1.26c.37-.36.59-.86.59-1.41 0-1.1-.9-2-2-2s-2 .9-2 2H8c0-2.21 1.79-4 4-4s4 1.79 4 4c0 .88-.36 1.68-.93 2.25z"/>
+                      </svg>
+                    </HelpButton>
+                    <ActionButton type="button" onClick={() => loadWebhooks()} disabled={webhooksLoading}>
+                      Recarregar
+                    </ActionButton>
+                    <PrimaryButton type="button" onClick={() => setCreateWebhookOpen(true)}>
+                      Novo webhook
+                    </PrimaryButton>
+                  </HeaderActions>
+                </CardHeader>
+                {error && (
+                  <Feedback role="alert" $variant="error">{error}</Feedback>
+                )}
+                {webhooksFeedback && !manageWebhookOpen && !createWebhookOpen && (
+                  <Feedback role={webhooksFeedback.type === "error" ? "alert" : "status"} $variant={webhooksFeedback.type}>
+                    {webhooksFeedback.text}
+                  </Feedback>
+                )}
+                <FormsScroll role="region" aria-label="Lista de webhooks">
+                  <FormsTable>
+                    <thead>
+                      <tr>
+                        <FormsHeaderCell>Webhook</FormsHeaderCell>
+                        <FormsHeaderCell>Status</FormsHeaderCell>
+                        <FormsHeaderCell>Criado por</FormsHeaderCell>
+                        <FormsHeaderCell>Criado em</FormsHeaderCell>
+                        <FormsHeaderCell>URL</FormsHeaderCell>
+                        <FormsHeaderCell aria-label="Ações" />
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {webhooksLoading && (
+                        <tr>
+                          <FormsCell colSpan={6}>
+                            <Muted>Carregando webhooks...</Muted>
+                          </FormsCell>
+                        </tr>
+                      )}
+                      {!webhooksLoading && webhooksList.length === 0 && (
+                        <tr>
+                          <FormsCell colSpan={6}>
+                            <Muted>Nenhum webhook cadastrado ainda.</Muted>
+                          </FormsCell>
+                        </tr>
+                      )}
+                      {!webhooksLoading && webhooksList.map((webhook) => (
+                        <tr key={webhook.id}>
+                          <FormsCell>
+                            <FormTitle>
+                              <strong>{webhook.name}</strong>
+                              {webhook.description && <small>{webhook.description}</small>}
+                            </FormTitle>
+                          </FormsCell>
+                          <FormsCell>
+                            <StatusBadge $tone={webhook.isActive ? "success" : "warning"}>
+                              {webhook.isActive ? "Ativo" : "Desativado"}
+                            </StatusBadge>
+                          </FormsCell>
+                          <FormsCell>
+                            <FormMeta>{webhook.createdByName || webhook.createdByEmail || "—"}</FormMeta>
+                          </FormsCell>
+                          <FormsCell>{formatDateTime(webhook.createdAt)}</FormsCell>
+                          <FormsCell>
+                            <FormLink href={webhook.link} target="_blank" rel="noreferrer" onClick={(e) => { e.preventDefault(); copyWebhookLink(webhook.token); }}>
+                              {webhook.link.replace(/^https?:\/\//, "").replace(/^[^\/]+/, "")}
+                            </FormLink>
+                          </FormsCell>
+                          <FormsCell>
+                            <ActionButton type="button" onClick={() => openManageWebhook(webhook.id)}>
+                              Gerenciar
+                            </ActionButton>
+                          </FormsCell>
+                        </tr>
+                      ))}
                     </tbody>
                   </FormsTable>
                 </FormsScroll>
@@ -1149,12 +1616,398 @@ export default function ConfigPage() {
           </ModalDialog>
         </>
       )}
+
+      {createWebhookOpen && (
+        <>
+          <ModalBackdrop $open={createWebhookOpen} onClick={() => setCreateWebhookOpen(false)} aria-hidden={!createWebhookOpen} />
+          <ModalDialog
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="create-webhook-title"
+            $open={createWebhookOpen}
+            onKeyDown={(e) => { if (e.key === "Escape") setCreateWebhookOpen(false); }}
+          >
+            <ModalHeader>
+              <ModalIcon aria-hidden>🔗</ModalIcon>
+              <div>
+                <ModalTitle id="create-webhook-title">Criar novo webhook</ModalTitle>
+                <Muted>Configure um webhook para receber notificações de outros sistemas.</Muted>
+              </div>
+            </ModalHeader>
+            <div>
+              <Field>
+                <Label htmlFor="new-webhook-name">Nome</Label>
+                <Input
+                  id="new-webhook-name"
+                  type="text"
+                  placeholder="Ex.: Webhook Zabbix"
+                  value={webhookName}
+                  onChange={(event) => {
+                    const value = (event.currentTarget as unknown as { value?: string }).value ?? "";
+                    setWebhookName(value);
+                  }}
+                />
+              </Field>
+              <Field>
+                <Label htmlFor="new-webhook-desc">Descrição</Label>
+                <Input
+                  id="new-webhook-desc"
+                  type="text"
+                  placeholder="Breve descrição do webhook"
+                  value={webhookDesc}
+                  onChange={(event) => {
+                    const value = (event.currentTarget as unknown as { value?: string }).value ?? "";
+                    setWebhookDesc(value);
+                  }}
+                />
+              </Field>
+            </div>
+            <ModalActions>
+              <CancelButton type="button" onClick={() => setCreateWebhookOpen(false)}>Cancelar</CancelButton>
+              <ConfirmButton type="button" onClick={saveWebhook} disabled={savingWebhook} aria-label="Salvar novo webhook">
+                {savingWebhook ? "Salvando..." : "Salvar"}
+              </ConfirmButton>
+            </ModalActions>
+          </ModalDialog>
+        </>
+      )}
+
+      {manageWebhookOpen && activeWebhook && (
+        <>
+          <ModalBackdrop $open={manageWebhookOpen} onClick={closeManageWebhook} aria-hidden={!manageWebhookOpen} />
+          <ModalDialog
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="manage-webhook-title"
+            $open={manageWebhookOpen}
+            onKeyDown={(e) => { if (e.key === "Escape") closeManageWebhook(); }}
+          >
+            <ModalHeader>
+              <ModalIcon aria-hidden>🔧</ModalIcon>
+              <div>
+                <ModalTitle id="manage-webhook-title">{activeWebhook.name}</ModalTitle>
+                <Muted>Detalhes do webhook e ações rápidas.</Muted>
+              </div>
+            </ModalHeader>
+            {webhooksFeedback && (
+              <Feedback role={webhooksFeedback.type === "error" ? "alert" : "status"} $variant={webhooksFeedback.type}>
+                {webhooksFeedback.text}
+              </Feedback>
+            )}
+            <InfoGrid>
+              <div>
+                <InfoLabel>ID</InfoLabel>
+                <InfoValue>{activeWebhook.id}</InfoValue>
+              </div>
+              <div>
+                <InfoLabel>Token</InfoLabel>
+                <InfoValue style={{ fontFamily: "monospace", fontSize: "0.85rem", wordBreak: "break-all" }}>{activeWebhook.token}</InfoValue>
+              </div>
+              <div>
+                <InfoLabel>Status</InfoLabel>
+                <InfoValue>
+                  <StatusBadge $tone={activeWebhook.isActive ? "success" : "warning"}>
+                    {activeWebhook.isActive ? "Ativo" : "Desativado"}
+                  </StatusBadge>
+                </InfoValue>
+              </div>
+              <div>
+                <InfoLabel>Criado por</InfoLabel>
+                <InfoValue>{activeWebhook.createdByName || activeWebhook.createdByEmail || "—"}</InfoValue>
+              </div>
+              <div>
+                <InfoLabel>Criado em</InfoLabel>
+                <InfoValue>{formatDateTime(activeWebhook.createdAt)}</InfoValue>
+              </div>
+              <div>
+                <InfoLabel>URL do webhook</InfoLabel>
+                <InfoValue>
+                  <FormLink href={activeWebhook.link} target="_blank" rel="noreferrer" onClick={(e) => { e.preventDefault(); copyWebhookLink(activeWebhook.token); }}>
+                    {activeWebhook.link}
+                  </FormLink>
+                </InfoValue>
+              </div>
+            </InfoGrid>
+            {testResult && (
+              <Feedback role="alert" $variant={testResult.success ? "success" : "error"}>
+                {testResult.message}
+                {testResult.success && testResult.ticketId && (
+                  <div style={{ marginTop: "8px", fontSize: "0.9rem" }}>
+                    Ticket criado: <strong>#{testResult.ticketId}</strong>
+                  </div>
+                )}
+              </Feedback>
+            )}
+            <ModalActions>
+              <ActionButton
+                type="button"
+                onClick={() => testWebhook(activeWebhook.token)}
+                disabled={toggleWebhookLoading || testingWebhook || !activeWebhook.isActive}
+              >
+                {testingWebhook ? "Testando..." : "Testar Webhook"}
+              </ActionButton>
+              <ActionButton
+                type="button"
+                onClick={() => toggleWebhookVisibility(activeWebhook)}
+                disabled={toggleWebhookLoading}
+              >
+                {toggleWebhookLoading ? "Atualizando..." : activeWebhook.isActive ? "Desativar webhook" : "Ativar webhook"}
+              </ActionButton>
+              <ActionButton
+                type="button"
+                onClick={() => startEditWebhook(activeWebhook.id)}
+                disabled={toggleWebhookLoading}
+              >
+                Editar
+              </ActionButton>
+              <PrimaryButton
+                type="button"
+                onClick={() => copyWebhookLink(activeWebhook.token)}
+                disabled={toggleWebhookLoading}
+              >
+                Copiar URL
+              </PrimaryButton>
+              <CancelButton type="button" onClick={closeManageWebhook} disabled={toggleWebhookLoading}>Fechar</CancelButton>
+            </ModalActions>
+          </ModalDialog>
+        </>
+      )}
+
+      {editWebhookOpen && (
+        <>
+          <ModalBackdrop
+            $open={editWebhookOpen}
+            onClick={() => { if (!editWebhookSaving && !editWebhookLoading) closeEditWebhookModal(); }}
+            aria-hidden={!editWebhookOpen}
+          />
+          <ModalDialog
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="edit-webhook-title"
+            $open={editWebhookOpen}
+            onKeyDown={(e) => { if (e.key === "Escape" && !editWebhookSaving) closeEditWebhookModal(); }}
+          >
+            <ModalHeader>
+              <ModalIcon aria-hidden>✏️</ModalIcon>
+              <div>
+                <ModalTitle id="edit-webhook-title">Editar webhook</ModalTitle>
+                <Muted>Atualize nome e descrição conforme necessário.</Muted>
+              </div>
+            </ModalHeader>
+            {editWebhookError && (
+              <Feedback role="alert" $variant="error">{editWebhookError}</Feedback>
+            )}
+            {editWebhookLoading ? (
+              <Muted>Carregando dados do webhook...</Muted>
+            ) : (
+              <div>
+                <Field>
+                  <Label htmlFor="edit-webhook-name-input">Nome</Label>
+                  <Input
+                    id="edit-webhook-name-input"
+                    type="text"
+                    value={editWebhookName}
+                    onChange={(event) => {
+                      const value = (event.currentTarget as unknown as { value?: string }).value ?? "";
+                      setEditWebhookName(value);
+                    }}
+                  />
+                </Field>
+                <Field>
+                  <Label htmlFor="edit-webhook-desc-input">Descrição</Label>
+                  <Input
+                    id="edit-webhook-desc-input"
+                    type="text"
+                    value={editWebhookDesc}
+                    onChange={(event) => {
+                      const value = (event.currentTarget as unknown as { value?: string }).value ?? "";
+                      setEditWebhookDesc(value);
+                    }}
+                  />
+                </Field>
+              </div>
+            )}
+            <ModalActions>
+              <CancelButton type="button" onClick={closeEditWebhookModal} disabled={editWebhookSaving || editWebhookLoading}>Cancelar</CancelButton>
+              <PrimaryButton type="button" onClick={saveEditedWebhook} disabled={editWebhookSaving || editWebhookLoading}>
+                {editWebhookSaving ? "Salvando..." : "Salvar alterações"}
+              </PrimaryButton>
+            </ModalActions>
+          </ModalDialog>
+        </>
+      )}
+
+      {webhookHelpOpen && (
+        <>
+          <ModalBackdrop $open={webhookHelpOpen} onClick={() => setWebhookHelpOpen(false)} aria-hidden={!webhookHelpOpen} />
+          <ModalDialog
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="webhook-help-title"
+            $open={webhookHelpOpen}
+            onKeyDown={(e) => { if (e.key === "Escape") setWebhookHelpOpen(false); }}
+          >
+            <ModalHeader>
+              <ModalIcon aria-hidden>❓</ModalIcon>
+              <div>
+                <ModalTitle id="webhook-help-title">Como funcionam os Webhooks?</ModalTitle>
+                <Muted>Entenda como configurar e usar webhooks para criar tickets automaticamente.</Muted>
+              </div>
+            </ModalHeader>
+            <div style={{ maxHeight: "60vh", overflowY: "auto", paddingRight: "8px" }}>
+              <HelpSection>
+                <HelpSectionTitle>O que é um Webhook?</HelpSectionTitle>
+                <HelpText>
+                  Um webhook é uma URL especial que permite que outros sistemas enviem notificações para o seu helpdesk. 
+                  Quando um evento ocorre no sistema externo (como Zabbix, por exemplo), ele envia uma requisição HTTP POST 
+                  para a URL do webhook, e automaticamente um ticket é criado no sistema.
+                </HelpText>
+              </HelpSection>
+
+              <HelpSection>
+                <HelpSectionTitle>Como criar um Webhook?</HelpSectionTitle>
+                <HelpText>
+                  <ol style={{ marginLeft: "20px", marginTop: "8px" }}>
+                    <li>Clique no botão "Novo webhook"</li>
+                    <li>Informe um nome descritivo (ex: "Webhook Zabbix")</li>
+                    <li>Adicione uma descrição opcional</li>
+                    <li>Clique em "Salvar"</li>
+                  </ol>
+                  Um token único será gerado automaticamente e uma URL será criada.
+                </HelpText>
+              </HelpSection>
+
+              <HelpSection>
+                <HelpSectionTitle>Como configurar no sistema externo?</HelpSectionTitle>
+                <HelpText>
+                  <strong>1. Copie a URL do webhook:</strong> Clique em "Gerenciar" no webhook desejado e depois em "Copiar URL".
+                  <br /><br />
+                  <strong>2. Configure no seu sistema (exemplo Zabbix):</strong>
+                  <ul style={{ marginLeft: "20px", marginTop: "8px" }}>
+                    <li>Acesse as configurações de Media Types ou Actions</li>
+                    <li>Adicione uma nova ação de webhook</li>
+                    <li>Cole a URL copiada no campo de URL</li>
+                    <li>Configure o método como POST</li>
+                    <li>Defina o Content-Type como application/json</li>
+                  </ul>
+                </HelpText>
+              </HelpSection>
+
+              <HelpSection>
+                <HelpSectionTitle>Formato dos dados enviados</HelpSectionTitle>
+                <HelpText>
+                  O sistema aceita dados em formato JSON ou form-data. Exemplo de payload JSON:
+                  <CodeBlock>
+{`{
+  "title": "Alerta Zabbix",
+  "description": "Servidor com alta utilização de CPU",
+  "host": "servidor01",
+  "severity": "High",
+  "event": "CPU_ALERT"
+}`}
+                  </CodeBlock>
+                  O sistema tentará extrair automaticamente:
+                  <ul style={{ marginLeft: "20px", marginTop: "8px" }}>
+                    <li><strong>Título do ticket:</strong> title, subject, name ou event</li>
+                    <li><strong>Descrição:</strong> description, message, body ou content</li>
+                    <li><strong>Outros campos:</strong> Todos os campos adicionais serão incluídos na descrição do ticket</li>
+                  </ul>
+                </HelpText>
+              </HelpSection>
+
+              <HelpSection>
+                <HelpSectionTitle>Ativar/Desativar Webhook</HelpSectionTitle>
+                <HelpText>
+                  Você pode ativar ou desativar um webhook a qualquer momento através do botão "Gerenciar". 
+                  Quando desativado, o webhook não aceitará novas requisições, mas os tickets já criados permanecerão no sistema.
+                </HelpText>
+              </HelpSection>
+
+              <HelpSection>
+                <HelpSectionTitle>Segurança</HelpSectionTitle>
+                <HelpText>
+                  Cada webhook possui um token único e secreto na URL. Mantenha essa URL em segurança e não compartilhe publicamente. 
+                  Se o token for comprometido, você pode desativar o webhook e criar um novo.
+                </HelpText>
+              </HelpSection>
+
+              <HelpSection>
+                <HelpSectionTitle>Como testar o Webhook?</HelpSectionTitle>
+                <HelpText>
+                  <strong>Opção 1 - Teste pela interface:</strong>
+                  <ol style={{ marginLeft: "20px", marginTop: "8px" }}>
+                    <li>Clique em "Gerenciar" no webhook desejado</li>
+                    <li>Clique no botão "Testar Webhook"</li>
+                    <li>Um ticket de teste será criado automaticamente</li>
+                    <li>Verifique o ID do ticket criado na mensagem de sucesso</li>
+                  </ol>
+                  <br />
+                  <strong>Opção 2 - Teste via cURL (Terminal):</strong>
+                  <CodeBlock>
+{`curl -X POST http://localhost:3000/api/webhooks/receive/SEU_TOKEN_AQUI \\
+  -H "Content-Type: application/json" \\
+  -d '{
+    "title": "Teste de Webhook",
+    "description": "Este é um teste via cURL",
+    "host": "servidor-teste",
+    "severity": "Medium"
+  }'`}
+                  </CodeBlock>
+                  <br />
+                  <strong>Opção 3 - Teste via Postman ou Insomnia:</strong>
+                  <ul style={{ marginLeft: "20px", marginTop: "8px" }}>
+                    <li>Método: <strong>POST</strong></li>
+                    <li>URL: Cole a URL completa do webhook</li>
+                    <li>Headers: <code>Content-Type: application/json</code></li>
+                    <li>Body: Selecione "raw" e "JSON", depois cole o exemplo abaixo</li>
+                  </ul>
+                  <CodeBlock>
+{`{
+  "title": "Alerta do Sistema",
+  "description": "Descrição do problema",
+  "host": "servidor01",
+  "severity": "High"
+}`}
+                  </CodeBlock>
+                  <br />
+                  <strong>Opção 4 - Teste via JavaScript (Node.js):</strong>
+                  <CodeBlock>
+{`const fetch = require('node-fetch');
+
+const webhookUrl = 'http://localhost:3000/api/webhooks/receive/SEU_TOKEN_AQUI';
+
+fetch(webhookUrl, {
+  method: 'POST',
+  headers: {
+    'Content-Type': 'application/json',
+  },
+  body: JSON.stringify({
+    title: 'Teste via Node.js',
+    description: 'Este é um teste automatizado',
+    source: 'script-teste'
+  })
+})
+.then(res => res.json())
+.then(data => console.log('Sucesso:', data))
+.catch(err => console.error('Erro:', err));`}
+                  </CodeBlock>
+                </HelpText>
+              </HelpSection>
+            </div>
+            <ModalActions>
+              <PrimaryButton type="button" onClick={() => setWebhookHelpOpen(false)}>
+                Entendi
+              </PrimaryButton>
+            </ModalActions>
+          </ModalDialog>
+        </>
+      )}
       
       </Page>
   );
 }
 
-const SECTIONS: SectionKey[] = ["general", "appearance", "notifications", "security", "integrations", "forms"];
+const SECTIONS: SectionKey[] = ["general", "appearance", "notifications", "security", "integrations", "forms", "webhooks"];
 
 const Page = styled.div`
   min-height: 100dvh;
@@ -1259,6 +2112,86 @@ const NavItem = styled.a`
     flex-shrink: 0;
     width: 20px;
     height: 20px;
+  }
+`;
+
+const NavItemButton = styled.button<{ $active?: boolean }>`
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  padding: 10px 4px;
+  border-radius: 8px;
+  border: none;
+  background: transparent;
+  color: inherit;
+  text-decoration: none;
+  font-size: 0.7rem;
+  font-weight: 500;
+  transition: all 0.2s ease;
+  width: 100%;
+  cursor: pointer;
+  position: relative;
+  &:hover { background: #f3f4f6; }
+  ${(p) => p.$active && "background: #eef2f7; font-weight: 600;"}
+  &:focus { outline: none; }
+  &:focus-visible { outline: none; }
+
+  svg {
+    flex-shrink: 0;
+    width: 20px;
+    height: 20px;
+  }
+`;
+
+const ConfigSubmenu = styled.div<{ $open: boolean }>`
+  position: fixed;
+  background: #fff;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  box-shadow: 0 12px 28px rgba(0,0,0,0.12);
+  min-width: 180px;
+  padding: 8px;
+  transform: translateY(${(p) => (p.$open ? "0" : "8px")});
+  opacity: ${(p) => (p.$open ? 1 : 0)};
+  pointer-events: ${(p) => (p.$open ? "auto" : "none")};
+  transition: opacity .18s ease, transform .18s ease;
+  z-index: 9999;
+
+  @media (max-width: 960px) {
+    left: 16px !important;
+    top: auto !important;
+    bottom: 96px !important;
+  }
+`;
+
+const ConfigSubmenuItem = styled.a<{ $active?: boolean }>`
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border: none;
+  background: transparent;
+  border-radius: 8px;
+  cursor: pointer;
+  text-align: left;
+  color: inherit;
+  text-decoration: none;
+  font-size: 0.9rem;
+  &:hover {
+    background: #f3f4f6;
+  }
+  &:active {
+    background: #e9ecef;
+  }
+  &:focus { outline: none; }
+  &:focus-visible { outline: none; }
+
+  svg {
+    flex-shrink: 0;
+    opacity: 0.8;
   }
 `;
 
@@ -1520,6 +2453,74 @@ const PrimaryButton = styled.button`
   cursor: pointer;
   background: linear-gradient(135deg, var(--primary-600), var(--primary-800));
   box-shadow: 0 6px 12px rgba(20, 93, 191, 0.2);
+`;
+
+const HelpButton = styled.button`
+  padding: 8px 10px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: #fff;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--primary-700);
+  transition: background .15s ease, transform .05s ease;
+  &:hover { 
+    background: #f8fafc; 
+    color: var(--primary-800);
+  }
+  &:active { transform: translateY(1px); }
+  &:disabled { opacity: .6; cursor: default; }
+`;
+
+const HelpSection = styled.div`
+  margin-bottom: 24px;
+  &:last-child {
+    margin-bottom: 0;
+  }
+`;
+
+const HelpSectionTitle = styled.h3`
+  font-size: 1.1rem;
+  font-weight: 700;
+  margin: 0 0 8px;
+  color: var(--primary-800);
+`;
+
+const HelpText = styled.div`
+  font-size: 0.95rem;
+  line-height: 1.6;
+  color: #374151;
+  
+  ol, ul {
+    margin: 8px 0;
+    padding-left: 20px;
+  }
+  
+  li {
+    margin-bottom: 4px;
+  }
+  
+  strong {
+    color: #1f2937;
+    font-weight: 600;
+  }
+`;
+
+const CodeBlock = styled.pre`
+  background: #f3f4f6;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  padding: 12px;
+  margin: 12px 0;
+  overflow-x: auto;
+  font-family: 'Courier New', Courier, monospace;
+  font-size: 0.85rem;
+  line-height: 1.5;
+  color: #1f2937;
+  white-space: pre-wrap;
+  word-wrap: break-word;
 `;
 
 // Botão de ação pequeno e discreto
