@@ -1,96 +1,65 @@
-[00:00:01.246] Server  LOG      ✓ Ready in 862ms
-[00:00:05.798] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
-[00:00:47.158] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
-[00:00:57.344] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
-[00:01:02.265] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
-[00:03:31.894] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
-[00:03:39.485] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
-[00:03:47.676] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
-[00:04:19.833] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
-[00:04:36.471] Server  LOG     [GET /api/base/passwords] Buscando senhas para usuário 1
-[00:04:36.478] Server  LOG     [GET /api/base/passwords] Encontradas 0 senhas
-[00:04:36.480] Server  LOG     [GET /api/base/passwords] Retornando 0 senhas mapeadas
-[00:04:41.714] Server  LOG     [GET /api/base/passwords] Buscando senhas para usuário 1
-[00:04:41.718] Server  LOG     [GET /api/base/passwords] Encontradas 0 senhas
-[00:04:41.719] Server  LOG     [GET /api/base/passwords] Retornando 0 senhas mapeadas
-[00:04:58.082] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
-[00:05:12.560] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
-[00:05:18.732] Server  LOG     [GET /api/base/passwords] Buscando senhas para usuário 2
-[00:05:18.737] Server  LOG     [GET /api/base/passwords] Encontradas 2 senhas
-[00:05:19.171] Server  LOG     [GET /api/base/passwords] Retornando 2 senhas mapeadas
-[00:07:12.078] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
-[00:07:32.654] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
-[00:07:32.660] Server  LOG     [GET /api/base/passwords] Buscando senhas de todos os usuários
-[00:07:32.663] Server  LOG     [GET /api/base/passwords] Encontradas 2 senhas
-[00:07:33.008] Server  LOG     [GET /api/base/passwords] Retornando 2 senhas mapeadas
-[00:09:31.066] Server  LOG      ✓ Compiled in 58ms
-[00:11:59.815] Server  LOG      ✓ Compiled in 84ms
-[00:11:59.972] Browser ERROR   uncaughtError: ReferenceError: chatOpen is not defined
-[00:12:03.721] Server  LOG      ✓ Compiled in 57ms
-[00:12:03.726] Server  WARN     ⚠ Fast Refresh had to perform a full reload due to a runtime error.
-[00:12:04.101] Browser ERROR   uncaughtError: ReferenceError: chatOpen is not defined
-[00:12:04.178] Server  ERROR    ⨯ ReferenceError: chatOpen is not defined
-[00:12:04.562] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
-[00:12:04.737] Browser ERROR   uncaughtError: ReferenceError: chatOpen is not defined
-[00:12:06.199] Server  WARN     ⚠ Fast Refresh had to perform a full reload due to a runtime error.
-[00:12:06.211] Server  LOG      ✓ Compiled in 75ms
-[00:12:06.612] Server  ERROR    ⨯ ReferenceError: chatOpen is not defined
-[00:12:06.843] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
-[00:12:07.027] Browser ERROR   uncaughtError: ReferenceError: chatOpen is not defined
-[00:12:08.280] Server  WARN     ⚠ Fast Refresh had to perform a full reload due to a runtime error.
-[00:12:08.293] Server  LOG      ✓ Compiled in 71ms
-[00:12:08.621] Server  ERROR    ⨯ ReferenceError: chatOpen is not defined
-[00:12:08.800] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
-[00:12:08.959] Browser ERROR   uncaughtError: ReferenceError: chatOpen is not defined
-[00:12:10.644] Server  WARN     ⚠ Fast Refresh had to perform a full reload due to a runtime error.
-[00:12:10.650] Server  LOG      ✓ Compiled in 82ms
-[00:12:11.037] Server  ERROR    ⨯ ReferenceError: chatOpen is not defined
-[00:12:11.227] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
-[00:12:11.388] Browser ERROR   uncaughtError: ReferenceError: chatOpen is not defined
-[00:12:14.506] Server  WARN     ⚠ Fast Refresh had to perform a full reload due to a runtime error.
-[00:12:14.521] Server  LOG      ✓ Compiled in 80ms
-[00:12:14.872] Server  ERROR    ⨯ ReferenceError: chatOpen is not defined
-[00:12:15.048] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
-[00:12:15.220] Browser ERROR   uncaughtError: ReferenceError: chatOpen is not defined
-[00:12:30.331] Server  WARN     ⚠ Fast Refresh had to perform a full reload due to a runtime error.
-[00:12:30.338] Server  LOG      ✓ Compiled in 83ms
-[00:12:30.739] Server  ERROR    ⨯ ReferenceError: chatOpen is not defined
-[00:12:30.970] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
-[00:12:31.126] Browser ERROR   uncaughtError: ReferenceError: chatOpen is not defined
-[00:12:36.378] Server  WARN     ⚠ Fast Refresh had to perform a full reload due to a runtime error.
-[00:12:36.386] Server  LOG      ✓ Compiled in 62ms
-[00:12:38.042] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
-[00:12:48.258] Server  LOG      ✓ Compiled in 44ms
-[00:20:53.146] Server  LOG      ✓ Compiled in 64ms
-[00:20:55.314] Server  LOG      ✓ Compiled in 97ms
-[00:24:33.812] Server  LOG      ✓ Compiled in 52ms
-[00:24:39.409] Server  LOG      ✓ Compiled in 111ms
-[00:24:42.118] Server  LOG      ✓ Compiled in 101ms
-[00:24:47.954] Server  LOG      ✓ Compiled in 74ms
-[00:24:50.526] Server  LOG      ✓ Compiled in 108ms
-[00:24:52.606] Server  LOG      ✓ Compiled in 96ms
-[00:24:54.822] Server  LOG      ✓ Compiled in 71ms
-[00:25:02.745] Server  LOG      ✓ Compiled in 80ms
-[00:25:45.430] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
-[00:25:46.634] Server  LOG      ✓ Compiled in 43ms
-[00:25:49.644] Server  LOG      ✓ Compiled in 175ms
-[00:25:53.145] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
-[00:25:59.121] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
-[00:26:11.527] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
-[00:26:19.231] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
-[00:26:23.529] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
-[00:26:28.884] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
-[00:26:50.640] Browser ERROR   ./src/app/base/page.tsx:3024:7
-Ecmascript file had an error
-  3022 | `;
-  3023 |
-> 3024 | const SearchIcon = styled.div`
-       |       ^^^^^^^^^^
-  3025 |   position: absolute;
-  3026 |   left: 16px;
-  3027 |   top: 50%;
+[00:00:01.422] Server  LOG      ✓ Ready in 996ms
+[00:00:05.054] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
+[00:00:05.820] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
+[00:00:22.590] Server  LOG     [chat:audio] Tentando transcrever áudio com API externa...
+[00:00:26.862] Server  LOG     [chat:audio] Transcrição obtida: "Tá qual a senha do de w serve."
+[00:00:57.127] Server  LOG     [chat:audio] Tentando transcrever áudio com API externa...
+[00:00:59.382] Server  LOG     [chat:audio] Transcrição obtida: "Quantos chique de Bernardo tinha pra hoje tarde"
+[00:01:08.537] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
+[00:01:11.244] Server  LOG     [chat:audio] Tentando transcrever áudio com API externa...
+[00:01:14.026] Server  LOG     [chat:audio] Não foi possível transcrever o áudio
+[00:01:25.188] Server  LOG     [chat:audio] Tentando transcrever áudio com API externa...
+[00:01:26.789] Server  LOG     [chat:audio] Transcrição obtida: "Quantos chique temos aberto no sistema?"
+[00:01:56.127] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
+[00:02:01.644] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
+[00:02:19.486] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
+[00:02:39.935] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
+[00:03:06.650] Server  LOG      ✓ Compiled in 206ms
+[00:03:06.969] Browser ERROR   uncaughtError: ReferenceError: HeaderIcon is not defined
+[00:03:13.910] Server  LOG      ✓ Compiled in 143ms
+[00:03:13.927] Server  WARN     ⚠ Fast Refresh had to perform a full reload due to a runtime error.
+[00:03:20.860] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
+[00:03:33.610] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
+[00:03:36.187] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
+[00:03:37.574] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
+[00:03:38.982] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
+[00:04:11.051] Server  LOG      ✓ Compiled in 103ms
+[00:04:11.275] Browser ERROR   uncaughtError: ReferenceError: HeaderIcon is not defined
+[00:04:13.059] Server  LOG      ✓ Compiled in 90ms
+[00:04:13.278] Server  WARN     ⚠ Fast Refresh had to perform a full reload due to a runtime error.
+[00:04:18.433] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
+[00:04:41.096] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
+[00:05:04.179] Server  LOG      ✓ Compiled in 134ms
+[00:05:04.479] Browser ERROR   uncaughtError: ReferenceError: HeaderIcon is not defined
+[00:05:06.382] Server  LOG      ✓ Compiled in 134ms
+[00:05:06.396] Server  WARN     ⚠ Fast Refresh had to perform a full reload due to a runtime error.
+[00:05:12.829] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
+[00:05:18.781] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
+[00:05:46.928] Server  LOG      ✓ Compiled in 170ms
+[00:05:47.338] Browser ERROR   uncaughtError: ReferenceError: HeaderIcon is not defined
+[00:05:49.306] Server  LOG      ✓ Compiled in 163ms
+[00:05:49.330] Server  WARN     ⚠ Fast Refresh had to perform a full reload due to a runtime error.
+[00:05:50.912] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
+[00:06:05.202] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
+[00:07:10.628] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
+[00:07:53.238] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
+[00:07:54.693] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
+[00:08:27.464] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
+[00:08:30.851] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
+[00:08:38.565] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
+[00:08:48.320] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
+[00:08:57.553] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
+[00:08:59.038] Browser ERROR   ./src/app/base/page.tsx:2966:28
+Parsing ecmascript source code failed
+  2964 | `;
+  2965 |
+> 2966 |     transform: translateY(-2px) scale(1.05);
+       |                            ^
+  2967 |     box-shadow: 
+  2968 |       0 16px 32px rgba(37, 99, 235, 0.4),
+  2969 |       0 0 0 4px rgba(37, 99, 235, 0.1);
 
-the name `SearchIcon` is defined multiple times
+Expression expected
 
 Import traces:
   Client Component Browser:
@@ -100,37 +69,17 @@ Import traces:
   Client Component SSR:
     ./src/app/base/page.tsx [Client Component SSR]
     ./src/app/base/page.tsx [Server Component]
-[00:27:25.622] Browser ERROR   ./src/app/base/page.tsx:3008:7
-Ecmascript file had an error
-  3006 | `;
-  3007 |
-> 3008 | const SearchIcon = styled.div`
-       |       ^^^^^^^^^^
-  3009 |   position: absolute;
-  3010 |   left: 16px;
-  3011 |   top: 50%;
+[00:08:59.042] Browser ERROR   ./src/app/base/page.tsx:2966:29
+Parsing ecmascript source code failed
+  2964 | `;
+  2965 |
+> 2966 |     transform: translateY(-2px) scale(1.05);
+       |                             ^
+  2967 |     box-shadow: 
+  2968 |       0 16px 32px rgba(37, 99, 235, 0.4),
+  2969 |       0 0 0 4px rgba(37, 99, 235, 0.1);
 
-the name `SearchIcon` is defined multiple times
-
-Import traces:
-  Client Component Browser:
-    ./src/app/base/page.tsx [Client Component Browser]
-    ./src/app/base/page.tsx [Server Component]
-
-  Client Component SSR:
-    ./src/app/base/page.tsx [Client Component SSR]
-    ./src/app/base/page.tsx [Server Component]
-[00:27:30.243] Browser ERROR   ./src/app/base/page.tsx:3008:7
-Ecmascript file had an error
-  3006 | `;
-  3007 |
-> 3008 | const SearchIcon = styled.div`
-       |       ^^^^^^^^^^
-  3009 |   position: absolute;
-  3010 |   left: 16px;
-  3011 |   top: 50%;
-
-the name `SearchIcon` is defined multiple times
+Identifier cannot follow number
 
 Import traces:
   Client Component Browser:
@@ -140,8 +89,507 @@ Import traces:
   Client Component SSR:
     ./src/app/base/page.tsx [Client Component SSR]
     ./src/app/base/page.tsx [Server Component]
-[00:27:48.369] Server  LOG      ✓ Compiled in 241ms
-[00:28:09.445] Server  LOG      ✓ Compiled in 187ms
-[00:29:02.295] Server  LOG      ✓ Compiled in 83ms
-[00:29:04.550] Server  LOG      ✓ Compiled in 89ms
-[00:29:06.948] Server  LOG      ✓ Compiled in 88ms
+[00:08:59.042] Browser ERROR   ./src/app/base/page.tsx:2966:28
+Parsing ecmascript source code failed
+  2964 | `;
+  2965 |
+> 2966 |     transform: translateY(-2px) scale(1.05);
+       |                            ^
+  2967 |     box-shadow: 
+  2968 |       0 16px 32px rgba(37, 99, 235, 0.4),
+  2969 |       0 0 0 4px rgba(37, 99, 235, 0.1);
+
+Expression expected
+
+Import traces:
+  Client Component Browser:
+    ./src/app/base/page.tsx [Client Component Browser]
+    ./src/app/base/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./src/app/base/page.tsx [Client Component SSR]
+    ./src/app/base/page.tsx [Server Component]
+[00:08:59.042] Browser ERROR   ./src/app/base/page.tsx:2966:29
+Parsing ecmascript source code failed
+  2964 | `;
+  2965 |
+> 2966 |     transform: translateY(-2px) scale(1.05);
+       |                             ^
+  2967 |     box-shadow: 
+  2968 |       0 16px 32px rgba(37, 99, 235, 0.4),
+  2969 |       0 0 0 4px rgba(37, 99, 235, 0.1);
+
+Identifier cannot follow number
+
+Import traces:
+  Client Component Browser:
+    ./src/app/base/page.tsx [Client Component Browser]
+    ./src/app/base/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./src/app/base/page.tsx [Client Component SSR]
+    ./src/app/base/page.tsx [Server Component]
+[00:08:59.042] Browser ERROR   ./src/app/base/page.tsx:2966:28
+Parsing ecmascript source code failed
+  2964 | `;
+  2965 |
+> 2966 |     transform: translateY(-2px) scale(1.05);
+       |                            ^
+  2967 |     box-shadow: 
+  2968 |       0 16px 32px rgba(37, 99, 235, 0.4),
+  2969 |       0 0 0 4px rgba(37, 99, 235, 0.1);
+
+Expression expected
+
+Import traces:
+  Client Component Browser:
+    ./src/app/base/page.tsx [Client Component Browser]
+    ./src/app/base/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./src/app/base/page.tsx [Client Component SSR]
+    ./src/app/base/page.tsx [Server Component]
+[00:08:59.042] Browser ERROR   ./src/app/base/page.tsx:2966:29
+Parsing ecmascript source code failed
+  2964 | `;
+  2965 |
+> 2966 |     transform: translateY(-2px) scale(1.05);
+       |                             ^
+  2967 |     box-shadow: 
+  2968 |       0 16px 32px rgba(37, 99, 235, 0.4),
+  2969 |       0 0 0 4px rgba(37, 99, 235, 0.1);
+
+Identifier cannot follow number
+
+Import traces:
+  Client Component Browser:
+    ./src/app/base/page.tsx [Client Component Browser]
+    ./src/app/base/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./src/app/base/page.tsx [Client Component SSR]
+    ./src/app/base/page.tsx [Server Component]
+[00:08:59.043] Browser ERROR   ./src/app/base/page.tsx:2966:28
+Parsing ecmascript source code failed
+  2964 | `;
+  2965 |
+> 2966 |     transform: translateY(-2px) scale(1.05);
+       |                            ^
+  2967 |     box-shadow: 
+  2968 |       0 16px 32px rgba(37, 99, 235, 0.4),
+  2969 |       0 0 0 4px rgba(37, 99, 235, 0.1);
+
+Expression expected
+
+Import traces:
+  Client Component Browser:
+    ./src/app/base/page.tsx [Client Component Browser]
+    ./src/app/base/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./src/app/base/page.tsx [Client Component SSR]
+    ./src/app/base/page.tsx [Server Component]
+[00:08:59.043] Browser ERROR   ./src/app/base/page.tsx:2966:29
+Parsing ecmascript source code failed
+  2964 | `;
+  2965 |
+> 2966 |     transform: translateY(-2px) scale(1.05);
+       |                             ^
+  2967 |     box-shadow: 
+  2968 |       0 16px 32px rgba(37, 99, 235, 0.4),
+  2969 |       0 0 0 4px rgba(37, 99, 235, 0.1);
+
+Identifier cannot follow number
+
+Import traces:
+  Client Component Browser:
+    ./src/app/base/page.tsx [Client Component Browser]
+    ./src/app/base/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./src/app/base/page.tsx [Client Component SSR]
+    ./src/app/base/page.tsx [Server Component]
+[00:08:59.043] Browser ERROR   ./src/app/base/page.tsx:2966:28
+Parsing ecmascript source code failed
+  2964 | `;
+  2965 |
+> 2966 |     transform: translateY(-2px) scale(1.05);
+       |                            ^
+  2967 |     box-shadow: 
+  2968 |       0 16px 32px rgba(37, 99, 235, 0.4),
+  2969 |       0 0 0 4px rgba(37, 99, 235, 0.1);
+
+Expression expected
+
+Import traces:
+  Client Component Browser:
+    ./src/app/base/page.tsx [Client Component Browser]
+    ./src/app/base/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./src/app/base/page.tsx [Client Component SSR]
+    ./src/app/base/page.tsx [Server Component]
+[00:08:59.043] Browser ERROR   ./src/app/base/page.tsx:2966:29
+Parsing ecmascript source code failed
+  2964 | `;
+  2965 |
+> 2966 |     transform: translateY(-2px) scale(1.05);
+       |                             ^
+  2967 |     box-shadow: 
+  2968 |       0 16px 32px rgba(37, 99, 235, 0.4),
+  2969 |       0 0 0 4px rgba(37, 99, 235, 0.1);
+
+Identifier cannot follow number
+
+Import traces:
+  Client Component Browser:
+    ./src/app/base/page.tsx [Client Component Browser]
+    ./src/app/base/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./src/app/base/page.tsx [Client Component SSR]
+    ./src/app/base/page.tsx [Server Component]
+[00:08:59.043] Browser ERROR   ./src/app/base/page.tsx:2966:28
+Parsing ecmascript source code failed
+  2964 | `;
+  2965 |
+> 2966 |     transform: translateY(-2px) scale(1.05);
+       |                            ^
+  2967 |     box-shadow: 
+  2968 |       0 16px 32px rgba(37, 99, 235, 0.4),
+  2969 |       0 0 0 4px rgba(37, 99, 235, 0.1);
+
+Expression expected
+
+Import traces:
+  Client Component Browser:
+    ./src/app/base/page.tsx [Client Component Browser]
+    ./src/app/base/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./src/app/base/page.tsx [Client Component SSR]
+    ./src/app/base/page.tsx [Server Component]
+[00:08:59.043] Browser ERROR   ./src/app/base/page.tsx:2966:29
+Parsing ecmascript source code failed
+  2964 | `;
+  2965 |
+> 2966 |     transform: translateY(-2px) scale(1.05);
+       |                             ^
+  2967 |     box-shadow: 
+  2968 |       0 16px 32px rgba(37, 99, 235, 0.4),
+  2969 |       0 0 0 4px rgba(37, 99, 235, 0.1);
+
+Identifier cannot follow number
+
+Import traces:
+  Client Component Browser:
+    ./src/app/base/page.tsx [Client Component Browser]
+    ./src/app/base/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./src/app/base/page.tsx [Client Component SSR]
+    ./src/app/base/page.tsx [Server Component]
+[00:09:00.359] Browser ERROR   ./src/app/base/page.tsx:2966:28
+Parsing ecmascript source code failed
+  2964 | `;
+  2965 |
+> 2966 |     transform: translateY(-2px) scale(1.05);
+       |                            ^
+  2967 |     box-shadow: 
+  2968 |       0 16px 32px rgba(37, 99, 235, 0.4),
+  2969 |       0 0 0 4px rgba(37, 99, 235, 0.1);
+
+Expression expected
+
+Import traces:
+  Client Component Browser:
+    ./src/app/base/page.tsx [Client Component Browser]
+    ./src/app/base/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./src/app/base/page.tsx [Client Component SSR]
+    ./src/app/base/page.tsx [Server Component]
+[00:09:00.359] Browser ERROR   ./src/app/base/page.tsx:2966:29
+Parsing ecmascript source code failed
+  2964 | `;
+  2965 |
+> 2966 |     transform: translateY(-2px) scale(1.05);
+       |                             ^
+  2967 |     box-shadow: 
+  2968 |       0 16px 32px rgba(37, 99, 235, 0.4),
+  2969 |       0 0 0 4px rgba(37, 99, 235, 0.1);
+
+Identifier cannot follow number
+
+Import traces:
+  Client Component Browser:
+    ./src/app/base/page.tsx [Client Component Browser]
+    ./src/app/base/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./src/app/base/page.tsx [Client Component SSR]
+    ./src/app/base/page.tsx [Server Component]
+[00:09:00.653] Browser ERROR   ./src/app/base/page.tsx:2966:28
+Parsing ecmascript source code failed
+  2964 | `;
+  2965 |
+> 2966 |     transform: translateY(-2px) scale(1.05);
+       |                            ^
+  2967 |     box-shadow: 
+  2968 |       0 16px 32px rgba(37, 99, 235, 0.4),
+  2969 |       0 0 0 4px rgba(37, 99, 235, 0.1);
+
+Expression expected
+
+Import traces:
+  Client Component Browser:
+    ./src/app/base/page.tsx [Client Component Browser]
+    ./src/app/base/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./src/app/base/page.tsx [Client Component SSR]
+    ./src/app/base/page.tsx [Server Component]
+[00:09:00.653] Browser ERROR   ./src/app/base/page.tsx:2966:29
+Parsing ecmascript source code failed
+  2964 | `;
+  2965 |
+> 2966 |     transform: translateY(-2px) scale(1.05);
+       |                             ^
+  2967 |     box-shadow: 
+  2968 |       0 16px 32px rgba(37, 99, 235, 0.4),
+  2969 |       0 0 0 4px rgba(37, 99, 235, 0.1);
+
+Identifier cannot follow number
+
+Import traces:
+  Client Component Browser:
+    ./src/app/base/page.tsx [Client Component Browser]
+    ./src/app/base/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./src/app/base/page.tsx [Client Component SSR]
+    ./src/app/base/page.tsx [Server Component]
+[00:09:00.761] Browser ERROR   ./src/app/base/page.tsx:2966:28
+Parsing ecmascript source code failed
+  2964 | `;
+  2965 |
+> 2966 |     transform: translateY(-2px) scale(1.05);
+       |                            ^
+  2967 |     box-shadow: 
+  2968 |       0 16px 32px rgba(37, 99, 235, 0.4),
+  2969 |       0 0 0 4px rgba(37, 99, 235, 0.1);
+
+Expression expected
+
+Import traces:
+  Client Component Browser:
+    ./src/app/base/page.tsx [Client Component Browser]
+    ./src/app/base/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./src/app/base/page.tsx [Client Component SSR]
+    ./src/app/base/page.tsx [Server Component]
+[00:09:00.761] Browser ERROR   ./src/app/base/page.tsx:2966:29
+Parsing ecmascript source code failed
+  2964 | `;
+  2965 |
+> 2966 |     transform: translateY(-2px) scale(1.05);
+       |                             ^
+  2967 |     box-shadow: 
+  2968 |       0 16px 32px rgba(37, 99, 235, 0.4),
+  2969 |       0 0 0 4px rgba(37, 99, 235, 0.1);
+
+Identifier cannot follow number
+
+Import traces:
+  Client Component Browser:
+    ./src/app/base/page.tsx [Client Component Browser]
+    ./src/app/base/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./src/app/base/page.tsx [Client Component SSR]
+    ./src/app/base/page.tsx [Server Component]
+[00:09:00.768] Browser ERROR   ./src/app/base/page.tsx:2966:28
+Parsing ecmascript source code failed
+  2964 | `;
+  2965 |
+> 2966 |     transform: translateY(-2px) scale(1.05);
+       |                            ^
+  2967 |     box-shadow: 
+  2968 |       0 16px 32px rgba(37, 99, 235, 0.4),
+  2969 |       0 0 0 4px rgba(37, 99, 235, 0.1);
+
+Expression expected
+
+Import traces:
+  Client Component Browser:
+    ./src/app/base/page.tsx [Client Component Browser]
+    ./src/app/base/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./src/app/base/page.tsx [Client Component SSR]
+    ./src/app/base/page.tsx [Server Component]
+[00:09:00.768] Browser ERROR   ./src/app/base/page.tsx:2966:29
+Parsing ecmascript source code failed
+  2964 | `;
+  2965 |
+> 2966 |     transform: translateY(-2px) scale(1.05);
+       |                             ^
+  2967 |     box-shadow: 
+  2968 |       0 16px 32px rgba(37, 99, 235, 0.4),
+  2969 |       0 0 0 4px rgba(37, 99, 235, 0.1);
+
+Identifier cannot follow number
+
+Import traces:
+  Client Component Browser:
+    ./src/app/base/page.tsx [Client Component Browser]
+    ./src/app/base/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./src/app/base/page.tsx [Client Component SSR]
+    ./src/app/base/page.tsx [Server Component]
+[00:09:02.082] Browser ERROR   ./src/app/base/page.tsx:2966:28
+Parsing ecmascript source code failed
+  2964 | `;
+  2965 |
+> 2966 |     transform: translateY(-2px) scale(1.05);
+       |                            ^
+  2967 |     box-shadow: 
+  2968 |       0 16px 32px rgba(37, 99, 235, 0.4),
+  2969 |       0 0 0 4px rgba(37, 99, 235, 0.1);
+
+Expression expected
+
+Import traces:
+  Client Component Browser:
+    ./src/app/base/page.tsx [Client Component Browser]
+    ./src/app/base/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./src/app/base/page.tsx [Client Component SSR]
+    ./src/app/base/page.tsx [Server Component]
+[00:09:02.082] Browser ERROR   ./src/app/base/page.tsx:2966:29
+Parsing ecmascript source code failed
+  2964 | `;
+  2965 |
+> 2966 |     transform: translateY(-2px) scale(1.05);
+       |                             ^
+  2967 |     box-shadow: 
+  2968 |       0 16px 32px rgba(37, 99, 235, 0.4),
+  2969 |       0 0 0 4px rgba(37, 99, 235, 0.1);
+
+Identifier cannot follow number
+
+Import traces:
+  Client Component Browser:
+    ./src/app/base/page.tsx [Client Component Browser]
+    ./src/app/base/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./src/app/base/page.tsx [Client Component SSR]
+    ./src/app/base/page.tsx [Server Component]
+[00:09:02.083] Browser ERROR   ./src/app/base/page.tsx:2966:28
+Parsing ecmascript source code failed
+  2964 | `;
+  2965 |
+> 2966 |     transform: translateY(-2px) scale(1.05);
+       |                            ^
+  2967 |     box-shadow: 
+  2968 |       0 16px 32px rgba(37, 99, 235, 0.4),
+  2969 |       0 0 0 4px rgba(37, 99, 235, 0.1);
+
+Expression expected
+
+Import traces:
+  Client Component Browser:
+    ./src/app/base/page.tsx [Client Component Browser]
+    ./src/app/base/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./src/app/base/page.tsx [Client Component SSR]
+    ./src/app/base/page.tsx [Server Component]
+[00:09:02.083] Browser ERROR   ./src/app/base/page.tsx:2966:29
+Parsing ecmascript source code failed
+  2964 | `;
+  2965 |
+> 2966 |     transform: translateY(-2px) scale(1.05);
+       |                             ^
+  2967 |     box-shadow: 
+  2968 |       0 16px 32px rgba(37, 99, 235, 0.4),
+  2969 |       0 0 0 4px rgba(37, 99, 235, 0.1);
+
+Identifier cannot follow number
+
+Import traces:
+  Client Component Browser:
+    ./src/app/base/page.tsx [Client Component Browser]
+    ./src/app/base/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./src/app/base/page.tsx [Client Component SSR]
+    ./src/app/base/page.tsx [Server Component]
+[00:09:06.363] Server  LOG      ✓ Compiled in 286ms
+[00:10:24.119] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
+[00:10:28.127] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
+[00:10:31.857] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
+[00:10:33.401] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
+[00:11:29.939] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
+[00:11:34.311] Server  LOG      ✓ Compiled in 130ms
+[00:11:37.762] Server  LOG      ✓ Compiled in 136ms
+[00:11:41.973] Server  LOG      ✓ Compiled in 117ms
+[00:11:49.544] Server  LOG      ✓ Compiled in 96ms
+[00:11:52.533] Server  LOG      ✓ Compiled in 144ms
+[00:14:26.491] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
+[00:14:31.528] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
+[00:15:28.007] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
+[00:15:30.302] Server  LOG     [GET /api/base/passwords] Buscando senhas de todos os usuários
+[00:15:30.314] Server  LOG     [GET /api/base/passwords] Encontradas 2 senhas
+[00:15:30.755] Server  LOG     [GET /api/base/passwords] Retornando 2 senhas mapeadas
+[00:15:41.880] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
+[00:15:51.139] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
+[00:15:58.009] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
+[00:16:01.859] Server  LOG      ✓ Compiled in 589ms
+[00:16:02.252] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
+[00:16:17.993] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
+[00:16:21.004] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
+[00:17:12.113] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
+[00:17:16.417] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
+[00:17:18.879] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
+[00:21:14.871] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
+[00:21:27.776] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
+[00:21:55.932] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
+[00:22:20.750] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
+[00:22:32.158] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
+[00:22:38.265] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
+[00:24:52.266] Server  LOG      ✓ Compiled in 60ms
+[00:24:54.633] Server  LOG      ✓ Compiled in 80ms
+[00:25:33.304] Server  LOG      ✓ Compiled in 58ms
+[00:26:58.924] Server  LOG      ✓ Compiled in 91ms
+[00:27:05.684] Server  LOG      ✓ Compiled in 68ms
+[00:27:42.692] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
+[00:27:49.713] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
+[00:27:54.092] Server  LOG     [GET /api/base/passwords] Buscando senhas de todos os usuários
+[00:27:54.095] Server  LOG     [GET /api/base/passwords] Encontradas 2 senhas
+[00:27:54.460] Server  LOG     [GET /api/base/passwords] Retornando 2 senhas mapeadas
+[00:28:18.533] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
+[00:28:26.613] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
+[00:29:31.824] Server  LOG      ✓ Compiled in 100ms
+[00:29:39.902] Server  LOG      ✓ Compiled in 95ms
+[00:29:43.934] Server  LOG      ✓ Compiled in 66ms
+[00:29:54.812] Server  LOG      ✓ Compiled in 78ms
+[00:32:25.566] Server  LOG      ✓ Compiled in 141ms
+[00:32:44.706] Server  LOG      ✓ Compiled in 111ms
+[00:32:54.419] Server  LOG      ✓ Compiled in 103ms
+[00:33:24.300] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
+[00:34:01.801] Server  LOG      ✓ Compiled in 100ms
+[00:35:25.153] Server  LOG      ✓ Compiled in 94ms
+[00:36:00.210] Server  LOG      ✓ Compiled in 123ms
+[00:37:28.813] Server  LOG      ✓ Compiled in 114ms
+[00:37:31.632] Server  LOG      ✓ Compiled in 162ms
+[00:37:54.106] Server  LOG      ✓ Compiled in 90ms
+[00:37:57.255] Server  LOG      ✓ Compiled in 117ms
+[00:38:20.687] Server  LOG      ✓ Compiled in 99ms
+[00:39:42.549] Server  LOG      ✓ Compiled in 111ms
+[00:40:23.872] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
+[00:43:24.993] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold

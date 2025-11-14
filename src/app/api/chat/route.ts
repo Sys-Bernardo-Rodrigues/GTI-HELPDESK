@@ -1149,7 +1149,7 @@ function generateResponse(
       return agendaResponse;
     
     case "help":
-      return `Olá! Sou o Elffo, assistente virtual do sistema. Posso ajudá-lo com:\n\n` +
+      return `Olá! Sou o Dobby, assistente virtual do sistema. Posso ajudá-lo com:\n\n` +
         `📚 **Base de Conhecimento**: Busque documentos e artigos (descriptografados)\n` +
         `📁 **Arquivos**: Encontre arquivos da base de conhecimento\n` +
         `🎫 **Tickets**: Consulte informações sobre chamados\n` +

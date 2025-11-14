@@ -372,7 +372,13 @@ const ProfileMeta = styled.div`
 const ProfileMetaItem = styled.div`
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 8px;
+  
+  svg {
+    flex-shrink: 0;
+    opacity: 0.9;
+    color: rgba(255, 255, 255, 0.95);
+  }
 `;
 
 const ProfileGrid = styled.div`
@@ -418,7 +424,11 @@ const HeaderIcon = styled.div`
   place-items: center;
   color: #fff;
   font-weight: 800;
-  font-size: 1.2rem;
+  
+  svg {
+    width: 20px;
+    height: 20px;
+  }
 `;
 
 const CardTitle = styled.h2`
@@ -683,23 +693,34 @@ const VerificationStatus = styled.span<{ $verified: boolean }>`
 
 const ConfirmBackdrop = styled.div<{ $open: boolean }>`
   position: fixed;
-  inset: 0;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
   background: rgba(0, 0, 0, 0.5);
-  z-index: 1000;
+  z-index: 9999;
   display: ${(p) => (p.$open ? "flex" : "none")};
   align-items: center;
   justify-content: center;
   padding: 16px;
+  backdrop-filter: blur(4px);
 `;
 
 const ConfirmDialog = styled.div<{ $open: boolean }>`
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: ${(p) => (p.$open ? "translate(-50%, -50%) scale(1)" : "translate(-50%, -50%) scale(0.95)")};
   background: #fff;
   border-radius: 16px;
-  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
   width: 100%;
   max-width: 400px;
   padding: 24px;
-  z-index: 1001;
+  z-index: 10000;
+  opacity: ${(p) => (p.$open ? 1 : 0)};
+  transition: transform 0.2s ease, opacity 0.2s ease;
+  pointer-events: ${(p) => (p.$open ? "auto" : "none")};
 `;
 
 const ConfirmTitle = styled.h2`
@@ -1241,7 +1262,7 @@ export default function ProfilePage() {
               Sair
             </UserMenuItem>
           </UserMenu>
-          {confirmOpen && (
+          {confirmOpen && typeof window !== "undefined" && createPortal(
             <>
               <ConfirmBackdrop $open={confirmOpen} onClick={() => setConfirmOpen(false)} aria-hidden={!confirmOpen} />
               <ConfirmDialog
@@ -1250,6 +1271,7 @@ export default function ProfilePage() {
                 aria-labelledby="confirm-exit-title"
                 $open={confirmOpen}
                 onKeyDown={(e) => { if (e.key === "Escape") setConfirmOpen(false); }}
+                onClick={(e) => e.stopPropagation()}
               >
                 <ConfirmTitle id="confirm-exit-title">Você deseja realmente sair?</ConfirmTitle>
                 <ConfirmActions>
@@ -1257,7 +1279,8 @@ export default function ProfilePage() {
                   <ConfirmButton type="button" onClick={onLogout}>Confirmar</ConfirmButton>
                 </ConfirmActions>
               </ConfirmDialog>
-            </>
+            </>,
+            document.body
           )}
         </Sidebar>
         <Overlay $show={open} onClick={() => setOpen(false)} aria-hidden={!open} />
@@ -1277,19 +1300,25 @@ export default function ProfilePage() {
                 <ProfileMeta>
                   {profile?.jobTitle && (
                     <ProfileMetaItem>
-                      <span>💼</span>
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M20 6h-2.18c.11-.31.18-.65.18-1a2.996 2.996 0 0 0-5.5-1.65l-.5.67-.5-.68C10.96 2.54 10 2 9 2 7.34 2 6 3.34 6 5c0 .35.07.69.18 1H4c-1.11 0-1.99.89-1.99 2L2 19c0 1.11.89 2 2 2h16c1.11 0 2-.89 2-2V8c0-1.11-.89-2-2-2zm-5-2c.55 0 1 .45 1 1s-.45 1-1 1-1-.45-1-1 .45-1 1-1zM9 4c.55 0 1 .45 1 1s-.45 1-1 1-1-.45-1-1 .45-1 1-1zm11 15H4v-2h16v2zm0-5H4V8h5.08L7 10.83 8.62 12 11 8.76l1-1.36 1 1.36L15.38 12 17 10.83 14.92 8H20v6z"/>
+                      </svg>
                       <span>{profile.jobTitle}</span>
                     </ProfileMetaItem>
                   )}
                   {profile?.company && (
                     <ProfileMetaItem>
-                      <span>🏢</span>
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M12 7V3H2v18h20V7H12zm-2 12H4v-2h6v2zm0-4H4v-2h6v2zm0-4H4V9h6v2zm8 8h-6v-2h6v2zm0-4h-6v-2h6v2zm0-4h-6V9h6v2z"/>
+                      </svg>
                       <span>{profile.company}</span>
                     </ProfileMetaItem>
                   )}
                   {profile?.phone && (
                     <ProfileMetaItem>
-                      <span>📱</span>
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M6.62 10.79c1.44 2.83 3.76 5.14 6.59 6.59l2.2-2.2c.27-.27.67-.36 1.02-.24 1.12.37 2.33.57 3.57.57.55 0 1 .45 1 1V20c0 .55-.45 1-1 1-9.39 0-17-7.61-17-17 0-.55.45-1 1-1h3.5c.55 0 1 .45 1 1 0 1.25.2 2.45.57 3.57.11.35.03.74-.25 1.02l-2.2 2.2z"/>
+                      </svg>
                       <span>{profile.phone}</span>
                     </ProfileMetaItem>
                   )}
@@ -1470,7 +1499,11 @@ export default function ProfilePage() {
 
             <Card $span={6}>
               <CardHeader>
-                <HeaderIcon>🔐</HeaderIcon>
+                <HeaderIcon>
+                  <svg viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M18 8h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2zm-6 9c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2zm3.1-9H8.9V6c0-1.71 1.39-3.1 3.1-3.1 1.71 0 3.1 1.39 3.1 3.1v2z"/>
+                  </svg>
+                </HeaderIcon>
                 <div>
                   <CardTitle>Alterar senha</CardTitle>
                   <Muted>Use uma senha forte com pelo menos 8 caracteres</Muted>
@@ -1524,7 +1557,11 @@ export default function ProfilePage() {
 
             <Card>
               <CardHeader>
-                <HeaderIcon>✅</HeaderIcon>
+                <HeaderIcon>
+                  <svg viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/>
+                  </svg>
+                </HeaderIcon>
                 <div>
                   <CardTitle>Verificações</CardTitle>
                   <Muted>Status das confirmações da sua conta</Muted>

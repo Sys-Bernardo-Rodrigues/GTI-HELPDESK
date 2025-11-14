@@ -349,6 +349,24 @@ const CalendarHeader = styled.div`
   gap: 16px;
 `;
 
+const HeaderIcon = styled.div`
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  background: linear-gradient(135deg, var(--primary-600), var(--primary-800));
+  box-shadow: 0 10px 20px rgba(20, 93, 191, 0.25);
+  display: grid;
+  place-items: center;
+  color: #fff;
+  font-weight: 800;
+  flex-shrink: 0;
+  
+  svg {
+    width: 24px;
+    height: 24px;
+  }
+`;
+
 const CalendarTitle = styled.h1`
   font-size: 1.75rem;
   font-weight: 800;
@@ -921,9 +939,18 @@ const EmptyDay = styled.div`
 `;
 
 const EmptyDayIcon = styled.div`
-  font-size: 3rem;
+  display: grid;
+  place-items: center;
   margin-bottom: 12px;
+  
+  svg {
+    width: 48px;
+    height: 48px;
+    color: #94a3b8;
+    opacity: 0.6;
+  }
 `;
+
 
 const EmptyDayText = styled.p`
   font-size: 0.875rem;
@@ -1636,7 +1663,14 @@ export default function AgendaPage() {
         <Content>
           <CalendarCard>
             <CalendarHeader>
-              <CalendarTitle>{formatMonthYear(currentDate)}</CalendarTitle>
+              <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+                <HeaderIcon aria-hidden>
+                  <svg viewBox="0 0 24 24" fill="currentColor" width="24" height="24">
+                    <path d="M19 4h-1V2h-2v2H8V2H6v2H5c-1.11 0-1.99.9-1.99 2L3 20c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 16H5V9h14v11zM5 7V6h14v1H5zm7 6H7v-2h5v2z"/>
+                  </svg>
+                </HeaderIcon>
+                <CalendarTitle>{formatMonthYear(currentDate)}</CalendarTitle>
+              </div>
               <CalendarActions>
                 <FilterToggle>
                   <input
@@ -1866,7 +1900,11 @@ export default function AgendaPage() {
             <DayViewBody>
               {getDayEvents(selectedDayForView).length === 0 ? (
                 <EmptyDay>
-                  <EmptyDayIcon>📅</EmptyDayIcon>
+                  <EmptyDayIcon>
+                    <svg viewBox="0 0 24 24" fill="currentColor">
+                      <path d="M19 4h-1V2h-2v2H8V2H6v2H5c-1.11 0-1.99.9-1.99 2L3 20c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 16H5V9h14v11zM5 7V6h14v1H5zm7 6H7v-2h5v2z"/>
+                    </svg>
+                  </EmptyDayIcon>
                   <EmptyDayText>Nenhum compromisso agendado para este dia</EmptyDayText>
                   <PrimaryButton 
                     onClick={() => {

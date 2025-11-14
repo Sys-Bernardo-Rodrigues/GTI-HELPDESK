@@ -1206,8 +1206,15 @@ export default function TicketsPage() {
         <Content>
           <MainCard>
             <PageHeader>
-              <div>
-                <Title>Central de Tickets</Title>
+              <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+                <HeaderIcon aria-hidden>
+                  <svg viewBox="0 0 24 24" fill="currentColor" width="24" height="24">
+                    <path d="M20 6h-2.18c.11-.31.18-.65.18-1a2.996 2.996 0 0 0-5.5-1.65l-.5.67-.5-.68C10.96 2.54 10 2 9 2 7.34 2 6 3.34 6 5c0 .35.07.69.18 1H4c-1.11 0-1.99.89-1.99 2L2 19c0 1.11.89 2 2 2h16c1.11 0 2-.89 2-2V8c0-1.11-.89-2-2-2zm-5-2c.55 0 1 .45 1 1s-.45 1-1 1-1-.45-1-1 .45-1 1-1zM9 4c.55 0 1 .45 1 1s-.45 1-1 1-1-.45-1-1 .45-1 1-1zm11 15H4v-2h16v2zm0-5H4V8h5.08L7 10.83 8.62 12 11 8.76l1-1.36 1 1.36L15.38 12 17 10.83 14.92 8H20v6z"/>
+                  </svg>
+                </HeaderIcon>
+                <div>
+                  <Title>Central de Tickets</Title>
+                </div>
               </div>
               <HeaderActions>
                 <RefreshButton 
@@ -2064,6 +2071,24 @@ const PageHeader = styled.header`
   justify-content: space-between;
   gap: 16px;
   align-items: flex-start;
+`;
+
+const HeaderIcon = styled.div`
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  background: linear-gradient(135deg, var(--primary-600), var(--primary-800));
+  box-shadow: 0 10px 20px rgba(20, 93, 191, 0.25);
+  display: grid;
+  place-items: center;
+  color: #fff;
+  font-weight: 800;
+  flex-shrink: 0;
+  
+  svg {
+    width: 24px;
+    height: 24px;
+  }
 `;
 
 const Title = styled.h1`

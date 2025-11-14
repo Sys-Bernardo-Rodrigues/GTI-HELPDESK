@@ -1074,7 +1074,11 @@ export default function ConfigPage() {
           {section !== "forms" && section !== "webhooks" && (
             <Card aria-labelledby="config-title">
               <CardHeader>
-                <HeaderIcon aria-hidden>⚙️</HeaderIcon>
+                <HeaderIcon aria-hidden>
+                  <svg viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58c.47-.35.61-.98.33-1.5l-1.92-3.32c-.28-.52-.9-.73-1.42-.5l-2.4.96c-.65-.49-1.35-.9-2.1-1.22l-.36-2.54c-.05-.55-.5-.98-1.05-.98h-3.84c-.55 0-1 .43-1.05.98l-.36 2.54c-.75.32-1.45.73-2.1 1.22l-2.4-.96c-.52-.23-1.14-.02-1.42.5L2.44 8.98c-.28.52-.14 1.15.33 1.5l2.03 1.58c-.05.3-.07.62-.07.94s.02.64.07.94l-2.03 1.58c-.47.35-.61.98-.33 1.5l1.92 3.32c.28.52.9.73 1.42.5l2.4-.96c.65.49 1.35.9 2.1 1.22l.36 2.54c.05.55.5.98 1.05.98h3.84c.55 0 1-.43 1.05-.98l.36-2.54c.75-.32 1.45-.73 2.1-1.22l2.4.96c.52.23 1.14.02 1.42-.5l1.92-3.32c.28-.52.14-1.15-.33-1.5l-2.03-1.58zM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6z"/>
+                  </svg>
+                </HeaderIcon>
                 <div>
                   <CardTitle id="config-title">Configurações</CardTitle>
                   <Muted>Gerencie as opções do sistema por seções.</Muted>
@@ -1087,7 +1091,11 @@ export default function ConfigPage() {
             <FormsWrapper>
               <Card aria-labelledby="forms-card-title">
                 <CardHeader>
-                  <HeaderIcon aria-hidden>📂</HeaderIcon>
+                  <HeaderIcon aria-hidden>
+                    <svg viewBox="0 0 24 24" fill="currentColor">
+                      <path d="M10 4H4c-1.11 0-2 .89-2 2v12c0 1.11.89 2 2 2h16c1.11 0 2-.89 2-2V8c0-1.11-.89-2-2-2h-8l-2-2z"/>
+                    </svg>
+                  </HeaderIcon>
                   <div>
                     <CardTitle id="forms-card-title">Formulários públicos</CardTitle>
                     <Muted>Gerencie as estruturas e links compartilhados com os usuários.</Muted>
@@ -1179,7 +1187,11 @@ export default function ConfigPage() {
             <FormsWrapper>
               <Card aria-labelledby="webhooks-card-title">
                 <CardHeader>
-                  <HeaderIcon aria-hidden>🔗</HeaderIcon>
+                  <HeaderIcon aria-hidden>
+                    <svg viewBox="0 0 24 24" fill="currentColor">
+                      <path d="M3.9 12c0-1.71 1.39-3.1 3.1-3.1h4V7H7c-2.76 0-5 2.24-5 5s2.24 5 5 5h4v-1.9H7c-1.71 0-3.1-1.39-3.1-3.1zM8 13h8v-2H8v2zm9-6h-4v1.9h4c1.71 0 3.1 1.39 3.1 3.1s-1.39 3.1-3.1 3.1h-4V17h4c2.76 0 5-2.24 5-5s-2.24-5-5-5z"/>
+                    </svg>
+                  </HeaderIcon>
                   <div>
                     <CardTitle id="webhooks-card-title">Webhooks</CardTitle>
                     <Muted>Configure webhooks para receber notificações de outros sistemas e criar tickets automaticamente.</Muted>
@@ -1281,7 +1293,11 @@ export default function ConfigPage() {
             onKeyDown={(e) => { if (e.key === "Escape") setCreateOpen(false); }}
           >
             <ModalHeader>
-              <ModalIcon aria-hidden>📝</ModalIcon>
+              <ModalIcon aria-hidden>
+                <svg viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M14 2H6c-1.1 0-1.99.9-1.99 2L4 20c0 1.1.89 2 1.99 2H18c1.1 0 2-.9 2-2V8l-6-6zm2 16H8v-2h8v2zm0-4H8v-2h8v2zm-3-5V3.5L18.5 9H13z"/>
+                </svg>
+              </ModalIcon>
               <div>
                 <ModalTitle id="create-form-title">Criar novo formulário</ModalTitle>
                 <Muted>Defina título, descrição e campos. Salvar tornará público.</Muted>
@@ -1502,7 +1518,11 @@ export default function ConfigPage() {
             onKeyDown={(e) => { if (e.key === "Escape" && !editSaving) closeEditModal(); }}
           >
             <ModalHeader>
-              <ModalIcon aria-hidden>✏️</ModalIcon>
+              <ModalIcon aria-hidden>
+                <svg viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/>
+                </svg>
+              </ModalIcon>
               <div>
                 <ModalTitle id="edit-form-title">Editar formulário</ModalTitle>
                 <Muted>Atualize título, descrição e campos conforme necessário.</Muted>
@@ -1634,7 +1654,11 @@ export default function ConfigPage() {
             onKeyDown={(e) => { if (e.key === "Escape") setCreateWebhookOpen(false); }}
           >
             <ModalHeader>
-              <ModalIcon aria-hidden>🔗</ModalIcon>
+              <ModalIcon aria-hidden>
+                <svg viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M3.9 12c0-1.71 1.39-3.1 3.1-3.1h4V7H7c-2.76 0-5 2.24-5 5s2.24 5 5 5h4v-1.9H7c-1.71 0-3.1-1.39-3.1-3.1zM8 13h8v-2H8v2zm9-6h-4v1.9h4c1.71 0 3.1 1.39 3.1 3.1s-1.39 3.1-3.1 3.1h-4V17h4c2.76 0 5-2.24 5-5s-2.24-5-5-5z"/>
+                </svg>
+              </ModalIcon>
               <div>
                 <ModalTitle id="create-webhook-title">Criar novo webhook</ModalTitle>
                 <Muted>Configure um webhook para receber notificações de outros sistemas.</Muted>
@@ -1794,7 +1818,11 @@ export default function ConfigPage() {
             onKeyDown={(e) => { if (e.key === "Escape" && !editWebhookSaving) closeEditWebhookModal(); }}
           >
             <ModalHeader>
-              <ModalIcon aria-hidden>✏️</ModalIcon>
+              <ModalIcon aria-hidden>
+                <svg viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/>
+                </svg>
+              </ModalIcon>
               <div>
                 <ModalTitle id="edit-webhook-title">Editar webhook</ModalTitle>
                 <Muted>Atualize nome e descrição conforme necessário.</Muted>
@@ -2317,6 +2345,11 @@ const HeaderIcon = styled.div`
   place-items: center;
   color: #fff;
   font-weight: 800;
+  
+  svg {
+    width: 20px;
+    height: 20px;
+  }
 `;
 
 const CardTitle = styled.h1`

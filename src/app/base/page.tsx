@@ -1277,7 +1277,11 @@ export default function BasePage() {
           <MainCard>
             <CardHeader>
               <HeaderSection>
-                <HeaderIcon aria-hidden>📚</HeaderIcon>
+                <HeaderIcon aria-hidden>
+                  <svg viewBox="0 0 24 24" fill="currentColor" width="24" height="24">
+                    <path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-5 14H7v-2h7v2zm3-4H7v-2h10v2zm0-4H7V7h10v2z"/>
+                  </svg>
+                </HeaderIcon>
                 <div>
                   <CardTitle>Base de Conhecimento</CardTitle>
                 </div>
@@ -1427,7 +1431,11 @@ export default function BasePage() {
               </LoadingState>
             ) : filteredDocuments.length === 0 ? (
               <EmptyState>
-                <EmptyIcon>📄</EmptyIcon>
+                <EmptyIcon>
+                  <svg viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M14 2H6c-1.1 0-1.99.9-1.99 2L4 20c0 1.1.89 2 1.99 2H18c1.1 0 2-.9 2-2V8l-6-6zm2 16H8v-2h8v2zm0-4H8v-2h8v2zm-3-5V3.5L18.5 9H13z"/>
+                  </svg>
+                </EmptyIcon>
                 <EmptyTitle>Nenhum documento encontrado</EmptyTitle>
                 <EmptyText>
                   {searchQuery || filterCategory 
@@ -1583,7 +1591,11 @@ export default function BasePage() {
                   </LoadingState>
                 ) : filteredFiles.length === 0 ? (
                   <EmptyState>
-                    <EmptyIcon>📎</EmptyIcon>
+                    <EmptyIcon>
+                      <svg viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M16.5 6v11.5c0 2.21-1.79 4-4 4s-4-1.79-4-4V5c0-1.38 1.12-2.5 2.5-2.5s2.5 1.12 2.5 2.5v10.5c0 .55-.45 1-1 1s-1-.45-1-1V6H10v9.5c0 1.38 1.12 2.5 2.5 2.5s2.5-1.12 2.5-2.5V5c0-2.21-1.79-4-4-4S7 2.79 7 5v12.5c0 3.04 2.46 5.5 5.5 5.5s5.5-2.46 5.5-5.5V6h-1.5z"/>
+                      </svg>
+                    </EmptyIcon>
                     <EmptyTitle>Nenhum arquivo encontrado</EmptyTitle>
                     <EmptyText>
                       {fileSearchQuery || fileFilterCategory 
@@ -1714,7 +1726,11 @@ export default function BasePage() {
                   </LoadingState>
                 ) : filteredPasswords.length === 0 ? (
                   <EmptyState>
-                    <EmptyIcon>🔐</EmptyIcon>
+                    <EmptyIcon>
+                      <svg viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M18 8h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2zm-6 9c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2zm3.1-9H8.9V6c0-1.71 1.39-3.1 3.1-3.1 1.71 0 3.1 1.39 3.1 3.1v2z"/>
+                      </svg>
+                    </EmptyIcon>
                     <EmptyTitle>Nenhuma senha encontrada</EmptyTitle>
                     <EmptyText>
                       {passwordSearchQuery || passwordFilterCategory 
@@ -1850,7 +1866,11 @@ export default function BasePage() {
             onKeyDown={(e) => { if (e.key === "Escape") closeEditModal(); }}
           >
             <ModalHeader>
-              <ModalIcon aria-hidden>✏️</ModalIcon>
+              <ModalIcon aria-hidden>
+                <svg viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/>
+                </svg>
+              </ModalIcon>
               <div>
                 <ModalTitle id="edit-document-title">Editar documento</ModalTitle>
                 <Muted>Ajuste os dados e salve para atualizar o documento.</Muted>
@@ -1924,7 +1944,11 @@ export default function BasePage() {
             onKeyDown={(e) => { if (e.key === "Escape") closeCreateModal(); }}
           >
             <ModalHeader>
-              <ModalIcon aria-hidden>➕</ModalIcon>
+              <ModalIcon aria-hidden>
+                <svg viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/>
+                </svg>
+              </ModalIcon>
               <div>
                 <ModalTitle id="create-document-title">Novo documento</ModalTitle>
                 <Muted>Preencha os dados para criar um novo documento na base de conhecimento.</Muted>
@@ -2181,7 +2205,11 @@ export default function BasePage() {
             onKeyDown={(e) => { if (e.key === "Escape") closeFileUploadModal(); }}
           >
             <ModalHeader>
-              <ModalIcon aria-hidden>📤</ModalIcon>
+              <ModalIcon aria-hidden>
+                <svg viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M9 16h6v-6h4l-7-7-7 7h4zm-4 2h14v2H5z"/>
+                </svg>
+              </ModalIcon>
               <div>
                 <ModalTitle id="upload-file-title">Enviar arquivo</ModalTitle>
                 <Muted>Selecione um arquivo para adicionar à base de conhecimento.</Muted>
@@ -2273,7 +2301,11 @@ export default function BasePage() {
             onKeyDown={(e) => { if (e.key === "Escape") closeFileEditModal(); }}
           >
             <ModalHeader>
-              <ModalIcon aria-hidden>✏️</ModalIcon>
+              <ModalIcon aria-hidden>
+                <svg viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/>
+                </svg>
+              </ModalIcon>
               <div>
                 <ModalTitle id="edit-file-title">Editar informações do arquivo</ModalTitle>
                 <Muted>Ajuste as informações e salve para atualizar.</Muted>
@@ -2448,7 +2480,11 @@ export default function BasePage() {
             onKeyDown={(e) => { if (e.key === "Escape") closePasswordCreateModal(); }}
           >
             <ModalHeader>
-              <ModalIcon aria-hidden>🔐</ModalIcon>
+              <ModalIcon aria-hidden>
+                <svg viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M18 8h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2zm-6 9c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2zm3.1-9H8.9V6c0-1.71 1.39-3.1 3.1-3.1 1.71 0 3.1 1.39 3.1 3.1v2z"/>
+                </svg>
+              </ModalIcon>
               <div>
                 <ModalTitle id="create-password-title">Nova senha</ModalTitle>
                 <Muted>Preencha os dados para criar uma nova senha no cofre.</Muted>
@@ -2552,7 +2588,11 @@ export default function BasePage() {
             onKeyDown={(e) => { if (e.key === "Escape") closePasswordEditModal(); }}
           >
             <ModalHeader>
-              <ModalIcon aria-hidden>✏️</ModalIcon>
+              <ModalIcon aria-hidden>
+                <svg viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/>
+                </svg>
+              </ModalIcon>
               <div>
                 <ModalTitle id="edit-password-title">Editar senha</ModalTitle>
                 <Muted>Ajuste os dados e salve para atualizar a senha.</Muted>
@@ -2942,25 +2982,20 @@ const HeaderSection = styled.div`
 `;
 
 const HeaderIcon = styled.div`
-  width: 56px;
-  height: 56px;
-  border-radius: 16px;
-  background: linear-gradient(135deg, #2563eb 0%, #1e40af 100%);
-  box-shadow: 
-    0 12px 24px rgba(37, 99, 235, 0.3),
-    0 0 0 0 rgba(37, 99, 235, 0.1);
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  background: linear-gradient(135deg, var(--primary-600), var(--primary-800));
+  box-shadow: 0 10px 20px rgba(20, 93, 191, 0.25);
   display: grid;
   place-items: center;
   color: #fff;
   font-weight: 800;
-  font-size: 28px;
-  transition: transform 0.3s ease, box-shadow 0.3s ease;
+  flex-shrink: 0;
   
-  &:hover {
-    transform: translateY(-2px) scale(1.05);
-    box-shadow: 
-      0 16px 32px rgba(37, 99, 235, 0.4),
-      0 0 0 4px rgba(37, 99, 235, 0.1);
+  svg {
+    width: 24px;
+    height: 24px;
   }
 `;
 
@@ -3291,6 +3326,20 @@ const EmptyState = styled.div`
 `;
 
 const EmptyIcon = styled.div`
+  margin-bottom: 24px;
+  opacity: 0.6;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  
+  svg {
+    width: 48px;
+    height: 48px;
+    color: #94a3b8;
+  }
+`;
+
+const OldEmptyIcon = styled.div`
   font-size: 5rem;
   margin-bottom: 24px;
   opacity: 0.6;
@@ -3666,16 +3715,16 @@ const ModalHeader = styled.div`
 `;
 
 const ModalIcon = styled.div`
-  width: 48px;
-  height: 48px;
-  border-radius: 12px;
-  background: linear-gradient(135deg, var(--primary-600), var(--primary-800));
   display: grid;
   place-items: center;
-  color: #fff;
-  font-weight: 800;
-  font-size: 24px;
+  
+  svg {
+    width: 24px;
+    height: 24px;
+    color: currentColor;
+  }
 `;
+
 
 const ModalTitle = styled.h2`
   font-size: 1.3rem;

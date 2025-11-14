@@ -835,7 +835,14 @@ export default function ReportsPage() {
           <MainCard>
             <PageHeader>
               <HeaderBlock>
-                <Title>Relatórios de Tickets</Title>
+                <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+                  <HeaderIcon aria-hidden>
+                    <svg viewBox="0 0 24 24" fill="currentColor" width="24" height="24">
+                      <path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zM9 17H7v-7h2v7zm4 0h-2V7h2v10zm4 0h-2v-4h2v4z"/>
+                    </svg>
+                  </HeaderIcon>
+                  <Title>Relatórios de Tickets</Title>
+                </div>
               </HeaderBlock>
               <HeaderActions>
                 <ExportButton type="button" onClick={handleExport} disabled={loading || exporting}>
@@ -1773,6 +1780,24 @@ const HeaderBlock = styled.div`
   display: flex;
   flex-direction: column;
   gap: 8px;
+`;
+
+const HeaderIcon = styled.div`
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  background: linear-gradient(135deg, var(--primary-600), var(--primary-800));
+  box-shadow: 0 10px 20px rgba(20, 93, 191, 0.25);
+  display: grid;
+  place-items: center;
+  color: #fff;
+  font-weight: 800;
+  flex-shrink: 0;
+  
+  svg {
+    width: 24px;
+    height: 24px;
+  }
 `;
 
 const Title = styled.h1`

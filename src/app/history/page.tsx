@@ -734,7 +734,14 @@ export default function HistoryPage() {
           <MainCard>
             <PageHeader>
               <HeaderBlock>
-                <Title>Histórico de tickets</Title>
+                <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+                  <HeaderIcon aria-hidden>
+                    <svg viewBox="0 0 24 24" fill="currentColor" width="24" height="24">
+                      <path d="M13 3c-4.97 0-9 4.03-9 9H1l3.89 3.89.07.14L9 12H6c0-3.87 3.13-7 7-7s7 3.13 7 7-3.13 7-7 7c-1.93 0-3.68-.79-4.94-2.06l-1.42 1.42C8.27 19.99 10.51 21 13 21c4.97 0 9-4.03 9-9s-4.03-9-9-9zm-1 5v5l4.28 2.54.72-1.21-3.5-2.08V8H12z"/>
+                    </svg>
+                  </HeaderIcon>
+                  <Title>Histórico de tickets</Title>
+                </div>
               </HeaderBlock>
               <HeaderActions>
                 <ExportButton type="button" onClick={handleExport} disabled={loading || exporting}>
@@ -1543,6 +1550,24 @@ const HeaderBlock = styled.div`
   display: flex;
   flex-direction: column;
   gap: 6px;
+`;
+
+const HeaderIcon = styled.div`
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  background: linear-gradient(135deg, var(--primary-600), var(--primary-800));
+  box-shadow: 0 10px 20px rgba(20, 93, 191, 0.25);
+  display: grid;
+  place-items: center;
+  color: #fff;
+  font-weight: 800;
+  flex-shrink: 0;
+  
+  svg {
+    width: 24px;
+    height: 24px;
+  }
 `;
 
 const Title = styled.h1`

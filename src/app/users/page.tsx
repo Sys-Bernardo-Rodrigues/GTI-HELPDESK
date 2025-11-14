@@ -598,7 +598,11 @@ export default function UsersPage() {
         <Content>
           <Card>
             <CardHeader>
-              <HeaderIcon aria-hidden>👥</HeaderIcon>
+              <HeaderIcon aria-hidden>
+                <svg viewBox="0 0 24 24" fill="currentColor" width="24" height="24">
+                  <path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z"/>
+                </svg>
+              </HeaderIcon>
               <div>
                 <CardTitle>Usuários</CardTitle>
                 <Muted>Visualize todos os usuários do helpdesk e gerencie seus dados.</Muted>
@@ -688,7 +692,11 @@ export default function UsersPage() {
             onKeyDown={(e) => { if (e.key === "Escape") closeEditModal(); }}
           >
             <ModalHeader>
-              <ModalIcon aria-hidden>✏️</ModalIcon>
+              <ModalIcon aria-hidden>
+                <svg viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/>
+                </svg>
+              </ModalIcon>
               <div>
                 <ModalTitle id="edit-user-title">Editar usuário</ModalTitle>
                 <Muted>Ajuste os dados e salve para atualizar o cadastro.</Muted>
@@ -1215,6 +1223,11 @@ const HeaderIcon = styled.div`
   place-items: center;
   color: #fff;
   font-weight: 800;
+  
+  svg {
+    width: 24px;
+    height: 24px;
+  }
 `;
 
 const CardTitle = styled.h1`
