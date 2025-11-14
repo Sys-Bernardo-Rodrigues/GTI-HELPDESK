@@ -239,3 +239,30 @@ Import traces:
 [00:31:35.925] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
 [00:31:41.012] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
 [00:31:42.760] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
+[00:33:48.552] Server  LOG      ✓ Compiled in 34ms
+[00:33:52.026] Server  LOG      ✓ Compiled in 41ms
+[00:33:56.617] Server  LOG      ✓ Compiled in 57ms
+[00:34:03.315] Server  LOG      ✓ Compiled in 63ms
+[00:34:14.992] Server  LOG      ✓ Compiled in 53ms
+[00:35:17.173] Server  LOG      ✓ Compiled in 100ms
+[00:35:50.273] Server  LOG      ✓ Compiled in 52ms
+[00:35:52.685] Server  LOG      ✓ Compiled in 44ms
+[00:36:31.687] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
+[00:36:35.400] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
+[00:37:19.176] Server  LOG      ✓ Compiled in 48ms
+[00:37:19.266] Browser ERROR   The final argument passed to %s changed size between renders. The order and size of this array must remain constant.
+
+Previous: %s
+Incoming: %s useEffect [] [2]
+[00:37:20.966] Server  LOG      ✓ Compiled in 56ms
+[00:37:35.363] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
+[00:38:48.827] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
+[00:38:55.539] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
+[00:39:05.476] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
+[00:39:29.993] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
+[00:40:02.775] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
+[00:40:04.853] Server  LOG      ✓ Compiled in 93ms
+[00:40:14.873] Server  LOG      ✓ Compiled in 48ms
+[00:40:16.827] Server  LOG      ✓ Compiled in 34ms
+[00:41:08.495] Server  LOG      ✓ Compiled in 58ms
+[00:41:17.935] Server  LOG      ✓ Compiled in 63ms

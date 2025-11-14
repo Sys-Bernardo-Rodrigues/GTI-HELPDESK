@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useMemo } from "react";
 import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
 import styled from "styled-components";
@@ -265,23 +265,232 @@ const Card = styled.section`
   background: #fff;
   border: 1px solid var(--border);
   border-radius: 16px;
-  padding: 16px;
-  box-shadow: 0 10px 24px rgba(0,0,0,0.04);
+  padding: 24px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+  transition: box-shadow 0.2s ease;
 
   @media (min-width: 960px) {
-    grid-column: span 6;
+    grid-column: span 4;
+  }
+
+  &:hover {
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
   }
 `;
 
+const CardHeader = styled.div`
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 20px;
+`;
+
 const CardTitle = styled.h2`
-  font-size: 1.1rem;
-  margin: 0 0 8px;
+  font-size: 1.25rem;
+  font-weight: 700;
+  margin: 0;
+  color: #0f172a;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+`;
+
+const CardIcon = styled.div`
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+  background: linear-gradient(135deg, var(--primary-600), var(--primary-800));
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.25);
+  display: grid;
+  place-items: center;
+  color: #fff;
+  font-weight: 800;
+  font-size: 1.2rem;
 `;
 
 const Muted = styled.p`
-  color: var(--muted);
+  color: #64748b;
+  margin: 0;
+  font-size: 0.875rem;
+`;
+
+const CardLink = styled.a`
+  color: var(--primary-600);
+  font-size: 0.875rem;
+  font-weight: 600;
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  transition: color 0.2s ease;
+
+  &:hover {
+    color: var(--primary-700);
+    text-decoration: underline;
+  }
+`;
+
+const EmptyState = styled.div`
+  text-align: center;
+  padding: 40px 20px;
+  color: #94a3b8;
+`;
+
+const EmptyIcon = styled.div`
+  font-size: 3rem;
+  margin-bottom: 12px;
+  opacity: 0.5;
+`;
+
+const EmptyText = styled.p`
+  font-size: 0.875rem;
   margin: 0;
 `;
+
+const ItemsList = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+`;
+
+const ItemCard = styled.div`
+  padding: 14px;
+  border-radius: 12px;
+  border: 1px solid #e5e7eb;
+  background: #f8fafc;
+  transition: all 0.2s ease;
+  cursor: pointer;
+
+  &:hover {
+    background: #f1f5f9;
+    border-color: var(--primary-300);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  }
+`;
+
+const ItemHeader = styled.div`
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 8px;
+`;
+
+const ItemTitle = styled.h3`
+  font-size: 0.9rem;
+  font-weight: 600;
+  margin: 0;
+  color: #1e293b;
+  flex: 1;
+`;
+
+const ItemBadge = styled.span<{ $color: string; $bg: string }>`
+  padding: 4px 10px;
+  border-radius: 6px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: ${(p) => p.$color};
+  background: ${(p) => p.$bg};
+  white-space: nowrap;
+`;
+
+const ItemMeta = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 0.75rem;
+  color: #64748b;
+`;
+
+const ItemTime = styled.span`
+  display: flex;
+  align-items: center;
+  gap: 4px;
+`;
+
+const ItemUser = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 6px;
+`;
+
+const ItemAvatar = styled.div`
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: #e5e7eb;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.7rem;
+  font-weight: 600;
+  overflow: hidden;
+
+  img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+`;
+
+const CountBadge = styled.div`
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 24px;
+  height: 24px;
+  padding: 0 8px;
+  border-radius: 12px;
+  background: var(--primary-600);
+  color: #fff;
+  font-size: 0.75rem;
+  font-weight: 700;
+  margin-left: 8px;
+`;
+
+const UrgentBadge = styled.span`
+  padding: 4px 8px;
+  border-radius: 6px;
+  font-size: 0.7rem;
+  font-weight: 700;
+  background: #fee2e2;
+  color: #dc2626;
+  margin-left: auto;
+`;
+
+type TicketItem = {
+  id: number;
+  title: string;
+  status: string;
+  createdAt: string;
+  updatedAt: string;
+  scheduledAt?: string | null;
+  userId: number;
+  requester: { id: number; name: string | null; email: string | null; avatarUrl: string | null } | null;
+  assignedTo: { id: number; name: string | null; email: string | null; avatarUrl: string | null } | null;
+};
+
+type EventItem = {
+  id: number;
+  title: string;
+  startDate: string;
+  endDate: string;
+  isAllDay: boolean;
+  color: string;
+  userAvatar: string | null;
+  userName: string | null;
+};
+
+const STATUS_DETAILS: Record<string, { label: string; color: string; background: string }> = {
+  OPEN: { label: "Novo", color: "#1d4ed8", background: "rgba(37, 99, 235, 0.12)" },
+  IN_PROGRESS: { label: "Em andamento", color: "#b45309", background: "rgba(234, 179, 8, 0.14)" },
+  OBSERVATION: { label: "Em observação", color: "#0369a1", background: "rgba(3, 105, 161, 0.16)" },
+  RESOLVED: { label: "Resolvido", color: "#047857", background: "rgba(16, 185, 129, 0.14)" },
+  CLOSED: { label: "Encerrado", color: "#334155", background: "rgba(148, 163, 184, 0.16)" },
+};
+
+const OVERDUE_THRESHOLD_MS = 48 * 60 * 60 * 1000; // 48 horas
 
 export default function HomePage() {
   const router = useRouter();
@@ -289,6 +498,9 @@ export default function HomePage() {
   const [menuOpen, setMenuOpen] = useState<boolean>(false);
   const [user, setUser] = useState<{ id: number; email: string; name: string | null } | null>(null);
   const [avatarUrl, setAvatarUrl] = useState<string>("");
+  const [tickets, setTickets] = useState<TicketItem[]>([]);
+  const [events, setEvents] = useState<EventItem[]>([]);
+  const [loading, setLoading] = useState<boolean>(true);
   const firstLinkRef = useRef<HTMLAnchorElement | null>(null);
   const footerRef = useRef<HTMLElement | null>(null);
   const menuRef = useRef<HTMLDivElement | null>(null);
@@ -342,6 +554,140 @@ export default function HomePage() {
       } catch {}
     })();
   }, []);
+
+  // Buscar tickets e eventos
+  useEffect(() => {
+    if (!user?.id) return; // Aguardar usuário estar carregado
+    
+    async function loadData() {
+      setLoading(true);
+      try {
+        const today = new Date();
+        const startOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+        const endOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 23, 59, 59);
+        
+        // Buscar tickets e eventos em paralelo
+        const [ticketsRes, eventsRes] = await Promise.all([
+          fetch("/api/tickets"),
+          fetch(`/api/events?startDate=${startOfDay.toISOString()}&endDate=${endOfDay.toISOString()}&onlyMine=true`),
+        ]);
+
+        let ticketsList: TicketItem[] = [];
+        if (ticketsRes.ok) {
+          const ticketsData = await ticketsRes.json();
+          ticketsList = ticketsData.items || [];
+          setTickets(ticketsList);
+        }
+
+        if (eventsRes.ok) {
+          const eventsData = await eventsRes.json();
+          const eventsList = eventsData.items || [];
+          
+          // Filtrar tickets agendados para hoje do usuário logado
+          const scheduledTickets = ticketsList.filter((ticket) => {
+            if (!ticket.scheduledAt) return false;
+            const scheduledDate = new Date(ticket.scheduledAt);
+            const isToday = scheduledDate >= startOfDay && scheduledDate <= endOfDay;
+            // Mostrar tickets criados pelo usuário ou atribuídos a ele
+            const isMine = ticket.userId === user.id || ticket.assignedTo?.id === user.id;
+            return isToday && isMine;
+          });
+          
+          // Converter tickets agendados para formato de evento
+          const ticketEvents = scheduledTickets.map((ticket) => ({
+            id: ticket.id + 1000000,
+            title: ticket.title,
+            startDate: ticket.scheduledAt!,
+            endDate: ticket.scheduledAt!,
+            isAllDay: false,
+            color: "#3b82f6",
+            userAvatar: ticket.assignedTo?.avatarUrl || ticket.requester?.avatarUrl || null,
+            userName: ticket.assignedTo?.name || ticket.requester?.name || null,
+            type: "ticket",
+          }));
+          
+          setEvents([...eventsList, ...ticketEvents]);
+        }
+      } catch (error) {
+        console.error("Erro ao carregar dados:", error);
+      } finally {
+        setLoading(false);
+      }
+    }
+    loadData();
+  }, [user?.id]);
+
+  // Filtrar tickets em atraso
+  const overdueTickets = useMemo(() => {
+    const now = Date.now();
+    return tickets.filter((ticket) => {
+      if (ticket.status === "CLOSED" || ticket.status === "RESOLVED") return false;
+      const updatedAt = new Date(ticket.updatedAt).getTime();
+      const age = now - updatedAt;
+      return age > OVERDUE_THRESHOLD_MS;
+    });
+  }, [tickets]);
+
+  // Filtrar eventos do dia atual
+  const todayEvents = useMemo(() => {
+    const today = new Date();
+    const todayStr = today.toISOString().split("T")[0];
+    return events.filter((event) => {
+      const eventDate = new Date(event.startDate).toISOString().split("T")[0];
+      return eventDate === todayStr;
+    });
+  }, [events]);
+
+  // Filtrar tickets novos (aguardando atendimento)
+  const newTickets = useMemo(() => {
+    return tickets.filter((ticket) => ticket.status === "OPEN");
+  }, [tickets]);
+
+  function formatTime(dateStr: string): string {
+    try {
+      const date = new Date(dateStr);
+      return date.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
+    } catch {
+      return "";
+    }
+  }
+
+  function formatDate(dateStr: string): string {
+    try {
+      const date = new Date(dateStr);
+      return date.toLocaleDateString("pt-BR", { day: "2-digit", month: "short" });
+    } catch {
+      return "";
+    }
+  }
+
+  function getHoursAgo(dateStr: string): string {
+    try {
+      const date = new Date(dateStr);
+      const now = Date.now();
+      const diffMs = now - date.getTime();
+      const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
+      if (diffHours < 1) return "Menos de 1h";
+      if (diffHours < 24) return `${diffHours}h atrás`;
+      const diffDays = Math.floor(diffHours / 24);
+      return `${diffDays}d atrás`;
+    } catch {
+      return "";
+    }
+  }
+
+  function resolveAvatarUrl(u?: string | null): string {
+    if (!u) return "";
+    const val = String(u);
+    if (val.startsWith("data:")) return val;
+    if (/^https?:\/\//i.test(val)) return val;
+    if (typeof window !== "undefined") {
+      const origin = window.location.origin;
+      if (val.startsWith("/")) return `${origin}${val}`;
+      return `${origin}/${val}`;
+    }
+    return val;
+  }
 
   useEffect(() => {
     if (open && firstLinkRef.current) {
@@ -623,16 +969,199 @@ export default function HomePage() {
         </Sidebar>
         <Content>
           <Card>
-            <CardTitle>Tickets Abertos</CardTitle>
-            <Muted>Resumo de tickets abertos no momento.</Muted>
+            <CardHeader>
+              <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+                <CardIcon>🎫</CardIcon>
+                <div>
+                  <CardTitle>
+                    Tickets Novos
+                    {newTickets.length > 0 && <CountBadge>{newTickets.length}</CountBadge>}
+                  </CardTitle>
+                  <Muted>Aguardando atendimento</Muted>
+                </div>
+              </div>
+              <CardLink href="/tickets">Ver todos →</CardLink>
+            </CardHeader>
+            {loading ? (
+              <EmptyState>
+                <EmptyText>Carregando...</EmptyText>
+              </EmptyState>
+            ) : newTickets.length === 0 ? (
+              <EmptyState>
+                <EmptyIcon>✅</EmptyIcon>
+                <EmptyText>Nenhum ticket novo aguardando atendimento</EmptyText>
+              </EmptyState>
+            ) : (
+              <ItemsList>
+                {newTickets.slice(0, 5).map((ticket) => {
+                  const statusInfo = STATUS_DETAILS[ticket.status] || STATUS_DETAILS.OPEN;
+                  const displayUser = ticket.assignedTo || ticket.requester;
+                  return (
+                    <ItemCard
+                      key={ticket.id}
+                      onClick={() => router.push("/tickets")}
+                    >
+                      <ItemHeader>
+                        <ItemTitle>{ticket.title}</ItemTitle>
+                        <ItemBadge $color={statusInfo.color} $bg={statusInfo.background}>
+                          {statusInfo.label}
+                        </ItemBadge>
+                      </ItemHeader>
+                      <ItemMeta>
+                        <ItemTime>
+                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                            <circle cx="12" cy="12" r="10"/>
+                            <polyline points="12 6 12 12 16 14"/>
+                          </svg>
+                          {getHoursAgo(ticket.createdAt)}
+                        </ItemTime>
+                        {displayUser && (
+                          <ItemUser>
+                            <ItemAvatar>
+                              {displayUser.avatarUrl ? (
+                                <img src={resolveAvatarUrl(displayUser.avatarUrl)} alt={displayUser.name || ""} />
+                              ) : (
+                                (displayUser.name?.[0] || displayUser.email?.[0] || "U").toUpperCase()
+                              )}
+                            </ItemAvatar>
+                            <span>{displayUser.name || displayUser.email || "Usuário"}</span>
+                          </ItemUser>
+                        )}
+                      </ItemMeta>
+                    </ItemCard>
+                  );
+                })}
+              </ItemsList>
+            )}
           </Card>
+
           <Card>
-            <CardTitle>Estatísticas</CardTitle>
-            <Muted>Métricas de atendimento recentes.</Muted>
+            <CardHeader>
+              <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+                <CardIcon>⚠️</CardIcon>
+                <div>
+                  <CardTitle>
+                    Tickets em Atraso
+                    {overdueTickets.length > 0 && <CountBadge>{overdueTickets.length}</CountBadge>}
+                  </CardTitle>
+                  <Muted>Tickets sem atualização há mais de 48 horas</Muted>
+                </div>
+              </div>
+              <CardLink href="/tickets">Ver todos →</CardLink>
+            </CardHeader>
+            {loading ? (
+              <EmptyState>
+                <EmptyText>Carregando...</EmptyText>
+              </EmptyState>
+            ) : overdueTickets.length === 0 ? (
+              <EmptyState>
+                <EmptyIcon>✅</EmptyIcon>
+                <EmptyText>Nenhum ticket em atraso</EmptyText>
+              </EmptyState>
+            ) : (
+              <ItemsList>
+                {overdueTickets.slice(0, 5).map((ticket) => {
+                  const statusInfo = STATUS_DETAILS[ticket.status] || STATUS_DETAILS.OPEN;
+                  const displayUser = ticket.assignedTo || ticket.requester;
+                  return (
+                    <ItemCard
+                      key={ticket.id}
+                      onClick={() => router.push("/tickets")}
+                    >
+                      <ItemHeader>
+                        <ItemTitle>{ticket.title}</ItemTitle>
+                        <ItemBadge $color={statusInfo.color} $bg={statusInfo.background}>
+                          {statusInfo.label}
+                        </ItemBadge>
+                        <UrgentBadge>URGENTE</UrgentBadge>
+                      </ItemHeader>
+                      <ItemMeta>
+                        <ItemTime>
+                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                            <circle cx="12" cy="12" r="10"/>
+                            <polyline points="12 6 12 12 16 14"/>
+                          </svg>
+                          {getHoursAgo(ticket.updatedAt)}
+                        </ItemTime>
+                        {displayUser && (
+                          <ItemUser>
+                            <ItemAvatar>
+                              {displayUser.avatarUrl ? (
+                                <img src={resolveAvatarUrl(displayUser.avatarUrl)} alt={displayUser.name || ""} />
+                              ) : (
+                                (displayUser.name?.[0] || displayUser.email?.[0] || "U").toUpperCase()
+                              )}
+                            </ItemAvatar>
+                            <span>{displayUser.name || displayUser.email || "Usuário"}</span>
+                          </ItemUser>
+                        )}
+                      </ItemMeta>
+                    </ItemCard>
+                  );
+                })}
+              </ItemsList>
+            )}
           </Card>
+
           <Card>
-            <CardTitle>Atalhos</CardTitle>
-            <Muted>Ações rápidas e favoritos.</Muted>
+            <CardHeader>
+              <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+                <CardIcon>📅</CardIcon>
+                <div>
+                  <CardTitle>
+                    Agenda de Hoje
+                    {todayEvents.length > 0 && <CountBadge>{todayEvents.length}</CountBadge>}
+                  </CardTitle>
+                  <Muted>Compromissos agendados para hoje</Muted>
+                </div>
+              </div>
+              <CardLink href="/agenda">Ver agenda →</CardLink>
+            </CardHeader>
+            {loading ? (
+              <EmptyState>
+                <EmptyText>Carregando...</EmptyText>
+              </EmptyState>
+            ) : todayEvents.length === 0 ? (
+              <EmptyState>
+                <EmptyIcon>📅</EmptyIcon>
+                <EmptyText>Nenhum compromisso agendado para hoje</EmptyText>
+              </EmptyState>
+            ) : (
+              <ItemsList>
+                {todayEvents.slice(0, 5).map((event) => (
+                  <ItemCard
+                    key={event.id}
+                    onClick={() => router.push("/agenda")}
+                  >
+                    <ItemHeader>
+                      <ItemTitle>{event.title}</ItemTitle>
+                      <div style={{ width: "12px", height: "12px", borderRadius: "50%", background: event.color, flexShrink: 0 }} />
+                    </ItemHeader>
+                    <ItemMeta>
+                      <ItemTime>
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                          <circle cx="12" cy="12" r="10"/>
+                          <polyline points="12 6 12 12 16 14"/>
+                        </svg>
+                        {event.isAllDay ? "Dia inteiro" : `${formatTime(event.startDate)} - ${formatTime(event.endDate)}`}
+                      </ItemTime>
+                      {event.userName && (
+                        <ItemUser>
+                          <ItemAvatar>
+                            {event.userAvatar ? (
+                              <img src={resolveAvatarUrl(event.userAvatar)} alt={event.userName} />
+                            ) : (
+                              event.userName[0].toUpperCase()
+                            )}
+                          </ItemAvatar>
+                          <span>{event.userName}</span>
+                        </ItemUser>
+                      )}
+                    </ItemMeta>
+                  </ItemCard>
+                ))}
+              </ItemsList>
+            )}
           </Card>
         </Content>
       </Shell>
