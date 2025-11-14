@@ -63,3 +63,85 @@
 [00:12:48.258] Server  LOG      ✓ Compiled in 44ms
 [00:20:53.146] Server  LOG      ✓ Compiled in 64ms
 [00:20:55.314] Server  LOG      ✓ Compiled in 97ms
+[00:24:33.812] Server  LOG      ✓ Compiled in 52ms
+[00:24:39.409] Server  LOG      ✓ Compiled in 111ms
+[00:24:42.118] Server  LOG      ✓ Compiled in 101ms
+[00:24:47.954] Server  LOG      ✓ Compiled in 74ms
+[00:24:50.526] Server  LOG      ✓ Compiled in 108ms
+[00:24:52.606] Server  LOG      ✓ Compiled in 96ms
+[00:24:54.822] Server  LOG      ✓ Compiled in 71ms
+[00:25:02.745] Server  LOG      ✓ Compiled in 80ms
+[00:25:45.430] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
+[00:25:46.634] Server  LOG      ✓ Compiled in 43ms
+[00:25:49.644] Server  LOG      ✓ Compiled in 175ms
+[00:25:53.145] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
+[00:25:59.121] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
+[00:26:11.527] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
+[00:26:19.231] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
+[00:26:23.529] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
+[00:26:28.884] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
+[00:26:50.640] Browser ERROR   ./src/app/base/page.tsx:3024:7
+Ecmascript file had an error
+  3022 | `;
+  3023 |
+> 3024 | const SearchIcon = styled.div`
+       |       ^^^^^^^^^^
+  3025 |   position: absolute;
+  3026 |   left: 16px;
+  3027 |   top: 50%;
+
+the name `SearchIcon` is defined multiple times
+
+Import traces:
+  Client Component Browser:
+    ./src/app/base/page.tsx [Client Component Browser]
+    ./src/app/base/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./src/app/base/page.tsx [Client Component SSR]
+    ./src/app/base/page.tsx [Server Component]
+[00:27:25.622] Browser ERROR   ./src/app/base/page.tsx:3008:7
+Ecmascript file had an error
+  3006 | `;
+  3007 |
+> 3008 | const SearchIcon = styled.div`
+       |       ^^^^^^^^^^
+  3009 |   position: absolute;
+  3010 |   left: 16px;
+  3011 |   top: 50%;
+
+the name `SearchIcon` is defined multiple times
+
+Import traces:
+  Client Component Browser:
+    ./src/app/base/page.tsx [Client Component Browser]
+    ./src/app/base/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./src/app/base/page.tsx [Client Component SSR]
+    ./src/app/base/page.tsx [Server Component]
+[00:27:30.243] Browser ERROR   ./src/app/base/page.tsx:3008:7
+Ecmascript file had an error
+  3006 | `;
+  3007 |
+> 3008 | const SearchIcon = styled.div`
+       |       ^^^^^^^^^^
+  3009 |   position: absolute;
+  3010 |   left: 16px;
+  3011 |   top: 50%;
+
+the name `SearchIcon` is defined multiple times
+
+Import traces:
+  Client Component Browser:
+    ./src/app/base/page.tsx [Client Component Browser]
+    ./src/app/base/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./src/app/base/page.tsx [Client Component SSR]
+    ./src/app/base/page.tsx [Server Component]
+[00:27:48.369] Server  LOG      ✓ Compiled in 241ms
+[00:28:09.445] Server  LOG      ✓ Compiled in 187ms
+[00:29:02.295] Server  LOG      ✓ Compiled in 83ms
+[00:29:04.550] Server  LOG      ✓ Compiled in 89ms
+[00:29:06.948] Server  LOG      ✓ Compiled in 88ms

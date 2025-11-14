@@ -498,6 +498,24 @@ const ChatHeaderActions = styled.div`
   gap: 8px;
 `;
 
+const ChatClearButton = styled.button`
+  width: 32px;
+  height: 32px;
+  border: none;
+  background: rgba(255, 255, 255, 0.2);
+  color: #fff;
+  border-radius: 8px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.2s ease;
+
+  &:hover {
+    background: rgba(255, 255, 255, 0.3);
+  }
+`;
+
 const ChatMessages = styled.div`
   flex: 1;
   overflow-y: auto;
@@ -857,6 +875,12 @@ export default function HomePage() {
     }
   }, []);
 
+  // Limpar mensagens do chat
+  function handleClearChat() {
+    setChatMessages([]);
+    setChatInput("");
+  }
+
   // Enviar mensagem no chat
   async function handleChatSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -1179,6 +1203,13 @@ export default function HomePage() {
                 <span>🤖</span>
                 <span>Elffo</span>
               </ChatHeaderTitle>
+              <ChatHeaderActions>
+                <ChatClearButton onClick={handleClearChat} aria-label="Limpar conversa" title="Limpar conversa">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+                  </svg>
+                </ChatClearButton>
+              </ChatHeaderActions>
             </ChatHeader>
             <ChatMessages>
               {chatMessages.length === 0 && (

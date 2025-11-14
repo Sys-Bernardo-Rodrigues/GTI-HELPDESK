@@ -1,4 +1,5 @@
 {
+  "/agenda/page": "app/agenda/page.js",
   "/api/base/files/route": "app/api/base/files/route.js",
   "/api/base/passwords/route": "app/api/base/passwords/route.js",
   "/api/base/route": "app/api/base/route.js",
@@ -10,10 +11,14 @@
   "/api/profile/route": "app/api/profile/route.js",
   "/api/session/route": "app/api/session/route.js",
   "/api/tickets/route": "app/api/tickets/route.js",
+  "/api/users/route": "app/api/users/route.js",
+  "/api/webhooks/route": "app/api/webhooks/route.js",
   "/base/page": "app/base/page.js",
   "/config/page": "app/config/page.js",
   "/history/page": "app/history/page.js",
   "/home/page": "app/home/page.js",
   "/page": "app/page.js",
-  "/profile/page": "app/profile/page.js"
+  "/profile/page": "app/profile/page.js",
+  "/tickets/page": "app/tickets/page.js",
+  "/users/page": "app/users/page.js"
 }
