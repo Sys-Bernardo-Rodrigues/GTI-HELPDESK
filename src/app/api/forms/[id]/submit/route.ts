@@ -163,7 +163,19 @@ export async function POST(req: NextRequest, context: { params: ParamsPromise })
       data: { formId: id, data: JSON.stringify(payload) },
     });
 
-    // Converter em ticket automaticamente
+    // Se o formulário requer aprovação, criar aprovação pendente em vez de ticket
+    if (form.requiresApproval) {
+      const approval = await prisma.formApproval.create({
+        data: {
+          submissionId: submission.id,
+          formId: id,
+          status: "PENDING",
+        },
+      });
+      return NextResponse.json({ success: true, requiresApproval: true, approvalId: approval.id, submissionId: submission.id, formId: form.id });
+    }
+
+    // Converter em ticket automaticamente (fluxo normal)
     const adminEmail = process.env.DEFAULT_USER_EMAIL || "admin@example.com";
     const admin = await prisma.user.findUnique({ where: { email: adminEmail } });
     const fallbackUser = admin ?? (await prisma.user.findFirst());

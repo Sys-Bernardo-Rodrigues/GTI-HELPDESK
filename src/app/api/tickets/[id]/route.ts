@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAuthenticatedUser } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { hasPermission } from "@/lib/permissions";
 
 type TicketStatus = "OPEN" | "IN_PROGRESS" | "OBSERVATION" | "RESOLVED" | "CLOSED";
 
@@ -18,6 +19,12 @@ async function parseId(paramsPromise: ParamsPromise) {
 export async function PUT(req: NextRequest, context: { params: ParamsPromise }) {
   const user = await getAuthenticatedUser();
   if (!user) return NextResponse.json({ error: "Não autenticado" }, { status: 401 });
+
+  // Verificar permissão para editar tickets
+  const canEdit = await hasPermission(user.id, "tickets.edit");
+  if (!canEdit && user.id !== 1) {
+    return NextResponse.json({ error: "Sem permissão para editar tickets" }, { status: 403 });
+  }
 
   const id = await parseId(context.params);
   if (!id) return NextResponse.json({ error: "ID inválido" }, { status: 400 });
@@ -49,6 +56,12 @@ export async function PUT(req: NextRequest, context: { params: ParamsPromise }) 
   }
 
   if (hasAssignedKey) {
+    // Verificar permissão para atribuir tickets
+    const canAssign = await hasPermission(user.id, "tickets.assign");
+    if (!canAssign && user.id !== 1) {
+      return NextResponse.json({ error: "Sem permissão para atribuir tickets" }, { status: 403 });
+    }
+
     if (assignedToRaw === null || assignedToRaw === "") {
       assignedToId = null;
     } else {

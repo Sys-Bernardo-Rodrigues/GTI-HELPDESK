@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getAuthenticatedUser } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { encryptFile, encrypt, decrypt } from "@/lib/encryption";
+import { hasPermission } from "@/lib/permissions";
 import fs from "fs";
 import path from "path";
 
@@ -120,6 +121,10 @@ export async function GET() {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
+  if (!(await hasPermission(auth.id, "knowledge.files.view"))) {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  }
+
   try {
     const files = await prisma.file.findMany({
       include: {
@@ -144,6 +149,10 @@ export async function POST(req: NextRequest) {
   const auth = await getAuthenticatedUser();
   if (!auth) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  if (!(await hasPermission(auth.id, "knowledge.create"))) {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
   const contentType = req.headers.get("content-type") || "";

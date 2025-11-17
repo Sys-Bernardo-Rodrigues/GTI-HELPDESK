@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getAuthenticatedUser } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { encrypt, decrypt } from "@/lib/encryption";
+import { hasPermission } from "@/lib/permissions";
 
 type ParamsPromise = Promise<{ id: string }>;
 
@@ -73,6 +74,10 @@ export async function GET(_req: NextRequest, context: { params: ParamsPromise })
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
+  if (!(await hasPermission(auth.id, "knowledge.documents.view"))) {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  }
+
   const documentId = await getDocumentId(context.params);
   if (!documentId) {
     return NextResponse.json({ error: "ID inválido" }, { status: 400 });
@@ -106,6 +111,10 @@ export async function PUT(req: NextRequest, context: { params: ParamsPromise }) 
   const auth = await getAuthenticatedUser();
   if (!auth) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  if (!(await hasPermission(auth.id, "knowledge.edit"))) {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
   const documentId = await getDocumentId(context.params);
@@ -167,6 +176,10 @@ export async function DELETE(_req: NextRequest, context: { params: ParamsPromise
   const auth = await getAuthenticatedUser();
   if (!auth) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  if (!(await hasPermission(auth.id, "knowledge.delete"))) {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
   const documentId = await getDocumentId(context.params);

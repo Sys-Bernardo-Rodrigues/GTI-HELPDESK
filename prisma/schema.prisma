@@ -10,24 +10,25 @@ datasource db {
 }
 
 model User {
-  id                     Int            @id @default(autoincrement())
-  email                  String         @unique
+  id                     Int             @id @default(autoincrement())
+  email                  String          @unique
   name                   String
   passwordHash           String?
   phone                  String?
   jobTitle               String?
   company                String?
   avatarUrl              String?
-  twoFactor              Boolean        @default(false)
-  newsletter             Boolean        @default(false)
-  phoneVerified          Boolean        @default(false)
-  discordTag             String?        @unique
+  twoFactor              Boolean         @default(false)
+  newsletter             Boolean         @default(false)
+  phoneVerified          Boolean         @default(false)
+  discordTag             String?         @unique
   pendingEmail           String?
   emailVerificationToken String?
   emailVerifiedAt        DateTime?
-  createdAt              DateTime       @default(now())
+  createdAt              DateTime        @default(now())
   forms                  Form[]
-  assignedTickets        Ticket[]       @relation("TicketAssignedTo")
+  formsToApprove         FormApprover[]
+  assignedTickets        Ticket[]        @relation("TicketAssignedTo")
   tickets                Ticket[]
   TicketUpdate           TicketUpdate[]
   documents              Document[]
@@ -35,6 +36,12 @@ model User {
   passwords              PasswordVault[]
   webhooks               Webhook[]
   events                 Event[]
+  formApprovals          FormApproval[]
+  createdProjects        Project[]       @relation("ProjectCreator")
+  projectMemberships     ProjectMember[] @relation("ProjectMember")
+  assignedTasks          ProjectTask[]   @relation("TaskAssignedTo")
+  createdTasks           ProjectTask[]   @relation("TaskCreator")
+  permissions            UserPermission[]
 }
 
 model Category {
@@ -45,27 +52,30 @@ model Category {
 }
 
 model Ticket {
-  id           Int             @id @default(autoincrement())
-  title        String
-  description  String?         @db.LongText
-  status       TicketStatus    @default(OPEN)
-  userId       Int
-  categoryId   Int?
-  submissionId Int?            @unique
-  createdAt    DateTime        @default(now())
-  updatedAt    DateTime        @updatedAt
-  assignedToId Int?
-  scheduledAt  DateTime?
-  scheduledNote String?        @db.Text
-  assignedTo   User?           @relation("TicketAssignedTo", fields: [assignedToId], references: [id])
-  category     Category?       @relation(fields: [categoryId], references: [id])
-  submission   FormSubmission? @relation(fields: [submissionId], references: [id])
-  user         User            @relation(fields: [userId], references: [id])
-  updates      TicketUpdate[]
+  id            Int             @id @default(autoincrement())
+  title         String
+  description   String?         @db.LongText
+  status        TicketStatus    @default(OPEN)
+  userId        Int
+  categoryId    Int?
+  submissionId  Int?            @unique
+  projectId     Int?
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt
+  assignedToId  Int?
+  scheduledAt   DateTime?
+  scheduledNote String?         @db.Text
+  assignedTo    User?           @relation("TicketAssignedTo", fields: [assignedToId], references: [id])
+  category      Category?       @relation(fields: [categoryId], references: [id])
+  submission    FormSubmission? @relation(fields: [submissionId], references: [id])
+  user          User            @relation(fields: [userId], references: [id])
+  project       Project?        @relation(fields: [projectId], references: [id])
+  updates       TicketUpdate[]
 
   @@index([assignedToId], map: "Ticket_assignedToId_fkey")
   @@index([categoryId], map: "Ticket_categoryId_fkey")
   @@index([userId], map: "Ticket_userId_fkey")
+  @@index([projectId])
 }
 
 model TicketUpdate {
@@ -83,17 +93,20 @@ model TicketUpdate {
 }
 
 model Form {
-  id          Int              @id @default(autoincrement())
-  title       String
-  description String?
-  slug        String           @unique
-  isPublic    Boolean          @default(true)
-  userId      Int
-  createdAt   DateTime         @default(now())
-  updatedAt   DateTime         @updatedAt
-  user        User             @relation(fields: [userId], references: [id])
-  fields      FormField[]
-  submissions FormSubmission[]
+  id               Int              @id @default(autoincrement())
+  title            String
+  description      String?
+  slug             String           @unique
+  isPublic         Boolean          @default(true)
+  requiresApproval Boolean          @default(false)
+  userId           Int
+  createdAt        DateTime         @default(now())
+  updatedAt        DateTime         @updatedAt
+  user             User             @relation(fields: [userId], references: [id])
+  approvers        FormApprover[]
+  fields           FormField[]
+  submissions      FormSubmission[]
+  approvals        FormApproval[]
 
   @@index([userId], map: "Form_userId_fkey")
 }
@@ -111,14 +124,52 @@ model FormField {
 }
 
 model FormSubmission {
-  id        Int      @id @default(autoincrement())
-  data      String   @db.LongText
+  id        Int           @id @default(autoincrement())
+  data      String        @db.LongText
   formId    Int
-  createdAt DateTime @default(now())
-  form      Form     @relation(fields: [formId], references: [id])
+  createdAt DateTime      @default(now())
+  form      Form          @relation(fields: [formId], references: [id])
   ticket    Ticket?
+  approval  FormApproval?
 
   @@index([formId], map: "FormSubmission_formId_fkey")
+}
+
+model FormApprover {
+  id        Int      @id @default(autoincrement())
+  formId    Int
+  userId    Int
+  createdAt DateTime @default(now())
+  form      Form     @relation(fields: [formId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([formId, userId])
+  @@index([formId])
+  @@index([userId])
+}
+
+model FormApproval {
+  id           Int            @id @default(autoincrement())
+  submissionId Int            @unique
+  formId       Int
+  status       ApprovalStatus @default(PENDING)
+  reviewedById Int?
+  reviewedAt   DateTime?
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
+  submission   FormSubmission @relation(fields: [submissionId], references: [id])
+  form         Form           @relation(fields: [formId], references: [id])
+  reviewedBy   User?          @relation(fields: [reviewedById], references: [id])
+
+  @@index([formId])
+  @@index([status])
+  @@index([reviewedById])
+}
+
+enum ApprovalStatus {
+  PENDING
+  APPROVED
+  REJECTED
 }
 
 enum TicketStatus {
@@ -154,19 +205,19 @@ model Document {
 }
 
 model File {
-  id          Int      @id @default(autoincrement())
-  name        String
+  id           Int      @id @default(autoincrement())
+  name         String
   originalName String
-  mimeType    String
-  size        Int
-  path        String
-  category    String?
-  tags        String?
-  description String?  @db.Text
-  createdById Int
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  createdBy   User     @relation(fields: [createdById], references: [id])
+  mimeType     String
+  size         Int
+  path         String
+  category     String?
+  tags         String?
+  description  String?  @db.Text
+  createdById  Int
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  createdBy    User     @relation(fields: [createdById], references: [id])
 
   @@index([createdById], map: "File_createdById_fkey")
   @@index([category])
@@ -223,4 +274,121 @@ model Event {
   @@index([userId], map: "Event_userId_fkey")
   @@index([startDate])
   @@index([endDate])
+}
+
+model Project {
+  id          Int             @id @default(autoincrement())
+  name        String
+  description String?         @db.Text
+  status      ProjectStatus   @default(PLANNING)
+  progress    Int             @default(0)
+  startDate   DateTime?
+  endDate     DateTime?
+  color       String?         @default("#3b82f6")
+  createdById Int
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+  createdBy   User            @relation("ProjectCreator", fields: [createdById], references: [id])
+  members     ProjectMember[]
+  tickets     Ticket[]
+  tasks       ProjectTask[]
+
+  @@index([createdById])
+  @@index([status])
+  @@index([startDate])
+  @@index([endDate])
+}
+
+model ProjectMember {
+  id        Int      @id @default(autoincrement())
+  projectId Int
+  userId    Int
+  role      String   @default("MEMBER")
+  createdAt DateTime @default(now())
+  project   Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  user      User     @relation("ProjectMember", fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([projectId, userId])
+  @@index([projectId])
+  @@index([userId])
+}
+
+model ProjectTask {
+  id           Int           @id @default(autoincrement())
+  projectId    Int
+  title        String
+  description  String?       @db.Text
+  status       TaskStatus    @default(TODO)
+  priority     TaskPriority  @default(MEDIUM)
+  dueDate      DateTime?
+  assignedToId Int?
+  createdById  Int
+  parentTaskId Int?
+  order        Int           @default(0)
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+  project      Project       @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  assignedTo   User?         @relation("TaskAssignedTo", fields: [assignedToId], references: [id])
+  createdBy    User          @relation("TaskCreator", fields: [createdById], references: [id])
+  parentTask   ProjectTask?  @relation("TaskHierarchy", fields: [parentTaskId], references: [id], onDelete: Cascade)
+  subtasks     ProjectTask[] @relation("TaskHierarchy")
+
+  @@index([projectId])
+  @@index([assignedToId])
+  @@index([createdById])
+  @@index([parentTaskId])
+  @@index([status])
+  @@index([priority])
+  @@index([dueDate])
+}
+
+model Permission {
+  id          Int             @id @default(autoincrement())
+  key         String          @unique
+  name        String
+  description String?         @db.Text
+  category    String          @default("general")
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+  userPermissions UserPermission[]
+
+  @@index([key])
+  @@index([category])
+}
+
+model UserPermission {
+  id           Int        @id @default(autoincrement())
+  userId       Int
+  permissionId Int
+  granted      Boolean    @default(true)
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+  user         User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  permission   Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, permissionId])
+  @@index([userId])
+  @@index([permissionId])
+}
+
+enum ProjectStatus {
+  PLANNING
+  IN_PROGRESS
+  ON_HOLD
+  COMPLETED
+  CANCELLED
+}
+
+enum TaskStatus {
+  TODO
+  IN_PROGRESS
+  DONE
+  CANCELLED
+}
+
+enum TaskPriority {
+  LOW
+  MEDIUM
+  HIGH
+  URGENT
 }

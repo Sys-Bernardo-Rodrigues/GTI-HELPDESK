@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getAuthenticatedUser } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { encrypt, decrypt } from "@/lib/encryption";
+import { hasPermission } from "@/lib/permissions";
 
 function sanitizeString(input: unknown, maxLength: number = 500): string {
   if (typeof input !== "string") return "";
@@ -107,6 +108,10 @@ export async function GET() {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
+    if (!(await hasPermission(auth.id, "knowledge.passwords.manage"))) {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    }
+
     console.log(`[GET /api/base/passwords] Buscando senhas de todos os usuários`);
 
     const passwords = await prisma.passwordVault.findMany({
@@ -168,6 +173,10 @@ export async function POST(req: NextRequest) {
   const auth = await getAuthenticatedUser();
   if (!auth) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  if (!(await hasPermission(auth.id, "knowledge.passwords.manage"))) {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
   const payload = await req.json().catch(() => null);

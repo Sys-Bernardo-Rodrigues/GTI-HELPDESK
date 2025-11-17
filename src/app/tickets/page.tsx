@@ -551,6 +551,30 @@ export default function TicketsPage() {
   }, [userMenuOpen]);
 
   useEffect(() => {
+    if (!userMenuOpen) return;
+    const updatePosition = () => {
+      const footerEl = footerRef.current;
+      const menuEl = typeof window !== "undefined" && document?.getElementById("user-menu");
+      if (footerEl && menuEl) {
+        const rect = footerEl.getBoundingClientRect();
+        const menu = menuEl as HTMLElement;
+        menu.style.left = `${rect.left}px`;
+        menu.style.top = `${rect.top - 8}px`;
+        menu.style.transform = `translateY(-100%)`;
+      }
+    };
+    updatePosition();
+    if (typeof window !== "undefined") {
+      window.addEventListener("resize", updatePosition);
+      window.addEventListener("scroll", updatePosition, true);
+      return () => {
+        window.removeEventListener("resize", updatePosition);
+        window.removeEventListener("scroll", updatePosition, true);
+      };
+    }
+  }, [userMenuOpen]);
+
+  useEffect(() => {
     const win = getBrowserWindow();
     if (!win?.setInterval) return;
     const interval = win.setInterval(() => {
@@ -1033,12 +1057,6 @@ export default function TicketsPage() {
                 </svg>
                 <span>Tickets</span>
               </NavItem>
-              <NavItem href="/users" aria-label="Usuários">
-                <svg viewBox="0 0 24 24" fill="currentColor">
-                  <path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z"/>
-                </svg>
-                <span>Usuários</span>
-              </NavItem>
               <NavItem href="/base" aria-label="Base de Conhecimento">
                 <svg viewBox="0 0 24 24" fill="currentColor">
                   <path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-5 14H7v-2h7v2zm3-4H7v-2h10v2zm0-4H7V7h10v2z"/>
@@ -1063,6 +1081,18 @@ export default function TicketsPage() {
                 </svg>
                 <span>Relatórios</span>
               </NavItem>
+              <NavItem href="/aprovacoes" aria-label="Aprovações">
+                <svg viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/>
+                </svg>
+                <span>Aprovações</span>
+              </NavItem>
+              <NavItem href="/projetos" aria-label="Projetos">
+                <svg viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M10 4H4c-1.11 0-2 .89-2 2v12c0 1.11.89 2 2 2h16c1.11 0 2-.89 2-2V8c0-1.11-.89-2-2-2h-8l-2-2z"/>
+                </svg>
+                <span>Projetos</span>
+              </NavItem>
               <div style={{ position: "relative" }}>
                 <NavItemButton
                   type="button"
@@ -1084,6 +1114,20 @@ export default function TicketsPage() {
                     aria-labelledby="config-menu-button"
                     $open={configSubmenuOpen}
                   >
+                    <ConfigSubmenuItem
+                      role="menuitem"
+                      tabIndex={0}
+                      href="/users"
+                      onClick={() => {
+                        setConfigSubmenuOpen(false);
+                        router.push("/users");
+                      }}
+                    >
+                      <svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16">
+                        <path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z"/>
+                      </svg>
+                      Usuários
+                    </ConfigSubmenuItem>
                     <ConfigSubmenuItem
                       role="menuitem"
                       tabIndex={0}
@@ -1112,6 +1156,20 @@ export default function TicketsPage() {
                       </svg>
                       Webhooks
                     </ConfigSubmenuItem>
+                    <ConfigSubmenuItem
+                      role="menuitem"
+                      tabIndex={0}
+                      href="/config/perfildeacesso"
+                      onClick={() => {
+                        setConfigSubmenuOpen(false);
+                        router.push("/config/perfildeacesso");
+                      }}
+                    >
+                      <svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16">
+                        <path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4zm0 10.99h7c-.53 4.12-3.28 7.79-7 8.94V12H5V6.3l7-3.11v8.8z"/>
+                      </svg>
+                      Perfil de Acesso
+                    </ConfigSubmenuItem>
                   </ConfigSubmenu>,
                   document.body
                 )}
@@ -1119,6 +1177,7 @@ export default function TicketsPage() {
             </MenuScroll>
           </nav>
           <UserFooter
+            id="user-footer"
             aria-label="Menu do usuário"
             role="button"
             tabIndex={0}
@@ -1144,39 +1203,42 @@ export default function TicketsPage() {
               {sessionUser?.name ?? sessionUser?.email ?? "Usuário"}
             </UserName>
           </UserFooter>
-          <UserMenu
-            id="user-menu"
-            role="menu"
-            aria-labelledby="user-menu-button"
-            $open={userMenuOpen}
-            ref={menuRef as any}
-          >
-            <UserMenuItem
-              role="menuitem"
-              tabIndex={0}
-              ref={firstMenuItemRef as any}
-              onClick={() => {
-                setUserMenuOpen(false);
-                const win = getBrowserWindow();
-                if (win?.location?.assign) {
-                  win.location.assign("/profile");
-                }
-              }}
+          {typeof window !== "undefined" && document && userMenuOpen && createPortal(
+            <UserMenu
+              id="user-menu"
+              role="menu"
+              aria-labelledby="user-menu-button"
+              $open={userMenuOpen}
+              ref={menuRef as any}
             >
-              Perfil
-            </UserMenuItem>
-            <UserMenuItem
-              role="menuitem"
-              tabIndex={0}
-              $variant="danger"
-              onClick={() => {
-                setUserMenuOpen(false);
-                setConfirmOpen(true);
-              }}
-            >
-              Sair
-            </UserMenuItem>
-          </UserMenu>
+              <UserMenuItem
+                role="menuitem"
+                tabIndex={0}
+                ref={firstMenuItemRef as any}
+                onClick={() => {
+                  setUserMenuOpen(false);
+                  const win = getBrowserWindow();
+                  if (win?.location?.assign) {
+                    win.location.assign("/profile");
+                  }
+                }}
+              >
+                Perfil
+              </UserMenuItem>
+              <UserMenuItem
+                role="menuitem"
+                tabIndex={0}
+                $variant="danger"
+                onClick={() => {
+                  setUserMenuOpen(false);
+                  setConfirmOpen(true);
+                }}
+              >
+                Sair
+              </UserMenuItem>
+            </UserMenu>,
+            document.body
+          )}
           {confirmOpen && (
             <>
               <ConfirmBackdrop $open={confirmOpen} onClick={() => setConfirmOpen(false)} aria-hidden={!confirmOpen} />
@@ -2985,22 +3047,23 @@ const DrawerActions = styled.div`
 
 const UserMenu = styled.div<{ $open: boolean }>`
   position: fixed;
-  left: 108px;
-  bottom: 96px;
   background: #fff;
   border: 1px solid var(--border);
   border-radius: 12px;
   box-shadow: 0 12px 28px rgba(0,0,0,0.12);
   min-width: 200px;
   padding: 8px;
-  transform: translateY(${(p) => (p.$open ? "0" : "8px")});
   opacity: ${(p) => (p.$open ? 1 : 0)};
   pointer-events: ${(p) => (p.$open ? "auto" : "none")};
-  transition: opacity .18s ease, transform .18s ease;
-  z-index: 100;
+  transition: opacity .18s ease;
+  z-index: 10000;
+  isolation: isolate;
 
   @media (max-width: 960px) {
-    left: 16px;
+    left: 16px !important;
+    top: auto !important;
+    bottom: 96px !important;
+    transform: none !important;
   }
 `;
 

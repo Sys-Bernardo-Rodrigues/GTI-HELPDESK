@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getAuthenticatedUser } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { decrypt } from "@/lib/encryption";
+import { hasPermission } from "@/lib/permissions";
 
 type Message = {
   role: "user" | "assistant";
@@ -1234,6 +1235,12 @@ export async function POST(req: NextRequest) {
   const user = await getAuthenticatedUser();
   if (!user) {
     return NextResponse.json({ error: "Não autenticado" }, { status: 401 });
+  }
+
+  // Verificar permissão para usar o Dobby assistente
+  const canUseDobby = await hasPermission(user.id, "dobby.use");
+  if (!canUseDobby && user.id !== 1) {
+    return NextResponse.json({ error: "Sem permissão para usar o assistente Dobby" }, { status: 403 });
   }
   
   try {

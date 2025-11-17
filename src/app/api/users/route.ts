@@ -2,6 +2,7 @@ import bcrypt from "bcryptjs";
 import { NextRequest, NextResponse } from "next/server";
 import { getAuthenticatedUser } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { hasPermission } from "@/lib/permissions";
 
 function sanitizeString(value: unknown, maxLength = 256) {
   if (typeof value !== "string") return "";
@@ -47,6 +48,12 @@ export async function GET() {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
+  // Verificar permissão para visualizar usuários
+  const canView = await hasPermission(auth.id, "users.view");
+  if (!canView && auth.id !== 1) {
+    return NextResponse.json({ error: "Sem permissão para visualizar usuários" }, { status: 403 });
+  }
+
   try {
     const users = await prisma.user.findMany({
       select: {
@@ -74,6 +81,12 @@ export async function POST(req: NextRequest) {
   const auth = await getAuthenticatedUser();
   if (!auth) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  // Verificar permissão para criar usuários
+  const canCreate = await hasPermission(auth.id, "users.create");
+  if (!canCreate && auth.id !== 1) {
+    return NextResponse.json({ error: "Sem permissão para criar usuários" }, { status: 403 });
   }
 
   const payload = await req.json().catch(() => null);

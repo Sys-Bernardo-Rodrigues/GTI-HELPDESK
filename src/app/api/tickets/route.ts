@@ -1,10 +1,17 @@
 import { NextResponse } from "next/server";
 import { getAuthenticatedUser } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { hasPermission } from "@/lib/permissions";
 
 export async function GET() {
   const user = await getAuthenticatedUser();
   if (!user) return NextResponse.json({ error: "Não autenticado" }, { status: 401 });
+
+  // Verificar permissão para visualizar tickets
+  const canView = await hasPermission(user.id, "tickets.view");
+  if (!canView && user.id !== 1) {
+    return NextResponse.json({ error: "Sem permissão para visualizar tickets" }, { status: 403 });
+  }
 
   try {
     const tickets = await prisma.ticket.findMany({

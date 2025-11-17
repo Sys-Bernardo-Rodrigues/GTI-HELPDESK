@@ -1129,12 +1129,6 @@ export default function ProfilePage() {
                 </svg>
                 <span>Tickets</span>
               </NavItem>
-              <NavItem href="/users" aria-label="Usuários">
-                <svg viewBox="0 0 24 24" fill="currentColor">
-                  <path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z"/>
-                </svg>
-                <span>Usuários</span>
-              </NavItem>
               <NavItem href="/base" aria-label="Base de Conhecimento">
                 <svg viewBox="0 0 24 24" fill="currentColor">
                   <path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-5 14H7v-2h7v2zm3-4H7v-2h10v2zm0-4H7V7h10v2z"/>
@@ -1159,6 +1153,18 @@ export default function ProfilePage() {
                 </svg>
                 <span>Relatórios</span>
               </NavItem>
+              <NavItem href="/aprovacoes" aria-label="Aprovações">
+                <svg viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/>
+                </svg>
+                <span>Aprovações</span>
+              </NavItem>
+              <NavItem href="/projetos" aria-label="Projetos">
+                <svg viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M10 4H4c-1.11 0-2 .89-2 2v12c0 1.11.89 2 2 2h16c1.11 0 2-.89 2-2V8c0-1.11-.89-2-2-2h-8l-2-2z"/>
+                </svg>
+                <span>Projetos</span>
+              </NavItem>
               <div style={{ position: "relative" }}>
                 <NavItemButton
                   type="button"
@@ -1180,6 +1186,20 @@ export default function ProfilePage() {
                     aria-labelledby="config-menu-button"
                     $open={configSubmenuOpen}
                   >
+                    <ConfigSubmenuItem
+                      role="menuitem"
+                      tabIndex={0}
+                      href="/users"
+                      onClick={() => {
+                        setConfigSubmenuOpen(false);
+                        router.push("/users");
+                      }}
+                    >
+                      <svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16">
+                        <path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z"/>
+                      </svg>
+                      Usuários
+                    </ConfigSubmenuItem>
                     <ConfigSubmenuItem
                       role="menuitem"
                       tabIndex={0}
@@ -1207,6 +1227,20 @@ export default function ProfilePage() {
                         <path d="M17.71 7.71L12 2h-1v7.59L6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 11 14.41V22h1l5.71-5.71-4.3-4.29 4.3-4.29zM13 3.83l3.88 3.88-3.88 3.88V3.83zm0 12.34v-7.76l3.88 3.88L13 16.17z"/>
                       </svg>
                       Webhooks
+                    </ConfigSubmenuItem>
+                    <ConfigSubmenuItem
+                      role="menuitem"
+                      tabIndex={0}
+                      href="/config/perfildeacesso"
+                      onClick={() => {
+                        setConfigSubmenuOpen(false);
+                        router.push("/config/perfildeacesso");
+                      }}
+                    >
+                      <svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16">
+                        <path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4zm0 10.99h7c-.53 4.12-3.28 7.79-7 8.94V12H5V6.3l7-3.11v8.8z"/>
+                      </svg>
+                      Perfil de Acesso
                     </ConfigSubmenuItem>
                   </ConfigSubmenu>,
                   document.body

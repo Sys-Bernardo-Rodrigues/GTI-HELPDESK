@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAuthenticatedUser } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { hasPermission } from "@/lib/permissions";
 
 type ParamsPromise = Promise<{ id: string }>;
 
@@ -92,9 +93,18 @@ export async function PUT(req: NextRequest, context: { params: ParamsPromise }) 
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
+  // Verificar permissão para editar usuários (ou permitir editar próprio perfil)
   const userId = await getUserId(context.params);
   if (!userId) {
     return NextResponse.json({ error: "ID inválido" }, { status: 400 });
+  }
+
+  // Permitir que o usuário edite seu próprio perfil, mas para outros usuários precisa de permissão
+  if (userId !== auth.id) {
+    const canEdit = await hasPermission(auth.id, "users.edit");
+    if (!canEdit && auth.id !== 1) {
+      return NextResponse.json({ error: "Sem permissão para editar usuários" }, { status: 403 });
+    }
   }
 
   const payload = await req.json().catch(() => null);

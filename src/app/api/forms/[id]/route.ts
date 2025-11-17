@@ -28,6 +28,11 @@ export async function GET(req: NextRequest, context: { params: ParamsPromise }) 
     where: { id },
     include: {
       fields: { orderBy: { id: "asc" } },
+      approvers: {
+        include: {
+          user: { select: { id: true, name: true, email: true } },
+        },
+      },
     },
   });
   if (!form) return NextResponse.json({ error: "Formulário não encontrado" }, { status: 404 });
@@ -46,23 +51,97 @@ export async function PUT(req: NextRequest, context: { params: ParamsPromise }) 
   const description = typeof body?.description === "string" ? body.description : body?.description?.toString() || undefined;
   const fields = Array.isArray(body?.fields) ? (body?.fields as unknown[]) : undefined;
   const isPublic = typeof body?.isPublic === "boolean" ? Boolean(body.isPublic) : undefined;
+  const requiresApproval = typeof body?.requiresApproval === "boolean" ? Boolean(body.requiresApproval) : undefined;
+  const approverIdsRaw = body?.approverIds;
+  let approverIds: number[] | undefined = undefined;
+  if (approverIdsRaw !== null && approverIdsRaw !== undefined) {
+    if (Array.isArray(approverIdsRaw) && approverIdsRaw.length > 0) {
+      approverIds = approverIdsRaw
+        .map((id: any) => {
+          const parsed = Number(id);
+          return Number.isFinite(parsed) && parsed > 0 ? parsed : null;
+        })
+        .filter((id): id is number => id !== null);
+      // Verificar se os usuários existem
+      if (approverIds.length > 0) {
+        const existingUsers = await prisma.user.findMany({
+          where: { id: { in: approverIds } },
+          select: { id: true },
+        });
+        approverIds = existingUsers.map((u) => u.id);
+      } else {
+        approverIds = [];
+      }
+    } else {
+      approverIds = [];
+    }
+  }
 
-  const updated = await prisma.form.update({
-    where: { id },
-    data: {
-      title,
-      description,
-      ...(isPublic !== undefined ? { isPublic } : {}),
-      ...(fields ? { fields: { deleteMany: {}, create: fields.map((f: any) => ({
-        label: (f?.label?.toString() || "Campo").slice(0, 64),
-        type: (f?.type as any) || "TEXT",
-        options: f?.options ? String(f.options) : null,
-        required: Boolean(f?.required),
-      })) } } : {}),
-    },
-    include: { fields: true },
-  });
-  return NextResponse.json(updated);
+  try {
+    const updateData: Record<string, any> = {};
+    if (title !== undefined) updateData.title = title;
+    if (description !== undefined) updateData.description = description;
+    if (isPublic !== undefined) updateData.isPublic = isPublic;
+    if (requiresApproval !== undefined) {
+      updateData.requiresApproval = requiresApproval;
+      // Se desabilitar aprovação, remover todos os aprovadores
+      if (!requiresApproval) {
+        updateData.approvers = { deleteMany: {} };
+      } else if (approverIds !== undefined) {
+        // Atualizar aprovadores
+        updateData.approvers = {
+          deleteMany: {},
+          create: approverIds.map((userId) => ({ userId })),
+        };
+      }
+    } else if (approverIds !== undefined) {
+      // Atualizar apenas os aprovadores sem mudar requiresApproval
+      updateData.approvers = {
+        deleteMany: {},
+        create: approverIds.map((userId) => ({ userId })),
+      };
+    }
+    if (fields !== undefined) {
+      updateData.fields = {
+        deleteMany: {},
+        create: fields.map((f: any) => ({
+          label: (f?.label?.toString() || "Campo").slice(0, 64),
+          type: (f?.type as any) || "TEXT",
+          options: f?.options ? String(f.options) : null,
+          required: Boolean(f?.required),
+        })),
+      };
+    }
+
+    // Verificar se o formulário existe antes de atualizar
+    const existingForm = await prisma.form.findUnique({
+      where: { id },
+      select: { id: true },
+    });
+    if (!existingForm) {
+      return NextResponse.json({ error: "Formulário não encontrado" }, { status: 404 });
+    }
+
+    const updated = await prisma.form.update({
+      where: { id },
+      data: updateData,
+      include: { 
+        fields: true,
+        approvers: {
+          include: {
+            user: { select: { id: true, name: true, email: true } },
+          },
+        },
+      },
+    });
+    return NextResponse.json(updated);
+  } catch (error: any) {
+    console.error("Erro ao atualizar formulário:", error);
+    return NextResponse.json(
+      { error: "Falha ao atualizar formulário", detail: error?.message || String(error) },
+      { status: 500 }
+    );
+  }
 }
 
 export async function DELETE(req: NextRequest, context: { params: ParamsPromise }) {

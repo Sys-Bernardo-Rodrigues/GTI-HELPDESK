@@ -28,10 +28,13 @@ export default function ConfigPage() {
   const [configSubmenuOpen, setConfigSubmenuOpen] = useState<boolean>(false);
   // Estado do builder de formulários
   type BuilderField = { tempId: string; label: string; type: "TEXT"|"TEXTAREA"|"SELECT"|"RADIO"|"CHECKBOX"|"FILE"; options?: string; required: boolean };
-  const [formsList, setFormsList] = useState<Array<{ id: number; numericId?: number; title: string; slug: string; link: string; createdAt?: string; isPublic?: boolean; createdByName?: string | null; createdByEmail?: string | null }>>([]);
+  const [formsList, setFormsList] = useState<Array<{ id: number; numericId?: number; title: string; slug: string; link: string; createdAt?: string; isPublic?: boolean; requiresApproval?: boolean; approvers?: Array<{ id: number; name: string; email: string }>; createdByName?: string | null; createdByEmail?: string | null }>>([]);
   const [formTitle, setFormTitle] = useState<string>("");
   const [formDesc, setFormDesc] = useState<string>("");
+  const [formRequiresApproval, setFormRequiresApproval] = useState<boolean>(false);
+  const [formApproverIds, setFormApproverIds] = useState<number[]>([]);
   const [builderFields, setBuilderFields] = useState<BuilderField[]>([]);
+  const [usersList, setUsersList] = useState<Array<{ id: number; name: string; email: string }>>([]);
   const [savingForm, setSavingForm] = useState<boolean>(false);
   const [createOpen, setCreateOpen] = useState<boolean>(false);
   const [formsFeedback, setFormsFeedback] = useState<{ type: "success" | "error"; text: string } | null>(null);
@@ -43,6 +46,8 @@ export default function ConfigPage() {
   const [editFormId, setEditFormId] = useState<number | null>(null);
   const [editTitle, setEditTitle] = useState<string>("");
   const [editDesc, setEditDesc] = useState<string>("");
+  const [editRequiresApproval, setEditRequiresApproval] = useState<boolean>(false);
+  const [editApproverIds, setEditApproverIds] = useState<number[]>([]);
   const [editBuilderFields, setEditBuilderFields] = useState<BuilderField[]>([]);
   const [editLoading, setEditLoading] = useState<boolean>(false);
   const [editSaving, setEditSaving] = useState<boolean>(false);
@@ -176,6 +181,24 @@ export default function ConfigPage() {
     })();
   }, []);
 
+  // Utilitário para carregar lista de usuários
+  async function loadUsers() {
+    try {
+      const res = await fetch("/api/users");
+      if (res.ok) {
+        const json = (await res.json()) as Record<string, any>;
+        const items = (json.items || []).map((u: any) => ({
+          id: Number(u.id),
+          name: String(u.name || u.email || "Usuário"),
+          email: String(u.email || ""),
+        }));
+        setUsersList(items);
+      }
+    } catch (err: any) {
+      console.error("Erro ao carregar usuários:", err);
+    }
+  }
+
   // Utilitário para carregar lista de formulários
   async function loadForms() {
     setFormsLoading(true);
@@ -191,6 +214,8 @@ export default function ConfigPage() {
           link: i.link,
           createdAt: i.createdAt,
           isPublic: Boolean(i.isPublic),
+          requiresApproval: Boolean(i.requiresApproval ?? false),
+          approvers: Array.isArray(i.approvers) ? i.approvers : [],
           createdByName: i.createdByName ?? null,
           createdByEmail: i.createdByEmail ?? null,
         }));
@@ -208,6 +233,7 @@ export default function ConfigPage() {
   // Carregar ao entrar na seção
   useEffect(() => {
     if (section === "forms") {
+      loadUsers();
       loadForms();
     } else if (section === "webhooks") {
       loadWebhooks();
@@ -308,12 +334,14 @@ export default function ConfigPage() {
       const payload = {
         title: formTitle.trim(),
         description: formDesc.trim(),
+        requiresApproval: formRequiresApproval,
+        approverIds: formRequiresApproval ? formApproverIds : [],
         fields: builderFields.map((f) => ({ label: f.label, type: f.type, options: f.options, required: f.required })),
       };
       const res = await fetch("/api/forms", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) });
       if (!res.ok) throw new Error("Falha ao salvar formulário");
       await loadForms();
-      setFormTitle(""); setFormDesc(""); setBuilderFields([]);
+      setFormTitle(""); setFormDesc(""); setFormRequiresApproval(false); setFormApproverIds([]); setBuilderFields([]);
       setCreateOpen(false);
       setFormsFeedback({ type: "success", text: "Formulário criado com sucesso." });
     } catch (e: any) {
@@ -355,6 +383,8 @@ export default function ConfigPage() {
     setManageFormId(id);
     setManageOpen(true);
     setFormsFeedback(null);
+    // Garantir que a lista de usuários está carregada
+    loadUsers();
   }
 
   function closeManageForm() {
@@ -366,7 +396,7 @@ export default function ConfigPage() {
   async function toggleFormVisibility(form: { id: number; isPublic?: boolean }) {
     setToggleVisibilityLoading(true);
     try {
-      const res = await fetch(`/api/forms/${form.id}/visibility`, {
+      const res = await fetch(`/api/forms/${form.id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ isPublic: !Boolean(form.isPublic) }),
@@ -381,6 +411,65 @@ export default function ConfigPage() {
       setFormsFeedback({ type: "success", text: "Formulário atualizado com sucesso." });
     } catch (err: any) {
       setFormsFeedback({ type: "error", text: err?.message || "Erro ao atualizar formulário" });
+    } finally {
+      setToggleVisibilityLoading(false);
+    }
+  }
+
+  async function toggleRequiresApproval(form: { id: number; requiresApproval?: boolean }) {
+    setToggleVisibilityLoading(true);
+    try {
+      const res = await fetch(`/api/forms/${form.id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ requiresApproval: !Boolean(form.requiresApproval) }),
+      });
+      const json = (await res.json().catch(() => null)) as Record<string, any> | null;
+      if (!res.ok) throw new Error(json?.error || "Falha ao atualizar aprovação");
+      const approvers = Array.isArray(json?.approvers) ? json.approvers.map((a: any) => ({
+        id: a.user?.id ?? a.id,
+        name: a.user?.name ?? a.name,
+        email: a.user?.email ?? a.email,
+      })) : [];
+      setFormsList((prev) =>
+        prev.map((f) =>
+          f.id === form.id ? { ...f, requiresApproval: json?.requiresApproval ?? !Boolean(form.requiresApproval), approvers: approvers } : f
+        )
+      );
+      setFormsFeedback({ type: "success", text: "Formulário atualizado com sucesso." });
+    } catch (err: any) {
+      setFormsFeedback({ type: "error", text: err?.message || "Erro ao atualizar formulário" });
+    } finally {
+      setToggleVisibilityLoading(false);
+    }
+  }
+
+  async function updateApprovers(form: { id: number }, approverIds: number[]) {
+    setToggleVisibilityLoading(true);
+    try {
+      const res = await fetch(`/api/forms/${form.id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ approverIds }),
+      });
+      const json = (await res.json().catch(() => null)) as Record<string, any> | null;
+      if (!res.ok) throw new Error(json?.error || "Falha ao atualizar aprovadores");
+      const approvers = Array.isArray(json?.approvers) ? json.approvers.map((a: any) => ({
+        id: a.user?.id ?? a.id,
+        name: a.user?.name ?? a.name,
+        email: a.user?.email ?? a.email,
+      })) : [];
+      setFormsList((prev) =>
+        prev.map((f) =>
+          f.id === form.id ? { 
+            ...f, 
+            approvers: approvers,
+          } : f
+        )
+      );
+      setFormsFeedback({ type: "success", text: "Aprovadores atualizados com sucesso." });
+    } catch (err: any) {
+      setFormsFeedback({ type: "error", text: err?.message || "Erro ao atualizar aprovadores" });
     } finally {
       setToggleVisibilityLoading(false);
     }
@@ -426,6 +515,9 @@ export default function ConfigPage() {
       const data = (await res.json()) as Record<string, any>;
       setEditTitle(data?.title ?? "");
       setEditDesc(data?.description ?? "");
+      setEditRequiresApproval(Boolean(data?.requiresApproval ?? false));
+      const approvers = Array.isArray(data?.approvers) ? data.approvers : [];
+      setEditApproverIds(approvers.map((a: any) => Number(a.user?.id ?? a.id)).filter((id: number) => !isNaN(id)));
       const mapped: BuilderField[] = Array.isArray(data?.fields)
         ? data.fields.map((field: any) => {
             const rawType = String(field.type ?? "TEXT").toUpperCase();
@@ -465,6 +557,8 @@ export default function ConfigPage() {
       const payload = {
         title: editTitle.trim(),
         description: editDesc.trim(),
+        requiresApproval: editRequiresApproval,
+        approverIds: editRequiresApproval ? editApproverIds : [],
         fields: editBuilderFields.map((f) => ({
           label: f.label,
           type: f.type,
@@ -872,7 +966,7 @@ export default function ConfigPage() {
     }
   }, [section, loading, error]);
 
-  const activeForm = manageFormId ? formsList.find((f) => f.id === manageFormId) ?? null : null;
+  const activeForm = manageFormId ? formsList.find((f) => f.id === manageFormId || f.numericId === manageFormId) ?? null : null;
   const activeWebhook = manageWebhookId ? webhooksList.find((w) => w.id === manageWebhookId) ?? null : null;
   const baseUrl = typeof globalThis !== "undefined" && (globalThis as any).window
     ? ((globalThis as any).window?.location?.origin ?? "")
@@ -910,12 +1004,6 @@ export default function ConfigPage() {
                 </svg>
                 <span>Tickets</span>
               </NavItem>
-              <NavItem href="/users" aria-label="Usuários">
-                <svg viewBox="0 0 24 24" fill="currentColor">
-                  <path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z"/>
-                </svg>
-                <span>Usuários</span>
-              </NavItem>
               <NavItem href="/base" aria-label="Base de Conhecimento">
                 <svg viewBox="0 0 24 24" fill="currentColor">
                   <path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-5 14H7v-2h7v2zm3-4H7v-2h10v2zm0-4H7V7h10v2z"/>
@@ -940,6 +1028,18 @@ export default function ConfigPage() {
                 </svg>
                 <span>Relatórios</span>
               </NavItem>
+              <NavItem href="/aprovacoes" aria-label="Aprovações">
+                <svg viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/>
+                </svg>
+                <span>Aprovações</span>
+              </NavItem>
+              <NavItem href="/projetos" aria-label="Projetos">
+                <svg viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M10 4H4c-1.11 0-2 .89-2 2v12c0 1.11.89 2 2 2h16c1.11 0 2-.89 2-2V8c0-1.11-.89-2-2-2h-8l-2-2z"/>
+                </svg>
+                <span>Projetos</span>
+              </NavItem>
               <div style={{ position: "relative" }}>
                 <NavItemButton
                   type="button"
@@ -962,6 +1062,20 @@ export default function ConfigPage() {
                   aria-labelledby="config-menu-button"
                   $open={configSubmenuOpen}
                 >
+                  <ConfigSubmenuItem
+                    role="menuitem"
+                    tabIndex={0}
+                    href="/users"
+                    onClick={() => {
+                      setConfigSubmenuOpen(false);
+                      router.push("/users");
+                    }}
+                  >
+                    <svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16">
+                      <path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z"/>
+                    </svg>
+                    Usuários
+                  </ConfigSubmenuItem>
                   <ConfigSubmenuItem
                     role="menuitem"
                     tabIndex={0}
@@ -991,6 +1105,20 @@ export default function ConfigPage() {
                       <path d="M17.71 7.71L12 2h-1v7.59L6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 11 14.41V22h1l5.71-5.71-4.3-4.29 4.3-4.29zM13 3.83l3.88 3.88-3.88 3.88V3.83zm0 12.34v-7.76l3.88 3.88L13 16.17z"/>
                     </svg>
                     Webhooks
+                  </ConfigSubmenuItem>
+                  <ConfigSubmenuItem
+                    role="menuitem"
+                    tabIndex={0}
+                    href="/config/perfildeacesso"
+                    onClick={() => {
+                      setConfigSubmenuOpen(false);
+                      router.push("/config/perfildeacesso");
+                    }}
+                  >
+                    <svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16">
+                      <path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4zm0 10.99h7c-.53 4.12-3.28 7.79-7 8.94V12H5V6.3l7-3.11v8.8z"/>
+                    </svg>
+                    Perfil de Acesso
                   </ConfigSubmenuItem>
                 </ConfigSubmenu>,
                 (globalThis as any).document.body
@@ -1050,7 +1178,7 @@ export default function ConfigPage() {
               Sair
             </UserMenuItem>
           </UserMenu>
-          {confirmOpen && (
+          {confirmOpen && typeof window !== "undefined" && createPortal(
             <>
               <ConfirmBackdrop $open={confirmOpen} onClick={() => setConfirmOpen(false)} aria-hidden={!confirmOpen} />
               <ConfirmDialog
@@ -1066,7 +1194,8 @@ export default function ConfigPage() {
                   <ConfirmButton type="button" onClick={onLogout}>Confirmar</ConfirmButton>
                 </ConfirmActions>
               </ConfirmDialog>
-            </>
+            </>,
+            document.body
           )}
         </Sidebar>
         <Overlay $show={open} onClick={() => setOpen(false)} />
@@ -1123,6 +1252,7 @@ export default function ConfigPage() {
                       <tr>
                         <FormsHeaderCell>Formulário</FormsHeaderCell>
                         <FormsHeaderCell>Visibilidade</FormsHeaderCell>
+                        <FormsHeaderCell>Aprovação</FormsHeaderCell>
                         <FormsHeaderCell>Criado por</FormsHeaderCell>
                         <FormsHeaderCell>Criado em</FormsHeaderCell>
                         <FormsHeaderCell>Link</FormsHeaderCell>
@@ -1132,14 +1262,14 @@ export default function ConfigPage() {
                     <tbody>
                       {formsLoading && (
                         <tr>
-                          <FormsCell colSpan={6}>
+                          <FormsCell colSpan={7}>
                             <Muted>Carregando formulários...</Muted>
                           </FormsCell>
                         </tr>
                       )}
                       {!formsLoading && formsList.length === 0 && (
                         <tr>
-                          <FormsCell colSpan={6}>
+                          <FormsCell colSpan={7}>
                             <Muted>Nenhum formulário cadastrado ainda.</Muted>
                           </FormsCell>
                         </tr>
@@ -1156,6 +1286,24 @@ export default function ConfigPage() {
                             <StatusBadge $tone={form.isPublic ? "success" : "warning"}>
                               {form.isPublic ? "Público" : "Desativado"}
                             </StatusBadge>
+                          </FormsCell>
+                          <FormsCell>
+                            {form.requiresApproval ? (
+                              <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
+                                <StatusBadge $tone="warning">Sim</StatusBadge>
+                                {form.approvers && form.approvers.length > 0 ? (
+                                  <FormMeta style={{ fontSize: "0.75rem", marginTop: "2px" }}>
+                                    {form.approvers.length} aprovador(es): {form.approvers.map(a => a.name || a.email).join(", ")}
+                                  </FormMeta>
+                                ) : (
+                                  <FormMeta style={{ fontSize: "0.75rem", marginTop: "2px", color: "#ef4444" }}>
+                                    Nenhum aprovador definido
+                                  </FormMeta>
+                                )}
+                              </div>
+                            ) : (
+                              <StatusBadge $tone="success">Não</StatusBadge>
+                            )}
                           </FormsCell>
                           <FormsCell>
                             <FormMeta>{form.createdByName || form.createdByEmail || "—"}</FormMeta>
@@ -1284,13 +1432,29 @@ export default function ConfigPage() {
       </Shell>
       {createOpen && (
         <>
-          <ModalBackdrop $open={createOpen} onClick={() => setCreateOpen(false)} aria-hidden={!createOpen} />
+          <ModalBackdrop $open={createOpen} onClick={() => {
+            setCreateOpen(false);
+            setFormTitle("");
+            setFormDesc("");
+            setFormRequiresApproval(false);
+            setFormApproverIds([]);
+            setBuilderFields([]);
+          }} aria-hidden={!createOpen} />
           <ModalDialog
             role="dialog"
             aria-modal="true"
             aria-labelledby="create-form-title"
             $open={createOpen}
-            onKeyDown={(e) => { if (e.key === "Escape") setCreateOpen(false); }}
+            onKeyDown={(e) => { 
+              if (e.key === "Escape") {
+                setCreateOpen(false);
+                setFormTitle("");
+                setFormDesc("");
+                setFormRequiresApproval(false);
+                setFormApproverId(null);
+                setBuilderFields([]);
+              }
+            }}
           >
             <ModalHeader>
               <ModalIcon aria-hidden>
@@ -1330,6 +1494,48 @@ export default function ConfigPage() {
                   }}
                 />
               </Field>
+              <Field>
+                <label style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer" }}>
+                  <input
+                    type="checkbox"
+                    checked={formRequiresApproval}
+                    onChange={(event) => {
+                      const checked = Boolean((event.currentTarget as unknown as { checked?: boolean }).checked);
+                      setFormRequiresApproval(checked);
+                      if (!checked) {
+                        setFormApproverIds([]);
+                      }
+                    }}
+                  />
+                  <span>Este formulário requer aprovação antes de criar ticket</span>
+                </label>
+              </Field>
+              {formRequiresApproval && (
+                <Field>
+                  <Label>Usuários responsáveis pela aprovação (selecione múltiplos)</Label>
+                  <select
+                    multiple
+                    value={formApproverIds.map(String)}
+                    onChange={(event) => {
+                      const selectedOptions = Array.from(event.currentTarget.selectedOptions);
+                      const selectedIds = selectedOptions.map(opt => Number(opt.value)).filter(id => !isNaN(id));
+                      setFormApproverIds(selectedIds);
+                    }}
+                    style={{ width: "100%", padding: "10px", borderRadius: 10, border: "1px solid var(--border)", background: "#fff", minHeight: "120px" }}
+                  >
+                    {usersList.map((u) => (
+                      <option key={u.id} value={u.id}>
+                        {u.name} ({u.email})
+                      </option>
+                    ))}
+                  </select>
+                  {formApproverIds.length > 0 && (
+                    <Muted style={{ marginTop: "4px", fontSize: "0.875rem" }}>
+                      {formApproverIds.length} usuário(s) selecionado(s)
+                    </Muted>
+                  )}
+                </Field>
+              )}
 
               <SectionTitle>Campos</SectionTitle>
               <div style={{ display: "grid", gap: 12 }}>
@@ -1406,7 +1612,14 @@ export default function ConfigPage() {
               </Actions>
             </div>
             <ModalActions>
-              <CancelButton type="button" onClick={() => setCreateOpen(false)}>Cancelar</CancelButton>
+              <CancelButton type="button" onClick={() => {
+                setCreateOpen(false);
+                setFormTitle("");
+                setFormDesc("");
+                setFormRequiresApproval(false);
+                setFormApproverId(null);
+                setBuilderFields([]);
+              }}>Cancelar</CancelButton>
               <ConfirmButton type="button" onClick={saveForm} disabled={savingForm} aria-label="Salvar novo formulário">
                 {savingForm ? "Salvando..." : "Salvar"}
               </ConfirmButton>
@@ -1455,6 +1668,55 @@ export default function ConfigPage() {
                 </InfoValue>
               </div>
               <div>
+                <InfoLabel>Requer Aprovação</InfoLabel>
+                <InfoValue>
+                  <StatusBadge $tone={Boolean(activeForm.requiresApproval) ? "warning" : "success"}>
+                    {Boolean(activeForm.requiresApproval) ? "Sim" : "Não"}
+                  </StatusBadge>
+                </InfoValue>
+              </div>
+              {Boolean(activeForm.requiresApproval) && (
+                <div style={{ gridColumn: "1 / -1" }}>
+                  <InfoLabel>Usuários Aprovadores</InfoLabel>
+                  <div style={{ display: "flex", flexDirection: "column", gap: "8px", marginTop: "4px" }}>
+                    <select
+                      multiple
+                      value={(activeForm.approvers || []).map(a => String(a.id))}
+                      onChange={(e) => {
+                        const selectedOptions = Array.from(e.currentTarget.selectedOptions);
+                        const selectedIds = selectedOptions.map(opt => Number(opt.value)).filter(id => !isNaN(id));
+                        updateApprovers(activeForm, selectedIds);
+                      }}
+                      disabled={toggleVisibilityLoading}
+                      style={{ 
+                        width: "100%", 
+                        padding: "8px 12px", 
+                        borderRadius: "8px", 
+                        border: "1px solid var(--border)", 
+                        background: "#fff",
+                        fontSize: "0.875rem",
+                        minHeight: "120px"
+                      }}
+                    >
+                      {usersList.length > 0 ? (
+                        usersList.map((u) => (
+                          <option key={u.id} value={u.id}>
+                            {u.name} ({u.email})
+                          </option>
+                        ))
+                      ) : (
+                        <option value="" disabled>Carregando usuários...</option>
+                      )}
+                    </select>
+                    {(activeForm.approvers || []).length > 0 && (
+                      <Muted style={{ fontSize: "0.75rem" }}>
+                        {(activeForm.approvers || []).length} usuário(s) selecionado(s)
+                      </Muted>
+                    )}
+                  </div>
+                </div>
+              )}
+              <div>
                 <InfoLabel>Criado por</InfoLabel>
                 <InfoValue>{activeForm.createdByName || activeForm.createdByEmail || "—"}</InfoValue>
               </div>
@@ -1482,6 +1744,13 @@ export default function ConfigPage() {
                 disabled={toggleVisibilityLoading}
               >
                 {toggleVisibilityLoading ? "Atualizando..." : activeForm.isPublic ? "Desativar formulário" : "Reativar formulário"}
+              </ActionButton>
+              <ActionButton
+                type="button"
+                onClick={() => toggleRequiresApproval(activeForm)}
+                disabled={toggleVisibilityLoading}
+              >
+                {toggleVisibilityLoading ? "Atualizando..." : activeForm.requiresApproval ? "Remover aprovação" : "Requerer aprovação"}
               </ActionButton>
               <ActionButton
                 type="button"
@@ -1559,6 +1828,48 @@ export default function ConfigPage() {
                     }}
                   />
                 </Field>
+                <Field>
+                  <label style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer" }}>
+                    <input
+                      type="checkbox"
+                      checked={editRequiresApproval}
+                      onChange={(event) => {
+                        const checked = Boolean((event.currentTarget as unknown as { checked?: boolean }).checked);
+                        setEditRequiresApproval(checked);
+                        if (!checked) {
+                          setEditApproverIds([]);
+                        }
+                      }}
+                    />
+                    <span>Este formulário requer aprovação antes de criar ticket</span>
+                  </label>
+                </Field>
+                {editRequiresApproval && (
+                  <Field>
+                    <Label>Usuários responsáveis pela aprovação (selecione múltiplos)</Label>
+                    <select
+                      multiple
+                      value={editApproverIds.map(String)}
+                      onChange={(event) => {
+                        const selectedOptions = Array.from(event.currentTarget.selectedOptions);
+                        const selectedIds = selectedOptions.map(opt => Number(opt.value)).filter(id => !isNaN(id));
+                        setEditApproverIds(selectedIds);
+                      }}
+                      style={{ width: "100%", padding: "10px", borderRadius: 10, border: "1px solid var(--border)", background: "#fff", minHeight: "120px" }}
+                    >
+                      {usersList.map((u) => (
+                        <option key={u.id} value={u.id}>
+                          {u.name} ({u.email})
+                        </option>
+                      ))}
+                    </select>
+                    {editApproverIds.length > 0 && (
+                      <Muted style={{ marginTop: "4px", fontSize: "0.875rem" }}>
+                        {editApproverIds.length} usuário(s) selecionado(s)
+                      </Muted>
+                    )}
+                  </Field>
+                )}
                 <SectionTitle>Campos</SectionTitle>
                 <div style={{ display: "grid", gap: 12 }}>
                   {editBuilderFields.map((bf) => (
@@ -2650,41 +2961,60 @@ const UserMenuItem = styled.button<{ $variant?: "danger" }>`
 `;
 
 const ConfirmBackdrop = styled.div<{ $open: boolean }>`
-  position: fixed;
-  inset: 0;
-  background: rgba(0,0,0,0.25);
-  opacity: ${(p) => (p.$open ? 1 : 0)};
-  pointer-events: ${(p) => (p.$open ? "auto" : "none")};
-  transition: opacity .18s ease;
-  z-index: 30;
+  position: fixed !important;
+  top: 0 !important;
+  left: 0 !important;
+  right: 0 !important;
+  bottom: 0 !important;
+  width: 100vw !important;
+  height: 100vh !important;
+  background: rgba(0,0,0,0.25) !important;
+  opacity: ${(p) => (p.$open ? 1 : 0)} !important;
+  pointer-events: ${(p) => (p.$open ? "auto" : "none")} !important;
+  transition: opacity .18s ease !important;
+  z-index: 10000 !important;
+  isolation: isolate !important;
 `;
 
 const ConfirmDialog = styled.div<{ $open: boolean }>`
-  position: fixed;
-  left: 50%;
-  top: 50%;
-  transform: translate(-50%, -50%) scale(${(p) => (p.$open ? 1 : 0.98)});
-  opacity: ${(p) => (p.$open ? 1 : 0)};
-  background: #fff;
-  border: 1px solid var(--border);
-  border-radius: 12px;
-  box-shadow: 0 12px 28px rgba(0,0,0,0.12);
-  width: min(480px, 94vw);
-  padding: 18px;
-  transition: opacity .18s ease, transform .18s ease;
-  z-index: 35;
+  position: fixed !important;
+  left: 50% !important;
+  top: 50% !important;
+  transform: translate(-50%, -50%) scale(${(p) => (p.$open ? 1 : 0.98)}) !important;
+  background: #fff !important;
+  border: 1px solid var(--border) !important;
+  border-radius: 14px !important;
+  box-shadow: 0 18px 36px rgba(0,0,0,0.16) !important;
+  width: min(90vw, 420px) !important;
+  padding: 16px !important;
+  z-index: 10001 !important;
+  opacity: ${(p) => (p.$open ? 1 : 0)} !important;
+  pointer-events: ${(p) => (p.$open ? "auto" : "none")} !important;
+  transition: transform .18s ease, opacity .18s ease !important;
+  isolation: isolate !important;
 `;
 
 const ConfirmTitle = styled.h2`
-  font-size: 1.2rem;
+  font-size: 1.1rem;
   margin: 0 0 12px;
 `;
 
 const ConfirmActions = styled.div`
   display: flex;
   gap: 10px;
-  align-items: center;
   justify-content: flex-end;
+`;
+
+const ConfirmButton = styled.button`
+  padding: 10px 14px;
+  border-radius: 10px;
+  border: 1px solid #FF0000;
+  background: #FF0000;
+  color: #fff;
+  cursor: pointer;
+  &:hover { filter: brightness(1.05); }
+  &:focus { outline: none; }
+  &:focus-visible { outline: none; }
 `;
 
 const CancelButton = styled.button`
@@ -2693,15 +3023,9 @@ const CancelButton = styled.button`
   border: 1px solid var(--border);
   background: #fff;
   cursor: pointer;
-`;
-
-const ConfirmButton = styled.button`
-  padding: 10px 14px;
-  border-radius: 10px;
-  border: 0;
-  color: #fff;
-  cursor: pointer;
-  background: linear-gradient(135deg, #B00000, #8A0000);
+  &:hover { background: #f3f4f6; }
+  &:focus { outline: none; }
+  &:focus-visible { outline: none; }
 `;
 
 // Estilos do modal de criação/gestão de formulário
@@ -2712,7 +3036,7 @@ const ModalBackdrop = styled.div<{ $open: boolean }>`
   opacity: ${(p) => (p.$open ? 1 : 0)};
   pointer-events: ${(p) => (p.$open ? "auto" : "none")};
   transition: opacity .18s ease;
-  z-index: 30;
+  z-index: 25;
 `;
 
 const ModalDialog = styled.div<{ $open: boolean }>`
@@ -2730,7 +3054,7 @@ const ModalDialog = styled.div<{ $open: boolean }>`
   overflow-y: auto;
   padding: 18px;
   transition: opacity .18s ease, transform .18s ease;
-  z-index: 35;
+  z-index: 26;
 `;
 
 const ModalHeader = styled.div`
