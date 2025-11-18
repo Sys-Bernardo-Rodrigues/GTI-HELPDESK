@@ -10,25 +10,25 @@ datasource db {
 }
 
 model User {
-  id                     Int             @id @default(autoincrement())
-  email                  String          @unique
+  id                     Int                @id @default(autoincrement())
+  email                  String             @unique
   name                   String
   passwordHash           String?
   phone                  String?
   jobTitle               String?
   company                String?
   avatarUrl              String?
-  twoFactor              Boolean         @default(false)
-  newsletter             Boolean         @default(false)
-  phoneVerified          Boolean         @default(false)
-  discordTag             String?         @unique
+  twoFactor              Boolean            @default(false)
+  newsletter             Boolean            @default(false)
+  phoneVerified          Boolean            @default(false)
+  discordTag             String?            @unique
   pendingEmail           String?
   emailVerificationToken String?
   emailVerifiedAt        DateTime?
-  createdAt              DateTime        @default(now())
+  createdAt              DateTime           @default(now())
   forms                  Form[]
   formsToApprove         FormApprover[]
-  assignedTickets        Ticket[]        @relation("TicketAssignedTo")
+  assignedTickets        Ticket[]           @relation("TicketAssignedTo")
   tickets                Ticket[]
   TicketUpdate           TicketUpdate[]
   documents              Document[]
@@ -37,11 +37,11 @@ model User {
   webhooks               Webhook[]
   events                 Event[]
   formApprovals          FormApproval[]
-  createdProjects        Project[]       @relation("ProjectCreator")
-  projectMemberships     ProjectMember[] @relation("ProjectMember")
-  assignedTasks          ProjectTask[]   @relation("TaskAssignedTo")
-  createdTasks           ProjectTask[]   @relation("TaskCreator")
-  permissions            UserPermission[]
+  createdProjects        Project[]          @relation("ProjectCreator")
+  projectMemberships     ProjectMember[]    @relation("ProjectMember")
+  assignedTasks          ProjectTask[]      @relation("TaskAssignedTo")
+  createdTasks           ProjectTask[]      @relation("TaskCreator")
+  accessProfiles         UserAccessProfile[]
 }
 
 model Category {
@@ -342,35 +342,6 @@ model ProjectTask {
   @@index([dueDate])
 }
 
-model Permission {
-  id          Int             @id @default(autoincrement())
-  key         String          @unique
-  name        String
-  description String?         @db.Text
-  category    String          @default("general")
-  createdAt   DateTime        @default(now())
-  updatedAt   DateTime        @updatedAt
-  userPermissions UserPermission[]
-
-  @@index([key])
-  @@index([category])
-}
-
-model UserPermission {
-  id           Int        @id @default(autoincrement())
-  userId       Int
-  permissionId Int
-  granted      Boolean    @default(true)
-  createdAt    DateTime   @default(now())
-  updatedAt    DateTime   @updatedAt
-  user         User       @relation(fields: [userId], references: [id], onDelete: Cascade)
-  permission   Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
-
-  @@unique([userId, permissionId])
-  @@index([userId])
-  @@index([permissionId])
-}
-
 enum ProjectStatus {
   PLANNING
   IN_PROGRESS
@@ -391,4 +362,39 @@ enum TaskPriority {
   MEDIUM
   HIGH
   URGENT
+}
+
+model AccessProfile {
+  id          Int                  @id @default(autoincrement())
+  name        String
+  description String?              @db.Text
+  isDefault   Boolean              @default(false)
+  createdAt   DateTime             @default(now())
+  updatedAt   DateTime             @updatedAt
+  pages       AccessProfilePage[]
+  users       UserAccessProfile[]
+}
+
+model AccessProfilePage {
+  id        Int           @id @default(autoincrement())
+  profileId Int
+  pagePath  String
+  pageName  String
+  profile   AccessProfile @relation(fields: [profileId], references: [id], onDelete: Cascade)
+
+  @@unique([profileId, pagePath])
+  @@index([profileId])
+}
+
+model UserAccessProfile {
+  id        Int            @id @default(autoincrement())
+  userId    Int
+  profileId Int
+  createdAt DateTime       @default(now())
+  user      User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  profile   AccessProfile  @relation(fields: [profileId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, profileId])
+  @@index([userId])
+  @@index([profileId])
 }

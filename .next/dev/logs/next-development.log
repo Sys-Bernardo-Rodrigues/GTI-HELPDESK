@@ -1,629 +1,93 @@
-[00:00:01.374] Server  LOG      ✓ Ready in 958ms
-[00:00:12.281] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
-[00:00:41.876] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
-[00:00:50.289] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
-[00:00:54.582] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
-[00:01:27.287] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
-[00:01:39.832] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
-[00:03:50.354] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
-[00:03:54.961] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
-[00:04:02.280] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
-[00:04:10.419] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
-[00:04:16.899] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
-[00:04:37.703] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
-[00:04:58.954] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
-[00:05:02.159] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
-[00:05:27.695] Server  LOG      ✓ Compiled in 305ms
-[00:05:30.149] Server  LOG      ✓ Compiled in 281ms
-[00:05:37.210] Server  LOG      ✓ Compiled in 251ms
-[00:05:45.021] Server  LOG      ✓ Compiled in 260ms
-[00:06:03.547] Server  LOG      ✓ Compiled in 284ms
-[00:06:25.879] Server  LOG      ✓ Compiled in 291ms
-[00:06:53.300] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
-[00:07:00.101] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
-[00:07:02.195] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
-[00:07:11.675] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
-[00:07:45.625] Server  LOG      ✓ Compiled in 200ms
-[00:07:53.808] Server  LOG      ✓ Compiled in 194ms
-[00:08:04.167] Server  LOG      ✓ Compiled in 200ms
-[00:08:41.026] Server  LOG      ✓ Compiled in 276ms
-[00:08:41.333] Browser ERROR   uncaughtError: ReferenceError: NavItemButton is not defined
-[00:08:57.458] Server  LOG      ✓ Compiled in 227ms
-[00:08:57.469] Server  WARN     ⚠ Fast Refresh had to perform a full reload due to a runtime error.
-[00:09:06.778] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
-[00:09:11.757] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
-[00:09:19.205] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
-[00:09:21.446] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
-[00:09:27.044] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
-[00:10:04.373] Server  LOG      ✓ Compiled in 235ms
-[00:10:11.693] Server  LOG      ✓ Compiled in 276ms
-[00:10:19.189] Server  LOG      ✓ Compiled in 249ms
-[00:10:31.620] Server  LOG      ✓ Compiled in 223ms
-[00:10:48.372] Server  LOG      ✓ Compiled in 241ms
-[00:11:16.498] Server  LOG      ✓ Compiled in 337ms
-[00:11:42.477] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
-[00:11:43.594] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
-[00:11:45.710] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
-[00:11:47.522] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
-[00:11:49.736] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
-[00:12:01.275] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
-[00:12:07.366] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
-[00:12:09.373] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
-[00:12:15.035] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
-[00:12:18.814] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
-[00:12:27.157] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
-[00:12:34.038] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
-[00:15:19.290] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
-[00:16:26.099] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
-[00:16:31.304] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
-[00:16:33.047] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
-[00:16:38.573] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
-[00:17:08.799] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
-[00:18:01.134] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
-[00:18:21.893] Server  LOG      ✓ Compiled in 182ms
-[00:18:22.457] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
-[00:18:28.035] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
-[00:18:31.750] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
-[00:18:34.199] Server  LOG      ✓ Compiled in 133ms
-[00:18:41.643] Server  LOG      ✓ Compiled in 132ms
-[00:18:50.325] Server  LOG      ✓ Compiled in 119ms
-[00:18:56.428] Server  LOG      ✓ Compiled in 66ms
-[00:19:05.495] Server  LOG      ✓ Compiled in 105ms
-[00:19:13.039] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
-[00:19:18.147] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
-[00:20:24.596] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
-[00:20:30.149] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
-[00:20:30.279] Browser ERROR   unhandledRejection: Error: Failed to load chunk /_next/static/chunks/%5Bturbopack%5D_browser_dev_hmr-client_hmr-client_ts_512b658a._.js from module [turbopack]/browser/dev/hmr-client/hmr-client.ts [app-client] (ecmascript, async loader)
-[00:20:33.052] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
-[00:20:52.262] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
-[00:21:00.801] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
-[00:21:07.132] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
-[00:21:12.899] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
-[00:21:21.212] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
-[00:21:29.183] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
-[00:21:30.177] Browser ERROR   Erro ao carregar tickets: {}
-[00:21:30.177] Browser ERROR   Erro ao carregar usuários: 403
-[00:21:41.755] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
-[00:21:47.327] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
-[00:22:04.897] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
-[00:22:10.365] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
-[00:22:15.102] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
-[00:22:32.288] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
-[00:22:58.025] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
-[00:23:00.439] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
-[00:24:27.679] Server  LOG      ✓ Compiled in 149ms
-[00:24:30.811] Server  LOG      ✓ Compiled in 100ms
-[00:24:34.882] Server  LOG      ✓ Compiled in 117ms
-[00:24:42.418] Server  LOG      ✓ Compiled in 105ms
-[00:25:02.556] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
-[00:26:09.103] Browser ERROR   ./src/app/home/page.tsx:1683:13
+[00:00:02.099] Server  LOG      ✓ Ready in 1407ms
+[00:00:27.316] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
+[00:01:07.772] Browser LOG     UserFooter clicked, current menuOpen: false
+[00:01:07.772] Browser LOG     Menu toggle: true
+[00:01:07.772] Browser LOG     Menu toggle: true
+[00:01:12.461] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
+[00:01:17.237] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
+[00:04:54.222] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
+[00:05:38.197] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
+[00:08:14.320] Server  LOG      ✓ Compiled in 37ms
+[00:08:16.799] Server  LOG      ✓ Compiled in 27ms
+[00:08:21.444] Server  LOG      ✓ Compiled in 54ms
+[00:08:23.943] Server  LOG      ✓ Compiled in 27ms
+[00:08:28.686] Server  LOG      ✓ Compiled in 52ms
+[00:08:32.925] Server  LOG      ✓ Compiled in 52ms
+[00:08:38.988] Server  LOG      ✓ Compiled in 36ms
+[00:08:42.343] Server  LOG      ✓ Compiled in 37ms
+[00:08:45.579] Server  LOG      ✓ Compiled in 38ms
+[00:08:48.967] Server  LOG      ✓ Compiled in 31ms
+[00:09:05.608] Server  LOG      ✓ Compiled in 53ms
+[00:09:15.785] Server  LOG      ✓ Compiled in 55ms
+[00:09:28.191] Server  LOG      ✓ Compiled in 59ms
+[00:09:32.316] Server  LOG      ✓ Compiled in 58ms
+[00:09:41.430] Server  LOG      ✓ Compiled in 57ms
+[00:09:50.929] Server  LOG      ✓ Compiled in 34ms
+[00:10:13.080] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
+[00:10:41.053] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
+[00:10:47.022] Server  LOG      ✓ Compiled in 58ms
+[00:11:06.164] Server  LOG      ✓ Compiled in 62ms
+[00:11:11.932] Server  LOG      ✓ Compiled in 58ms
+[00:11:15.305] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
+[00:11:17.771] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
+[00:12:48.557] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
+[00:12:50.568] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
+[00:16:10.077] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
+[00:16:20.249] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
+[00:16:21.792] Browser LOG     UserFooter clicked, current menuOpen: false
+[00:16:21.792] Browser LOG     Menu toggle: true
+[00:16:21.792] Browser LOG     Menu toggle: true
+[00:16:33.602] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
+[00:17:00.158] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
+[00:18:22.513] Server  LOG      ✓ Compiled in 37ms
+[00:18:25.480] Server  LOG      ✓ Compiled in 24ms
+[00:18:46.556] Server  LOG      ✓ Compiled in 44ms
+[00:20:41.589] Server  LOG      ✓ Compiled in 52ms
+[00:20:55.784] Server  LOG      ✓ Compiled in 41ms
+[00:21:14.780] Server  LOG      ✓ Compiled in 30ms
+[00:21:14.891] Browser ERROR   ./src/components/StandardLayout.tsx:660:14
 Parsing ecmascript source code failed
-  1681 |               <CardLink href="/tickets">Ver todos →</CardLink>
-  1682 |             </CardHeader>
-> 1683 |             {loading ? (
-       |             ^
-  1684 |               <EmptyState>
-  1685 |                 <EmptyText>Carregando...</EmptyText>
-  1686 |               </EmptyState>
+  658 |                 )}
+  659 |               </div>
+> 660 |             </MenuScroll>
+      |              ^^^^^^^^^^^^
+  661 |           </nav>
+  662 |           <UserFooter
+  663 |             aria-label="Menu do usuário"
 
-Expected '</', got '{'
+Unterminated regexp literal
 
 Import traces:
   Client Component Browser:
+    ./src/components/StandardLayout.tsx [Client Component Browser]
     ./src/app/home/page.tsx [Client Component Browser]
     ./src/app/home/page.tsx [Server Component]
 
   Client Component SSR:
+    ./src/components/StandardLayout.tsx [Client Component SSR]
     ./src/app/home/page.tsx [Client Component SSR]
     ./src/app/home/page.tsx [Server Component]
-[00:26:09.136] Browser ERROR   ./src/app/home/page.tsx:1683:13
+[00:21:15.824] Browser ERROR   ./src/components/StandardLayout.tsx:660:14
 Parsing ecmascript source code failed
-  1681 |               <CardLink href="/tickets">Ver todos →</CardLink>
-  1682 |             </CardHeader>
-> 1683 |             {loading ? (
-       |             ^
-  1684 |               <EmptyState>
-  1685 |                 <EmptyText>Carregando...</EmptyText>
-  1686 |               </EmptyState>
+  658 |                 )}
+  659 |               </div>
+> 660 |             </MenuScroll>
+      |              ^^^^^^^^^^^^
+  661 |           </nav>
+  662 |           <UserFooter
+  663 |             aria-label="Menu do usuário"
 
-Expected '</', got '{'
+Unterminated regexp literal
 
 Import traces:
   Client Component Browser:
+    ./src/components/StandardLayout.tsx [Client Component Browser]
     ./src/app/home/page.tsx [Client Component Browser]
     ./src/app/home/page.tsx [Server Component]
 
   Client Component SSR:
+    ./src/components/StandardLayout.tsx [Client Component SSR]
     ./src/app/home/page.tsx [Client Component SSR]
     ./src/app/home/page.tsx [Server Component]
-[00:26:12.374] Server  LOG      ✓ Compiled in 86ms
-[00:26:12.476] Browser ERROR   ./src/app/home/page.tsx:1683:13
-Parsing ecmascript source code failed
-  1681 |               <CardLink href="/tickets">Ver todos →</CardLink>
-  1682 |             </CardHeader>
-> 1683 |             {loading ? (
-       |             ^
-  1684 |               <EmptyState>
-  1685 |                 <EmptyText>Carregando...</EmptyText>
-  1686 |               </EmptyState>
-
-Expected '</', got '{'
-
-Import traces:
-  Client Component Browser:
-    ./src/app/home/page.tsx [Client Component Browser]
-    ./src/app/home/page.tsx [Server Component]
-
-  Client Component SSR:
-    ./src/app/home/page.tsx [Client Component SSR]
-    ./src/app/home/page.tsx [Server Component]
-[00:26:12.476] Browser ERROR   ./src/app/home/page.tsx:1683:13
-Parsing ecmascript source code failed
-  1681 |               <CardLink href="/tickets">Ver todos →</CardLink>
-  1682 |             </CardHeader>
-> 1683 |             {loading ? (
-       |             ^
-  1684 |               <EmptyState>
-  1685 |                 <EmptyText>Carregando...</EmptyText>
-  1686 |               </EmptyState>
-
-Expected '</', got '{'
-
-Import traces:
-  Client Component Browser:
-    ./src/app/home/page.tsx [Client Component Browser]
-    ./src/app/home/page.tsx [Server Component]
-
-  Client Component SSR:
-    ./src/app/home/page.tsx [Client Component SSR]
-    ./src/app/home/page.tsx [Server Component]
-[00:27:10.266] Browser ERROR   ./src/app/home/page.tsx:1686:13
-Parsing ecmascript source code failed
-  1684 |               <CardLink href="/tickets">Ver todos →</CardLink>
-  1685 |             </CardHeader>
-> 1686 |             {loading ? (
-       |             ^
-  1687 |               <EmptyState>
-  1688 |                 <EmptyText>Carregando...</EmptyText>
-  1689 |               </EmptyState>
-
-Expected '</', got '{'
-
-Import traces:
-  Client Component Browser:
-    ./src/app/home/page.tsx [Client Component Browser]
-    ./src/app/home/page.tsx [Server Component]
-
-  Client Component SSR:
-    ./src/app/home/page.tsx [Client Component SSR]
-    ./src/app/home/page.tsx [Server Component]
-[00:27:10.274] Browser ERROR   ./src/app/home/page.tsx:1686:13
-Parsing ecmascript source code failed
-  1684 |               <CardLink href="/tickets">Ver todos →</CardLink>
-  1685 |             </CardHeader>
-> 1686 |             {loading ? (
-       |             ^
-  1687 |               <EmptyState>
-  1688 |                 <EmptyText>Carregando...</EmptyText>
-  1689 |               </EmptyState>
-
-Expected '</', got '{'
-
-Import traces:
-  Client Component Browser:
-    ./src/app/home/page.tsx [Client Component Browser]
-    ./src/app/home/page.tsx [Server Component]
-
-  Client Component SSR:
-    ./src/app/home/page.tsx [Client Component SSR]
-    ./src/app/home/page.tsx [Server Component]
-[00:27:23.679] Browser ERROR   ./src/app/home/page.tsx:1686:13
-Parsing ecmascript source code failed
-  1684 |               <CardLink href="/tickets">Ver todos →</CardLink>
-  1685 |             </CardHeader>
-> 1686 |             {loading ? (
-       |             ^
-  1687 |               <EmptyState>
-  1688 |                 <EmptyText>Carregando...</EmptyText>
-  1689 |               </EmptyState>
-
-Expected '</', got '{'
-
-Import traces:
-  Client Component Browser:
-    ./src/app/home/page.tsx [Client Component Browser]
-    ./src/app/home/page.tsx [Server Component]
-
-  Client Component SSR:
-    ./src/app/home/page.tsx [Client Component SSR]
-    ./src/app/home/page.tsx [Server Component]
-[00:27:23.680] Browser ERROR   ./src/app/home/page.tsx:1686:13
-Parsing ecmascript source code failed
-  1684 |               <CardLink href="/tickets">Ver todos →</CardLink>
-  1685 |             </CardHeader>
-> 1686 |             {loading ? (
-       |             ^
-  1687 |               <EmptyState>
-  1688 |                 <EmptyText>Carregando...</EmptyText>
-  1689 |               </EmptyState>
-
-Expected '</', got '{'
-
-Import traces:
-  Client Component Browser:
-    ./src/app/home/page.tsx [Client Component Browser]
-    ./src/app/home/page.tsx [Server Component]
-
-  Client Component SSR:
-    ./src/app/home/page.tsx [Client Component SSR]
-    ./src/app/home/page.tsx [Server Component]
-[00:27:25.000] Browser ERROR   ./src/app/home/page.tsx:1686:13
-Parsing ecmascript source code failed
-  1684 |               <CardLink href="/tickets">Ver todos →</CardLink>
-  1685 |             </CardHeader>
-> 1686 |             {loading ? (
-       |             ^
-  1687 |               <EmptyState>
-  1688 |                 <EmptyText>Carregando...</EmptyText>
-  1689 |               </EmptyState>
-
-Expected '</', got '{'
-
-Import traces:
-  Client Component Browser:
-    ./src/app/home/page.tsx [Client Component Browser]
-    ./src/app/home/page.tsx [Server Component]
-
-  Client Component SSR:
-    ./src/app/home/page.tsx [Client Component SSR]
-    ./src/app/home/page.tsx [Server Component]
-[00:27:25.509] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
-[00:27:25.748] Browser ERROR   ./src/app/home/page.tsx:1686:13
-Parsing ecmascript source code failed
-  1684 |               <CardLink href="/tickets">Ver todos →</CardLink>
-  1685 |             </CardHeader>
-> 1686 |             {loading ? (
-       |             ^
-  1687 |               <EmptyState>
-  1688 |                 <EmptyText>Carregando...</EmptyText>
-  1689 |               </EmptyState>
-
-Expected '</', got '{'
-
-Import traces:
-  Client Component Browser:
-    ./src/app/home/page.tsx [Client Component Browser]
-    ./src/app/home/page.tsx [Server Component]
-
-  Client Component SSR:
-    ./src/app/home/page.tsx [Client Component SSR]
-    ./src/app/home/page.tsx [Server Component]
-[00:27:25.748] Browser ERROR   ./src/app/home/page.tsx:1686:13
-Parsing ecmascript source code failed
-  1684 |               <CardLink href="/tickets">Ver todos →</CardLink>
-  1685 |             </CardHeader>
-> 1686 |             {loading ? (
-       |             ^
-  1687 |               <EmptyState>
-  1688 |                 <EmptyText>Carregando...</EmptyText>
-  1689 |               </EmptyState>
-
-Expected '</', got '{'
-
-Import traces:
-  Client Component Browser:
-    ./src/app/home/page.tsx [Client Component Browser]
-    ./src/app/home/page.tsx [Server Component]
-
-  Client Component SSR:
-    ./src/app/home/page.tsx [Client Component SSR]
-    ./src/app/home/page.tsx [Server Component]
-[00:27:25.750] Browser ERROR   ./src/app/home/page.tsx:1686:13
-Parsing ecmascript source code failed
-  1684 |               <CardLink href="/tickets">Ver todos →</CardLink>
-  1685 |             </CardHeader>
-> 1686 |             {loading ? (
-       |             ^
-  1687 |               <EmptyState>
-  1688 |                 <EmptyText>Carregando...</EmptyText>
-  1689 |               </EmptyState>
-
-Expected '</', got '{'
-
-Import traces:
-  Client Component Browser:
-    ./src/app/home/page.tsx [Client Component Browser]
-    ./src/app/home/page.tsx [Server Component]
-
-  Client Component SSR:
-    ./src/app/home/page.tsx [Client Component SSR]
-    ./src/app/home/page.tsx [Server Component]
-[00:27:25.750] Browser ERROR   ./src/app/home/page.tsx:1686:13
-Parsing ecmascript source code failed
-  1684 |               <CardLink href="/tickets">Ver todos →</CardLink>
-  1685 |             </CardHeader>
-> 1686 |             {loading ? (
-       |             ^
-  1687 |               <EmptyState>
-  1688 |                 <EmptyText>Carregando...</EmptyText>
-  1689 |               </EmptyState>
-
-Expected '</', got '{'
-
-Import traces:
-  Client Component Browser:
-    ./src/app/home/page.tsx [Client Component Browser]
-    ./src/app/home/page.tsx [Server Component]
-
-  Client Component SSR:
-    ./src/app/home/page.tsx [Client Component SSR]
-    ./src/app/home/page.tsx [Server Component]
-[00:27:25.750] Browser ERROR   ./src/app/home/page.tsx:1686:13
-Parsing ecmascript source code failed
-  1684 |               <CardLink href="/tickets">Ver todos →</CardLink>
-  1685 |             </CardHeader>
-> 1686 |             {loading ? (
-       |             ^
-  1687 |               <EmptyState>
-  1688 |                 <EmptyText>Carregando...</EmptyText>
-  1689 |               </EmptyState>
-
-Expected '</', got '{'
-
-Import traces:
-  Client Component Browser:
-    ./src/app/home/page.tsx [Client Component Browser]
-    ./src/app/home/page.tsx [Server Component]
-
-  Client Component SSR:
-    ./src/app/home/page.tsx [Client Component SSR]
-    ./src/app/home/page.tsx [Server Component]
-[00:27:26.467] Browser ERROR   ./src/app/home/page.tsx:1686:13
-Parsing ecmascript source code failed
-  1684 |               <CardLink href="/tickets">Ver todos →</CardLink>
-  1685 |             </CardHeader>
-> 1686 |             {loading ? (
-       |             ^
-  1687 |               <EmptyState>
-  1688 |                 <EmptyText>Carregando...</EmptyText>
-  1689 |               </EmptyState>
-
-Expected '</', got '{'
-
-Import traces:
-  Client Component Browser:
-    ./src/app/home/page.tsx [Client Component Browser]
-    ./src/app/home/page.tsx [Server Component]
-
-  Client Component SSR:
-    ./src/app/home/page.tsx [Client Component SSR]
-    ./src/app/home/page.tsx [Server Component]
-[00:27:26.477] Browser ERROR   ./src/app/home/page.tsx:1686:13
-Parsing ecmascript source code failed
-  1684 |               <CardLink href="/tickets">Ver todos →</CardLink>
-  1685 |             </CardHeader>
-> 1686 |             {loading ? (
-       |             ^
-  1687 |               <EmptyState>
-  1688 |                 <EmptyText>Carregando...</EmptyText>
-  1689 |               </EmptyState>
-
-Expected '</', got '{'
-
-Import traces:
-  Client Component Browser:
-    ./src/app/home/page.tsx [Client Component Browser]
-    ./src/app/home/page.tsx [Server Component]
-
-  Client Component SSR:
-    ./src/app/home/page.tsx [Client Component SSR]
-    ./src/app/home/page.tsx [Server Component]
-[00:27:26.577] Browser ERROR   ./src/app/home/page.tsx:1686:13
-Parsing ecmascript source code failed
-  1684 |               <CardLink href="/tickets">Ver todos →</CardLink>
-  1685 |             </CardHeader>
-> 1686 |             {loading ? (
-       |             ^
-  1687 |               <EmptyState>
-  1688 |                 <EmptyText>Carregando...</EmptyText>
-  1689 |               </EmptyState>
-
-Expected '</', got '{'
-
-Import traces:
-  Client Component Browser:
-    ./src/app/home/page.tsx [Client Component Browser]
-    ./src/app/home/page.tsx [Server Component]
-
-  Client Component SSR:
-    ./src/app/home/page.tsx [Client Component SSR]
-    ./src/app/home/page.tsx [Server Component]
-[00:27:26.582] Browser ERROR   ./src/app/home/page.tsx:1686:13
-Parsing ecmascript source code failed
-  1684 |               <CardLink href="/tickets">Ver todos →</CardLink>
-  1685 |             </CardHeader>
-> 1686 |             {loading ? (
-       |             ^
-  1687 |               <EmptyState>
-  1688 |                 <EmptyText>Carregando...</EmptyText>
-  1689 |               </EmptyState>
-
-Expected '</', got '{'
-
-Import traces:
-  Client Component Browser:
-    ./src/app/home/page.tsx [Client Component Browser]
-    ./src/app/home/page.tsx [Server Component]
-
-  Client Component SSR:
-    ./src/app/home/page.tsx [Client Component SSR]
-    ./src/app/home/page.tsx [Server Component]
-[00:27:26.963] Browser ERROR   ./src/app/home/page.tsx:1686:13
-Parsing ecmascript source code failed
-  1684 |               <CardLink href="/tickets">Ver todos →</CardLink>
-  1685 |             </CardHeader>
-> 1686 |             {loading ? (
-       |             ^
-  1687 |               <EmptyState>
-  1688 |                 <EmptyText>Carregando...</EmptyText>
-  1689 |               </EmptyState>
-
-Expected '</', got '{'
-
-Import traces:
-  Client Component Browser:
-    ./src/app/home/page.tsx [Client Component Browser]
-    ./src/app/home/page.tsx [Server Component]
-
-  Client Component SSR:
-    ./src/app/home/page.tsx [Client Component SSR]
-    ./src/app/home/page.tsx [Server Component]
-[00:27:26.963] Browser ERROR   ./src/app/home/page.tsx:1686:13
-Parsing ecmascript source code failed
-  1684 |               <CardLink href="/tickets">Ver todos →</CardLink>
-  1685 |             </CardHeader>
-> 1686 |             {loading ? (
-       |             ^
-  1687 |               <EmptyState>
-  1688 |                 <EmptyText>Carregando...</EmptyText>
-  1689 |               </EmptyState>
-
-Expected '</', got '{'
-
-Import traces:
-  Client Component Browser:
-    ./src/app/home/page.tsx [Client Component Browser]
-    ./src/app/home/page.tsx [Server Component]
-
-  Client Component SSR:
-    ./src/app/home/page.tsx [Client Component SSR]
-    ./src/app/home/page.tsx [Server Component]
-[00:27:27.069] Browser ERROR   {}
-[00:27:54.547] Server  LOG      ✓ Compiled in 139ms
-[00:32:27.420] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
-[00:32:36.318] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
-[00:32:40.111] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
-[00:32:43.341] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
-[00:32:48.577] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
-[00:32:52.884] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
-[00:32:56.537] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
-[00:33:02.631] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
-[00:33:53.511] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
-[00:33:56.348] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
-[00:34:04.495] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
-[00:35:34.328] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
-[00:36:35.182] Server  LOG      ✓ Compiled in 169ms
-[00:36:39.234] Server  LOG      ✓ Compiled in 305ms
-[00:36:45.681] Server  LOG      ✓ Compiled in 318ms
-[00:36:48.830] Server  LOG      ✓ Compiled in 68ms
-[00:36:57.954] Server  LOG      ✓ Compiled in 290ms
-[00:36:58.277] Browser ERROR   The final argument passed to %s changed size between renders. The order and size of this array must remain constant.
-
-Previous: %s
-Incoming: %s useEffect [documents] [documents, false]
-[00:37:29.289] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
-[00:37:30.923] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
-[00:39:55.054] Server  LOG      ✓ Compiled in 234ms
-[00:40:05.784] Server  LOG      ✓ Compiled in 283ms
-[00:40:25.309] Server  LOG      ✓ Compiled in 302ms
-[00:40:44.310] Server  LOG      ✓ Compiled in 305ms
-[00:40:53.605] Server  LOG      ✓ Compiled in 302ms
-[00:41:04.508] Server  LOG      ✓ Compiled in 462ms
-[00:41:08.977] Server  LOG      ✓ Compiled in 465ms
-[00:41:14.249] Server  LOG      ✓ Compiled in 312ms
-[00:41:38.656] Server  LOG      ✓ Compiled in 206ms
-[00:41:52.655] Server  LOG      ✓ Compiled in 239ms
-[00:41:56.979] Server  LOG      ✓ Compiled in 168ms
-[00:44:21.818] Server  LOG      ✓ Compiled in 291ms
-[00:44:27.382] Server  LOG      ✓ Compiled in 330ms
-[00:44:27.535] Browser ERROR   The final argument passed to %s changed size between renders. The order and size of this array must remain constant.
-
-Previous: %s
-Incoming: %s useEffect [documents, false] [documents, false, false, false]
-[00:44:45.511] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
-[00:44:54.828] Server  LOG      ✓ Compiled in 374ms
-[00:45:00.835] Server  LOG      ✓ Compiled in 110ms
-[00:45:12.967] Server  LOG      ✓ Compiled in 325ms
-[00:45:17.413] Server  LOG      ✓ Compiled in 249ms
-[00:45:22.311] Server  LOG      ✓ Compiled in 206ms
-[00:45:22.415] Browser ERROR   ./src/app/base/page.tsx:1985:14
-Parsing ecmascript source code failed
-  1983 |                 )}
-  1984 |               </>
-> 1985 |             )}
-       |              ^
-  1986 |           </MainCard>
-  1987 |         </Content>
-  1988 |       </Shell>
-
-Expected '</', got '}'
-
-Import traces:
-  Client Component Browser:
-    ./src/app/base/page.tsx [Client Component Browser]
-    ./src/app/base/page.tsx [Server Component]
-
-  Client Component SSR:
-    ./src/app/base/page.tsx [Client Component SSR]
-    ./src/app/base/page.tsx [Server Component]
-[00:45:22.416] Browser ERROR   ./src/app/base/page.tsx:1985:14
-Parsing ecmascript source code failed
-  1983 |                 )}
-  1984 |               </>
-> 1985 |             )}
-       |              ^
-  1986 |           </MainCard>
-  1987 |         </Content>
-  1988 |       </Shell>
-
-Expected '</', got '}'
-
-Import traces:
-  Client Component Browser:
-    ./src/app/base/page.tsx [Client Component Browser]
-    ./src/app/base/page.tsx [Server Component]
-
-  Client Component SSR:
-    ./src/app/base/page.tsx [Client Component SSR]
-    ./src/app/base/page.tsx [Server Component]
-[00:45:33.569] Browser ERROR   ./src/app/base/page.tsx:1985:14
-Parsing ecmascript source code failed
-  1983 |                 )}
-  1984 |               </>
-> 1985 |             )}
-       |              ^
-  1986 |           </MainCard>
-  1987 |         </Content>
-  1988 |       </Shell>
-
-Expected '</', got '}'
-
-Import traces:
-  Client Component Browser:
-    ./src/app/base/page.tsx [Client Component Browser]
-    ./src/app/base/page.tsx [Server Component]
-
-  Client Component SSR:
-    ./src/app/base/page.tsx [Client Component SSR]
-    ./src/app/base/page.tsx [Server Component]
-[00:45:33.569] Browser ERROR   ./src/app/base/page.tsx:1985:14
-Parsing ecmascript source code failed
-  1983 |                 )}
-  1984 |               </>
-> 1985 |             )}
-       |              ^
-  1986 |           </MainCard>
-  1987 |         </Content>
-  1988 |       </Shell>
-
-Expected '</', got '}'
-
-Import traces:
-  Client Component Browser:
-    ./src/app/base/page.tsx [Client Component Browser]
-    ./src/app/base/page.tsx [Server Component]
-
-  Client Component SSR:
-    ./src/app/base/page.tsx [Client Component SSR]
-    ./src/app/base/page.tsx [Server Component]
-[00:45:59.738] Server  LOG      ✓ Compiled in 304ms
+[00:21:51.428] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
+[00:22:24.633] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold

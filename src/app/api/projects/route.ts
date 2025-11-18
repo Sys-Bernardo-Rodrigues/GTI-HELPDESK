@@ -2,17 +2,10 @@ import { NextRequest, NextResponse } from "next/server";
 import { getAuthenticatedUser } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { calculateProjectProgress } from "@/lib/projectProgress";
-import { hasPermission } from "@/lib/permissions";
 
 export async function GET() {
   const user = await getAuthenticatedUser();
   if (!user) return NextResponse.json({ error: "Não autenticado" }, { status: 401 });
-
-  // Verificar permissão para visualizar projetos
-  const canView = await hasPermission(user.id, "projects.view");
-  if (!canView && user.id !== 1) {
-    return NextResponse.json({ error: "Sem permissão para visualizar projetos" }, { status: 403 });
-  }
 
   try {
     const projects = await prisma.project.findMany({
@@ -86,12 +79,6 @@ export async function GET() {
 export async function POST(req: NextRequest) {
   const user = await getAuthenticatedUser();
   if (!user) return NextResponse.json({ error: "Não autenticado" }, { status: 401 });
-
-  // Verificar permissão para criar projetos
-  const canCreate = await hasPermission(user.id, "projects.create");
-  if (!canCreate && user.id !== 1) {
-    return NextResponse.json({ error: "Sem permissão para criar projetos" }, { status: 403 });
-  }
 
   try {
     const body = (await req.json().catch(() => null)) as Record<string, unknown> | null;

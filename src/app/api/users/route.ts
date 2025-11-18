@@ -2,7 +2,6 @@ import bcrypt from "bcryptjs";
 import { NextRequest, NextResponse } from "next/server";
 import { getAuthenticatedUser } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { hasPermission } from "@/lib/permissions";
 
 function sanitizeString(value: unknown, maxLength = 256) {
   if (typeof value !== "string") return "";
@@ -48,12 +47,6 @@ export async function GET() {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  // Verificar permissão para visualizar usuários
-  const canView = await hasPermission(auth.id, "users.view");
-  if (!canView && auth.id !== 1) {
-    return NextResponse.json({ error: "Sem permissão para visualizar usuários" }, { status: 403 });
-  }
-
   try {
     const users = await prisma.user.findMany({
       select: {
@@ -67,11 +60,26 @@ export async function GET() {
         newsletter: true,
         avatarUrl: true,
         createdAt: true,
+        accessProfiles: {
+          include: {
+            profile: {
+              select: {
+                id: true,
+                name: true,
+              },
+            },
+          },
+        },
       },
       orderBy: { id: "asc" },
     });
 
-    return NextResponse.json({ items: users.map(mapUserResponse) });
+    return NextResponse.json({
+      items: users.map((user) => ({
+        ...mapUserResponse(user),
+        accessProfile: user.accessProfiles[0]?.profile || null,
+      })),
+    });
   } catch (error) {
     return NextResponse.json({ error: "Falha ao carregar usuários" }, { status: 500 });
   }
@@ -81,12 +89,6 @@ export async function POST(req: NextRequest) {
   const auth = await getAuthenticatedUser();
   if (!auth) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
-
-  // Verificar permissão para criar usuários
-  const canCreate = await hasPermission(auth.id, "users.create");
-  if (!canCreate && auth.id !== 1) {
-    return NextResponse.json({ error: "Sem permissão para criar usuários" }, { status: 403 });
   }
 
   const payload = await req.json().catch(() => null);
@@ -103,6 +105,11 @@ export async function POST(req: NextRequest) {
   const avatarUrl = sanitizeString((payload as any).avatarUrl, 512);
   const twoFactor = parseBoolean((payload as any).twoFactor);
   const newsletter = parseBoolean((payload as any).newsletter);
+  const accessProfileId = typeof (payload as any).accessProfileId === "number" 
+    ? (payload as any).accessProfileId 
+    : typeof (payload as any).accessProfileId === "string" 
+      ? parseInt((payload as any).accessProfileId, 10) 
+      : null;
 
   if (!name) {
     return NextResponse.json({ error: "Nome é obrigatório" }, { status: 400 });
@@ -118,6 +125,17 @@ export async function POST(req: NextRequest) {
 
   try {
     const passwordHash = await bcrypt.hash(password, 10);
+    
+    // Verificar se o perfil de acesso existe (se fornecido)
+    if (accessProfileId && !isNaN(accessProfileId)) {
+      const profile = await prisma.accessProfile.findUnique({
+        where: { id: accessProfileId },
+      });
+      if (!profile) {
+        return NextResponse.json({ error: "Perfil de acesso não encontrado" }, { status: 400 });
+      }
+    }
+
     const created = await prisma.user.create({
       data: {
         name,
@@ -129,6 +147,11 @@ export async function POST(req: NextRequest) {
         avatarUrl: avatarUrl || null,
         twoFactor,
         newsletter,
+        accessProfiles: accessProfileId && !isNaN(accessProfileId) ? {
+          create: {
+            profileId: accessProfileId,
+          },
+        } : undefined,
       },
       select: {
         id: true,
@@ -141,10 +164,23 @@ export async function POST(req: NextRequest) {
         newsletter: true,
         avatarUrl: true,
         createdAt: true,
+        accessProfiles: {
+          include: {
+            profile: {
+              select: {
+                id: true,
+                name: true,
+              },
+            },
+          },
+        },
       },
     });
 
-    return NextResponse.json(mapUserResponse(created), { status: 201 });
+    return NextResponse.json({
+      ...mapUserResponse(created),
+      accessProfile: created.accessProfiles[0]?.profile || null,
+    }, { status: 201 });
   } catch (error: any) {
     if (error?.code === "P2002") {
       return NextResponse.json({ error: "E-mail já está em uso" }, { status: 409 });

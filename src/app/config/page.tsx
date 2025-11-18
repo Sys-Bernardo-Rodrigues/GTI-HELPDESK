@@ -1,31 +1,19 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
-import { createPortal } from "react-dom";
+import { useEffect, useMemo, useState } from "react";
 import styled from "styled-components";
 import { useRouter, useSearchParams } from "next/navigation";
-import NotificationBell from "@/components/NotificationBell";
-// Remover header/aside custom e usar o mesmo padrão visual do /home
+import StandardLayout from "@/components/StandardLayout";
 
 type SectionKey = "general" | "appearance" | "notifications" | "security" | "integrations" | "forms" | "webhooks";
 
 export default function ConfigPage() {
   const params = useSearchParams();
   const router = useRouter();
-  const [open, setOpen] = useState<boolean>(true);
-  const [user, setUser] = useState<{ id: number; email: string; name: string | null } | null>(null);
-  const [avatarUrl, setAvatarUrl] = useState<string>("");
-  const firstLinkRef = useRef<HTMLAnchorElement | null>(null);
-  const footerRef = useRef<HTMLElement | null>(null);
-  const menuRef = useRef<HTMLDivElement | null>(null);
-  const firstMenuItemRef = useRef<HTMLButtonElement | null>(null);
   const initialSection = (params?.get("section") as SectionKey) || "forms";
   const [section, setSection] = useState<SectionKey>(initialSection);
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string>("");
-  const [menuOpen, setMenuOpen] = useState<boolean>(false);
-  const [confirmOpen, setConfirmOpen] = useState<boolean>(false);
-  const [configSubmenuOpen, setConfigSubmenuOpen] = useState<boolean>(false);
   // Estado do builder de formulários
   type BuilderField = { tempId: string; label: string; type: "TEXT"|"TEXTAREA"|"SELECT"|"RADIO"|"CHECKBOX"|"FILE"; options?: string; required: boolean };
   const [formsList, setFormsList] = useState<Array<{ id: number; numericId?: number; title: string; slug: string; link: string; createdAt?: string; isPublic?: boolean; requiresApproval?: boolean; approvers?: Array<{ id: number; name: string; email: string }>; createdByName?: string | null; createdByEmail?: string | null }>>([]);
@@ -128,58 +116,6 @@ export default function ConfigPage() {
     return () => clearTimeout(t);
   }, [section]);
 
-  // Normaliza URLs do avatar (data URI, http(s), caminhos relativos)
-  function resolveAvatarUrl(u?: string): string {
-    if (!u) return "";
-    const val = String(u);
-    if (val.startsWith("data:")) return val;
-    if (/^https?:\/\//i.test(val)) return val;
-    const appWindow = typeof globalThis !== "undefined" ? (globalThis as any).window : undefined;
-    if (appWindow) {
-      const origin = appWindow.location.origin;
-      if (val.startsWith("/")) return `${origin}${val}`;
-      return `${origin}/${val}`;
-    }
-    return val;
-  }
-
-  // Persistir estado do sidebar e buscar dados do usuário, igual ao /home
-  useEffect(() => {
-    const storage = typeof globalThis !== "undefined" ? (globalThis as any).localStorage : undefined;
-    if (!storage) return;
-    const saved = storage.getItem("sidebar_open");
-    if (saved !== null) setOpen(saved === "true");
-  }, []);
-
-  useEffect(() => {
-    const storage = typeof globalThis !== "undefined" ? (globalThis as any).localStorage : undefined;
-    if (!storage) return;
-    storage.setItem("sidebar_open", String(open));
-  }, [open]);
-
-  useEffect(() => {
-    (async () => {
-      try {
-        const res = await fetch("/api/session");
-        if (res.ok) {
-          const json = (await res.json()) as Record<string, any>;
-          setUser(json?.user ?? null);
-        }
-      } catch {}
-    })();
-  }, []);
-
-  useEffect(() => {
-    (async () => {
-      try {
-        const res = await fetch("/api/profile");
-        if (res.ok) {
-          const json = (await res.json()) as Record<string, any>;
-          setAvatarUrl(resolveAvatarUrl(json?.avatarUrl || ""));
-        }
-      } catch {}
-    })();
-  }, []);
 
   // Utilitário para carregar lista de usuários
   async function loadUsers() {
@@ -240,58 +176,6 @@ export default function ConfigPage() {
     }
   }, [section]);
 
-  // Abrir submenu de config quando estiver em forms ou webhooks
-  useEffect(() => {
-    if (section === "forms" || section === "webhooks") {
-      setConfigSubmenuOpen(true);
-    }
-  }, [section]);
-
-  // Posicionar menu de config
-  useEffect(() => {
-    if (!configSubmenuOpen) return;
-    const updatePosition = () => {
-      const buttonEl = typeof globalThis !== "undefined" && (globalThis as any).document?.getElementById("config-menu-button");
-      const menuEl = typeof globalThis !== "undefined" && (globalThis as any).document?.getElementById("config-submenu");
-      if (buttonEl && menuEl) {
-        const rect = (buttonEl as HTMLElement).getBoundingClientRect();
-        const menu = menuEl as HTMLElement;
-        menu.style.left = `${rect.right + 8}px`;
-        menu.style.top = `${rect.top}px`;
-      }
-    };
-    updatePosition();
-    const appWindow = typeof globalThis !== "undefined" ? (globalThis as any).window : undefined;
-    if (appWindow) {
-      appWindow.addEventListener("resize", updatePosition);
-      appWindow.addEventListener("scroll", updatePosition, true);
-      return () => {
-        appWindow.removeEventListener("resize", updatePosition);
-        appWindow.removeEventListener("scroll", updatePosition, true);
-      };
-    }
-  }, [configSubmenuOpen]);
-
-  // Fechar menu ao clicar fora
-  useEffect(() => {
-    const doc = typeof globalThis !== "undefined" ? (globalThis as any).document : undefined;
-    if (!doc || !configSubmenuOpen) return;
-    function onDocDown(event: MouseEvent | TouchEvent) {
-      const target = event.target as unknown as HTMLElement | null;
-      if (!target) return;
-      const menuContains = (typeof globalThis !== "undefined" && (globalThis as any).document?.getElementById("config-submenu")?.contains?.(target));
-      const buttonContains = (typeof globalThis !== "undefined" && (globalThis as any).document?.querySelector('[aria-label="Configurações"]')?.contains?.(target));
-      if (!menuContains && !buttonContains) {
-        setConfigSubmenuOpen(false);
-      }
-    }
-    doc.addEventListener("mousedown", onDocDown);
-    doc.addEventListener("touchstart", onDocDown);
-    return () => {
-      doc.removeEventListener("mousedown", onDocDown);
-      doc.removeEventListener("touchstart", onDocDown);
-    };
-  }, [configSubmenuOpen]);
   // Atualizar automaticamente ao voltar o foco para a aba
   useEffect(() => {
     const doc = typeof globalThis !== "undefined" ? (globalThis as any).document : undefined;
@@ -300,13 +184,6 @@ export default function ConfigPage() {
       if (doc.visibilityState === "visible") {
         // atualiza sessão (nome do criador) e formulários
         (async () => {
-          try {
-            const res = await fetch("/api/session");
-            if (res.ok) {
-              const json = (await res.json()) as Record<string, any>;
-              setUser(json?.user ?? null);
-            }
-          } catch {}
           await loadForms();
         })();
       }
@@ -818,52 +695,6 @@ export default function ConfigPage() {
 
   
 
-  useEffect(() => {
-    if (open && firstLinkRef.current) {
-      (firstLinkRef.current as unknown as { focus?: () => void })?.focus?.();
-    }
-  }, [open]);
-
-  function toggleUserMenu() {
-    setMenuOpen((v) => !v);
-  }
-
-  async function onLogout() {
-    try {
-      await fetch("/api/logout", { method: "POST" });
-    } catch {}
-    setMenuOpen(false);
-    const appWindow = typeof globalThis !== "undefined" ? (globalThis as any).window : undefined;
-    appWindow?.location?.assign("/");
-  }
-
-  // fechar menu ao clicar fora
-  useEffect(() => {
-    const doc = typeof globalThis !== "undefined" ? (globalThis as any).document : undefined;
-    if (!doc) return;
-    function onDocDown(event: MouseEvent | TouchEvent) {
-      const target = event.target as unknown as HTMLElement | null;
-      if (!target) return;
-      const menuContains = (menuRef.current as unknown as { contains?: (el: HTMLElement) => boolean })?.contains?.(target);
-      const footerContains = (footerRef.current as unknown as { contains?: (el: HTMLElement) => boolean })?.contains?.(target);
-      if (!menuContains && !footerContains) {
-        setMenuOpen(false);
-      }
-    }
-    doc.addEventListener("mousedown", onDocDown);
-    doc.addEventListener("touchstart", onDocDown);
-    return () => {
-      doc.removeEventListener("mousedown", onDocDown);
-      doc.removeEventListener("touchstart", onDocDown);
-    };
-  }, []);
-
-  // acessibilidade: foco no primeiro item quando abrir menu
-  useEffect(() => {
-    if (menuOpen && firstMenuItemRef.current) {
-      (firstMenuItemRef.current as unknown as { focus?: () => void })?.focus?.();
-    }
-  }, [menuOpen]);
 
   function formatDateTime(value?: string): string {
     if (!value) return "-";
@@ -973,233 +804,8 @@ export default function ConfigPage() {
     : "";
 
   return (
-    <Page>
-      <TopBar role="navigation" aria-label="Barra de navegação">
-        <Brand>Helpdesk</Brand>
-        <TopBarActions>
-          <NotificationBell />
-        </TopBarActions>
-        <MenuToggle
-          aria-label={open ? "Fechar menu lateral" : "Abrir menu lateral"}
-          aria-controls="sidebar"
-          aria-expanded={open}
-          onClick={() => setOpen((v) => !v)}
-        >
-          {open ? "Fechar menu" : "Abrir menu"}
-        </MenuToggle>
-      </TopBar>
-      <Shell>
-        <Sidebar id="sidebar" aria-label="Menu lateral" aria-expanded={open} aria-hidden={!open} $open={open}>
-          <nav role="navigation" aria-label="Navegação principal">
-            <MenuScroll>
-              <NavItem ref={firstLinkRef} href="/home" aria-label="Início">
-                <svg viewBox="0 0 24 24" fill="currentColor">
-                  <path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/>
-                </svg>
-                <span>Início</span>
-              </NavItem>
-              <NavItem href="/tickets" aria-label="Tickets">
-                <svg viewBox="0 0 24 24" fill="currentColor">
-                  <path d="M20 6h-2.18c.11-.31.18-.65.18-1a2.996 2.996 0 0 0-5.5-1.65l-.5.67-.5-.68C10.96 2.54 10 2 9 2 7.34 2 6 3.34 6 5c0 .35.07.69.18 1H4c-1.11 0-1.99.89-1.99 2L2 19c0 1.11.89 2 2 2h16c1.11 0 2-.89 2-2V8c0-1.11-.89-2-2-2zm-5-2c.55 0 1 .45 1 1s-.45 1-1 1-1-.45-1-1 .45-1 1-1zM9 4c.55 0 1 .45 1 1s-.45 1-1 1-1-.45-1-1 .45-1 1-1zm11 15H4v-2h16v2zm0-5H4V8h5.08L7 10.83 8.62 12 11 8.76l1-1.36 1 1.36L15.38 12 17 10.83 14.92 8H20v6z"/>
-                </svg>
-                <span>Tickets</span>
-              </NavItem>
-              <NavItem href="/base" aria-label="Base de Conhecimento">
-                <svg viewBox="0 0 24 24" fill="currentColor">
-                  <path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-5 14H7v-2h7v2zm3-4H7v-2h10v2zm0-4H7V7h10v2z"/>
-                </svg>
-                <span>Base</span>
-              </NavItem>
-              <NavItem href="/agenda" aria-label="Agenda">
-                <svg viewBox="0 0 24 24" fill="currentColor">
-                  <path d="M19 4h-1V2h-2v2H8V2H6v2H5c-1.11 0-1.99.9-1.99 2L3 20c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 16H5V9h14v11zM5 7V6h14v1H5zm7 6H7v-2h5v2z"/>
-                </svg>
-                <span>Agenda</span>
-              </NavItem>
-              <NavItem href="/history" aria-label="Histórico">
-                <svg viewBox="0 0 24 24" fill="currentColor">
-                  <path d="M13 3c-4.97 0-9 4.03-9 9H1l3.89 3.89.07.14L9 12H6c0-3.87 3.13-7 7-7s7 3.13 7 7-3.13 7-7 7c-1.93 0-3.68-.79-4.94-2.06l-1.42 1.42C8.27 19.99 10.51 21 13 21c4.97 0 9-4.03 9-9s-4.03-9-9-9zm-1 5v5l4.28 2.54.72-1.21-3.5-2.08V8H12z"/>
-                </svg>
-                <span>Histórico</span>
-              </NavItem>
-              <NavItem href="/relatorios" aria-label="Relatórios">
-                <svg viewBox="0 0 24 24" fill="currentColor">
-                  <path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zM9 17H7v-7h2v7zm4 0h-2V7h2v10zm4 0h-2v-4h2v4z"/>
-                </svg>
-                <span>Relatórios</span>
-              </NavItem>
-              <NavItem href="/aprovacoes" aria-label="Aprovações">
-                <svg viewBox="0 0 24 24" fill="currentColor">
-                  <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/>
-                </svg>
-                <span>Aprovações</span>
-              </NavItem>
-              <NavItem href="/projetos" aria-label="Projetos">
-                <svg viewBox="0 0 24 24" fill="currentColor">
-                  <path d="M10 4H4c-1.11 0-2 .89-2 2v12c0 1.11.89 2 2 2h16c1.11 0 2-.89 2-2V8c0-1.11-.89-2-2-2h-8l-2-2z"/>
-                </svg>
-                <span>Projetos</span>
-              </NavItem>
-              <div style={{ position: "relative" }}>
-                <NavItemButton
-                  type="button"
-                  id="config-menu-button"
-                  aria-label="Configurações"
-                  aria-expanded={configSubmenuOpen}
-                  aria-haspopup="true"
-                  onClick={() => setConfigSubmenuOpen(!configSubmenuOpen)}
-                  $active={section === "forms" || section === "webhooks"}
-                >
-                  <svg viewBox="0 0 24 24" fill="currentColor">
-                    <path d="M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58c.18-.14.23-.41.12-.61l-1.92-3.32c-.12-.22-.37-.29-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54c-.04-.24-.24-.41-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96c-.22-.08-.47 0-.59.22L2.74 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.05.3-.07.62-.07.94s.02.64.07.94l-2.03 1.58c-.18.14-.23.41-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58zM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6z"/>
-                  </svg>
-                  <span>Config</span>
-                </NavItemButton>
-{typeof globalThis !== "undefined" && (globalThis as any).document && configSubmenuOpen && createPortal(
-                <ConfigSubmenu
-                  id="config-submenu"
-                  role="menu"
-                  aria-labelledby="config-menu-button"
-                  $open={configSubmenuOpen}
-                >
-                  <ConfigSubmenuItem
-                    role="menuitem"
-                    tabIndex={0}
-                    href="/users"
-                    onClick={() => {
-                      setConfigSubmenuOpen(false);
-                      router.push("/users");
-                    }}
-                  >
-                    <svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16">
-                      <path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z"/>
-                    </svg>
-                    Usuários
-                  </ConfigSubmenuItem>
-                  <ConfigSubmenuItem
-                    role="menuitem"
-                    tabIndex={0}
-                    href="/config?section=forms"
-                    onClick={() => {
-                      setConfigSubmenuOpen(false);
-                      router.push("/config?section=forms");
-                    }}
-                    $active={section === "forms"}
-                  >
-                    <svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16">
-                      <path d="M14 2H6c-1.1 0-1.99.9-1.99 2L4 20c0 1.1.89 2 1.99 2H18c1.1 0 2-.9 2-2V8l-6-6zm2 16H8v-2h8v2zm0-4H8v-2h8v2zm-3-5V3.5L18.5 9H13z"/>
-                    </svg>
-                    Formulários
-                  </ConfigSubmenuItem>
-                  <ConfigSubmenuItem
-                    role="menuitem"
-                    tabIndex={0}
-                    href="/config?section=webhooks"
-                    onClick={() => {
-                      setConfigSubmenuOpen(false);
-                      router.push("/config?section=webhooks");
-                    }}
-                    $active={section === "webhooks"}
-                  >
-                    <svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16">
-                      <path d="M17.71 7.71L12 2h-1v7.59L6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 11 14.41V22h1l5.71-5.71-4.3-4.29 4.3-4.29zM13 3.83l3.88 3.88-3.88 3.88V3.83zm0 12.34v-7.76l3.88 3.88L13 16.17z"/>
-                    </svg>
-                    Webhooks
-                  </ConfigSubmenuItem>
-                  <ConfigSubmenuItem
-                    role="menuitem"
-                    tabIndex={0}
-                    href="/config/perfildeacesso"
-                    onClick={() => {
-                      setConfigSubmenuOpen(false);
-                      router.push("/config/perfildeacesso");
-                    }}
-                  >
-                    <svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16">
-                      <path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4zm0 10.99h7c-.53 4.12-3.28 7.79-7 8.94V12H5V6.3l7-3.11v8.8z"/>
-                    </svg>
-                    Perfil de Acesso
-                  </ConfigSubmenuItem>
-                </ConfigSubmenu>,
-                (globalThis as any).document.body
-              )}
-              </div>
-            </MenuScroll>
-          </nav>
-          <UserFooter
-            aria-label="Menu do usuário"
-            role="button"
-            tabIndex={0}
-            aria-haspopup="menu"
-            aria-expanded={menuOpen}
-            aria-controls="user-menu"
-            onClick={toggleUserMenu}
-            onKeyDown={(e) => {
-              if (e.key === "Enter" || e.key === " ") toggleUserMenu();
-              if (e.key === "Escape") setMenuOpen(false);
-              if (e.key === "ArrowDown") setMenuOpen(true);
-            }}
-            ref={footerRef as any}
-          >
-            <Avatar aria-label="Foto do usuário" role="img">
-              {avatarUrl ? (
-                <img src={avatarUrl} alt="Avatar" decoding="async" />
-              ) : (
-                user?.name ? (user.name?.[0] || "U") : "U"
-              )}
-            </Avatar>
-            <UserName aria-label="Nome do usuário">{user?.name ?? user?.email ?? "Usuário"}</UserName>
-          </UserFooter>
-          <UserMenu
-            id="user-menu"
-            role="menu"
-            aria-labelledby="user-menu-button"
-            $open={menuOpen}
-            ref={menuRef as any}
-          >
-            <UserMenuItem
-              role="menuitem"
-              tabIndex={0}
-              ref={firstMenuItemRef as any}
-              onClick={() => {
-                setMenuOpen(false);
-                const appWindow = typeof globalThis !== "undefined" ? (globalThis as any).window : undefined;
-                appWindow?.location?.assign("/profile");
-              }}
-            >
-              Perfil
-            </UserMenuItem>
-            <UserMenuItem
-              role="menuitem"
-              tabIndex={0}
-              $variant="danger"
-              onClick={() => { setMenuOpen(false); setConfirmOpen(true); }}
-            >
-              Sair
-            </UserMenuItem>
-          </UserMenu>
-          {confirmOpen && typeof window !== "undefined" && createPortal(
-            <>
-              <ConfirmBackdrop $open={confirmOpen} onClick={() => setConfirmOpen(false)} aria-hidden={!confirmOpen} />
-              <ConfirmDialog
-                role="dialog"
-                aria-modal="true"
-                aria-labelledby="confirm-exit-title"
-                $open={confirmOpen}
-                onKeyDown={(e) => { if (e.key === "Escape") setConfirmOpen(false); }}
-              >
-                <ConfirmTitle id="confirm-exit-title">Você deseja realmente sair?</ConfirmTitle>
-                <ConfirmActions>
-                  <CancelButton type="button" onClick={() => setConfirmOpen(false)}>Cancelar</CancelButton>
-                  <ConfirmButton type="button" onClick={onLogout}>Confirmar</ConfirmButton>
-                </ConfirmActions>
-              </ConfirmDialog>
-            </>,
-            document.body
-          )}
-        </Sidebar>
-        <Overlay $show={open} onClick={() => setOpen(false)} />
-        <Content>
+    <StandardLayout>
+      <Content>
           {section !== "forms" && section !== "webhooks" && (
             <Card aria-labelledby="config-title">
               <CardHeader>
@@ -1429,7 +1035,6 @@ export default function ConfigPage() {
             </FormsWrapper>
           )}
         </Content>
-      </Shell>
       {createOpen && (
         <>
           <ModalBackdrop $open={createOpen} onClick={() => {
@@ -1451,7 +1056,7 @@ export default function ConfigPage() {
                 setFormTitle("");
                 setFormDesc("");
                 setFormRequiresApproval(false);
-                setFormApproverId(null);
+                setFormApproverIds([]);
                 setBuilderFields([]);
               }
             }}
@@ -1617,7 +1222,7 @@ export default function ConfigPage() {
                 setFormTitle("");
                 setFormDesc("");
                 setFormRequiresApproval(false);
-                setFormApproverId(null);
+                setFormApproverIds([]);
                 setBuilderFields([]);
               }}>Cancelar</CancelButton>
               <ConfirmButton type="button" onClick={saveForm} disabled={savingForm} aria-label="Salvar novo formulário">
@@ -2347,258 +1952,11 @@ fetch(webhookUrl, {
           </ModalDialog>
         </>
       )}
-      
-      </Page>
+    </StandardLayout>
   );
 }
 
 const SECTIONS: SectionKey[] = ["general", "appearance", "notifications", "security", "integrations", "forms", "webhooks"];
-
-const Page = styled.div`
-  min-height: 100dvh;
-  display: grid;
-  grid-template-rows: 56px 1fr;
-  background: var(--bg);
-`;
-
-// Header e aside iguais ao /home
-const TopBar = styled.header`
-  position: sticky;
-  top: 0;
-  z-index: 10;
-  height: 56px;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  padding: 0 16px;
-  background: #fff;
-  border-bottom: 1px solid var(--border);
-`;
-
-const TopBarActions = styled.div`
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin-left: auto;
-`;
-
-const Brand = styled.div`
-  font-weight: 800;
-  color: var(--primary-700);
-`;
-
-const Shell = styled.div`
-  display: grid;
-  grid-template-columns: 100px 1fr;
-  gap: 16px;
-  padding: 16px;
-  @media (max-width: 960px) {
-    grid-template-columns: 1fr;
-  }
-`;
-
-const Sidebar = styled.aside<{ $open: boolean }>`
-  background: var(--surface);
-  border-right: 1px solid var(--border);
-  box-shadow: 2px 0 12px rgba(0,0,0,0.06);
-  border-radius: 12px;
-  padding: 12px 8px;
-  display: flex;
-  flex-direction: column;
-  height: calc(100dvh - 72px);
-  overflow: visible;
-  position: sticky;
-  top: 72px;
-  align-self: start;
-  transition: transform .25s ease, opacity .25s ease;
-
-  @media (max-width: 960px) {
-    position: fixed;
-    top: 56px;
-    left: 0;
-    right: auto;
-    width: min(82vw, 240px);
-    height: calc(100dvh - 56px);
-    border-radius: 0 12px 12px 0;
-    transform: translateX(${(p) => (p.$open ? "0" : "-105%")});
-    opacity: ${(p) => (p.$open ? 1 : 0)};
-    z-index: 20;
-  }
-`;
-
-const MenuScroll = styled.div`
-  flex: 1;
-  overflow-y: auto;
-  overflow-x: visible;
-  padding-right: 4px;
-`;
-
-const NavItem = styled.a`
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 4px;
-  padding: 10px 4px;
-  border-radius: 8px;
-  color: inherit;
-  text-decoration: none;
-  font-size: 0.7rem;
-  font-weight: 500;
-  transition: all 0.2s ease;
-  width: 100%;
-  &:hover { background: #f3f4f6; }
-  &[aria-current="page"] { background: #eef2f7; font-weight: 600; }
-  &:focus { outline: none; }
-  &:focus-visible { outline: none; }
-
-  svg {
-    flex-shrink: 0;
-    width: 20px;
-    height: 20px;
-  }
-`;
-
-const NavItemButton = styled.button<{ $active?: boolean }>`
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 4px;
-  padding: 10px 4px;
-  border-radius: 8px;
-  border: none;
-  background: transparent;
-  color: inherit;
-  text-decoration: none;
-  font-size: 0.7rem;
-  font-weight: 500;
-  transition: all 0.2s ease;
-  width: 100%;
-  cursor: pointer;
-  position: relative;
-  &:hover { background: #f3f4f6; }
-  ${(p) => p.$active && "background: #eef2f7; font-weight: 600;"}
-  &:focus { outline: none; }
-  &:focus-visible { outline: none; }
-
-  svg {
-    flex-shrink: 0;
-    width: 20px;
-    height: 20px;
-  }
-`;
-
-const ConfigSubmenu = styled.div<{ $open: boolean }>`
-  position: fixed;
-  background: #fff;
-  border: 1px solid var(--border);
-  border-radius: 12px;
-  box-shadow: 0 12px 28px rgba(0,0,0,0.12);
-  min-width: 180px;
-  padding: 8px;
-  transform: translateY(${(p) => (p.$open ? "0" : "8px")});
-  opacity: ${(p) => (p.$open ? 1 : 0)};
-  pointer-events: ${(p) => (p.$open ? "auto" : "none")};
-  transition: opacity .18s ease, transform .18s ease;
-  z-index: 9999;
-
-  @media (max-width: 960px) {
-    left: 16px !important;
-    top: auto !important;
-    bottom: 96px !important;
-  }
-`;
-
-const ConfigSubmenuItem = styled.a<{ $active?: boolean }>`
-  width: 100%;
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 10px 12px;
-  border: none;
-  background: transparent;
-  border-radius: 8px;
-  cursor: pointer;
-  text-align: left;
-  color: inherit;
-  text-decoration: none;
-  font-size: 0.9rem;
-  &:hover {
-    background: #f3f4f6;
-  }
-  &:active {
-    background: #e9ecef;
-  }
-  &:focus { outline: none; }
-  &:focus-visible { outline: none; }
-
-  svg {
-    flex-shrink: 0;
-    opacity: 0.8;
-  }
-`;
-
-const UserFooter = styled.footer`
-  border-top: 1px solid var(--border);
-  padding-top: 10px;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 6px;
-  margin-top: auto;
-  cursor: pointer;
-  user-select: none;
-`;
-
-const Avatar = styled.div`
-  width: 48px;
-  height: 48px;
-  border-radius: 50%;
-  background: #e5e7eb;
-  display: grid;
-  place-items: center;
-  color: var(--muted);
-  font-weight: 700;
-  user-select: none;
-  overflow: hidden;
-  flex-shrink: 0;
-  font-size: 0.875rem;
-  img { width: 100%; height: 100%; object-fit: cover; }
-`;
-
-const UserName = styled.div`
-  font-size: 0.7rem;
-  font-weight: 600;
-  text-align: center;
-  word-break: break-word;
-  max-width: 100%;
-  line-height: 1.2;
-`;
-
-const MenuToggle = styled.button`
-  margin-left: auto;
-  border: 1px solid var(--border);
-  background: #fff;
-  padding: 8px 10px;
-  border-radius: 8px;
-  cursor: pointer;
-  @media (min-width: 961px) {
-    display: none;
-  }
-`;
-
-const Overlay = styled.div<{ $show: boolean }>`
-  @media (min-width: 961px) { display: none; }
-  position: fixed;
-  inset: 56px 0 0 0;
-  background: rgba(0,0,0,0.15);
-  opacity: ${(p) => (p.$show ? 1 : 0)};
-  pointer-events: ${(p) => (p.$show ? "auto" : "none")};
-  transition: opacity .25s ease;
-  z-index: 15;
-`;
 
 const Content = styled.main`
   display: grid;
@@ -2920,114 +2278,6 @@ const Skeleton = styled.div`
   }
 `;
 
-// Menu do usuário (igual ao /home)
-const UserMenu = styled.div<{ $open: boolean }>`
-  position: fixed;
-  left: 108px;
-  bottom: 96px;
-  background: #fff;
-  border: 1px solid var(--border);
-  border-radius: 12px;
-  box-shadow: 0 12px 28px rgba(0,0,0,0.12);
-  min-width: 200px;
-  padding: 8px;
-  transform: translateY(${(p) => (p.$open ? "0" : "8px")});
-  opacity: ${(p) => (p.$open ? 1 : 0)};
-  pointer-events: ${(p) => (p.$open ? "auto" : "none")};
-  transition: opacity .18s ease, transform .18s ease;
-  z-index: 100;
-
-  @media (max-width: 960px) {
-    left: 16px;
-  }
-`;
-
-const UserMenuItem = styled.button<{ $variant?: "danger" }>`
-  width: 100%;
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 10px 12px;
-  border: none;
-  background: transparent;
-  border-radius: 8px;
-  cursor: pointer;
-  text-align: left;
-  color: ${(p) => (p.$variant === "danger" ? "#B00000" : "inherit")};
-  &:hover { background: ${(p) => (p.$variant === "danger" ? "#ffe5e5" : "#f3f4f6")}; }
-  &:active { background: ${(p) => (p.$variant === "danger" ? "#ffcccc" : "#e9ecef")}; }
-  &:focus { outline: none; }
-  &:focus-visible { outline: none; }
-`;
-
-const ConfirmBackdrop = styled.div<{ $open: boolean }>`
-  position: fixed !important;
-  top: 0 !important;
-  left: 0 !important;
-  right: 0 !important;
-  bottom: 0 !important;
-  width: 100vw !important;
-  height: 100vh !important;
-  background: rgba(0,0,0,0.25) !important;
-  opacity: ${(p) => (p.$open ? 1 : 0)} !important;
-  pointer-events: ${(p) => (p.$open ? "auto" : "none")} !important;
-  transition: opacity .18s ease !important;
-  z-index: 10000 !important;
-  isolation: isolate !important;
-`;
-
-const ConfirmDialog = styled.div<{ $open: boolean }>`
-  position: fixed !important;
-  left: 50% !important;
-  top: 50% !important;
-  transform: translate(-50%, -50%) scale(${(p) => (p.$open ? 1 : 0.98)}) !important;
-  background: #fff !important;
-  border: 1px solid var(--border) !important;
-  border-radius: 14px !important;
-  box-shadow: 0 18px 36px rgba(0,0,0,0.16) !important;
-  width: min(90vw, 420px) !important;
-  padding: 16px !important;
-  z-index: 10001 !important;
-  opacity: ${(p) => (p.$open ? 1 : 0)} !important;
-  pointer-events: ${(p) => (p.$open ? "auto" : "none")} !important;
-  transition: transform .18s ease, opacity .18s ease !important;
-  isolation: isolate !important;
-`;
-
-const ConfirmTitle = styled.h2`
-  font-size: 1.1rem;
-  margin: 0 0 12px;
-`;
-
-const ConfirmActions = styled.div`
-  display: flex;
-  gap: 10px;
-  justify-content: flex-end;
-`;
-
-const ConfirmButton = styled.button`
-  padding: 10px 14px;
-  border-radius: 10px;
-  border: 1px solid #FF0000;
-  background: #FF0000;
-  color: #fff;
-  cursor: pointer;
-  &:hover { filter: brightness(1.05); }
-  &:focus { outline: none; }
-  &:focus-visible { outline: none; }
-`;
-
-const CancelButton = styled.button`
-  padding: 10px 14px;
-  border-radius: 10px;
-  border: 1px solid var(--border);
-  background: #fff;
-  cursor: pointer;
-  &:hover { background: #f3f4f6; }
-  &:focus { outline: none; }
-  &:focus-visible { outline: none; }
-`;
-
 // Estilos do modal de criação/gestão de formulário
 const ModalBackdrop = styled.div<{ $open: boolean }>`
   position: fixed;
@@ -3106,4 +2356,34 @@ const InfoValue = styled.span`
   font-size: 1rem;
   color: #1f2937;
   word-break: break-word;
+`;
+
+const CancelButton = styled.button`
+  padding: 10px 14px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: #fff;
+  cursor: pointer;
+  font-size: 0.9rem;
+  transition: background .15s ease, transform .05s ease;
+  &:hover { background: #f8fafc; }
+  &:active { transform: translateY(1px); }
+  &:disabled { opacity: .6; cursor: default; }
+`;
+
+const ConfirmButton = styled.button`
+  padding: 10px 14px;
+  border-radius: 10px;
+  border: 0;
+  color: #fff;
+  cursor: pointer;
+  background: linear-gradient(135deg, var(--primary-600), var(--primary-800));
+  box-shadow: 0 6px 12px rgba(20, 93, 191, 0.2);
+  font-size: 0.9rem;
+  transition: background .15s ease, transform .05s ease;
+  &:hover { 
+    background: linear-gradient(135deg, var(--primary-700), var(--primary-900));
+  }
+  &:active { transform: translateY(1px); }
+  &:disabled { opacity: .6; cursor: default; }
 `;

@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAuthenticatedUser } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { hasPermission } from "@/lib/permissions";
 
 type ParamsPromise = Promise<{ id: string }>;
 
@@ -74,6 +73,16 @@ export async function GET(_req: NextRequest, context: { params: ParamsPromise })
         twoFactor: true,
         newsletter: true,
         avatarUrl: true,
+        accessProfiles: {
+          include: {
+            profile: {
+              select: {
+                id: true,
+                name: true,
+              },
+            },
+          },
+        },
       },
     });
 
@@ -81,7 +90,10 @@ export async function GET(_req: NextRequest, context: { params: ParamsPromise })
       return NextResponse.json({ error: "Usuário não encontrado" }, { status: 404 });
     }
 
-    return NextResponse.json(mapUserResponse(user));
+    return NextResponse.json({
+      ...mapUserResponse(user),
+      accessProfile: user.accessProfiles[0]?.profile || null,
+    });
   } catch (error) {
     return NextResponse.json({ error: "Falha ao buscar usuário" }, { status: 500 });
   }
@@ -93,18 +105,9 @@ export async function PUT(req: NextRequest, context: { params: ParamsPromise }) 
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  // Verificar permissão para editar usuários (ou permitir editar próprio perfil)
   const userId = await getUserId(context.params);
   if (!userId) {
     return NextResponse.json({ error: "ID inválido" }, { status: 400 });
-  }
-
-  // Permitir que o usuário edite seu próprio perfil, mas para outros usuários precisa de permissão
-  if (userId !== auth.id) {
-    const canEdit = await hasPermission(auth.id, "users.edit");
-    if (!canEdit && auth.id !== 1) {
-      return NextResponse.json({ error: "Sem permissão para editar usuários" }, { status: 403 });
-    }
   }
 
   const payload = await req.json().catch(() => null);
@@ -120,6 +123,11 @@ export async function PUT(req: NextRequest, context: { params: ParamsPromise }) 
   const avatarUrl = sanitizeString((payload as any).avatarUrl, 512);
   const twoFactor = parseBoolean((payload as any).twoFactor);
   const newsletter = parseBoolean((payload as any).newsletter);
+  const accessProfileId = typeof (payload as any).accessProfileId === "number" 
+    ? (payload as any).accessProfileId 
+    : typeof (payload as any).accessProfileId === "string" 
+      ? (payload as any).accessProfileId === "" ? null : parseInt((payload as any).accessProfileId, 10)
+      : null;
 
   if (!name) {
     return NextResponse.json({ error: "Nome é obrigatório" }, { status: 400 });
@@ -130,6 +138,28 @@ export async function PUT(req: NextRequest, context: { params: ParamsPromise }) 
   }
 
   try {
+    // Verificar se o perfil de acesso existe (se fornecido)
+    if (accessProfileId && !isNaN(accessProfileId)) {
+      const profile = await prisma.accessProfile.findUnique({
+        where: { id: accessProfileId },
+      });
+      if (!profile) {
+        return NextResponse.json({ error: "Perfil de acesso não encontrado" }, { status: 400 });
+      }
+    }
+
+    // Remover perfis existentes e adicionar o novo (se fornecido)
+    if (accessProfileId && !isNaN(accessProfileId)) {
+      await prisma.userAccessProfile.deleteMany({
+        where: { userId },
+      });
+    } else if (accessProfileId === null) {
+      // Se accessProfileId for null explicitamente, remover todos os perfis
+      await prisma.userAccessProfile.deleteMany({
+        where: { userId },
+      });
+    }
+
     const updated = await prisma.user.update({
       where: { id: userId },
       data: {
@@ -141,6 +171,11 @@ export async function PUT(req: NextRequest, context: { params: ParamsPromise }) 
         avatarUrl: avatarUrl || null,
         twoFactor,
         newsletter,
+        accessProfiles: accessProfileId && !isNaN(accessProfileId) ? {
+          create: {
+            profileId: accessProfileId,
+          },
+        } : undefined,
       },
       select: {
         id: true,
@@ -152,10 +187,23 @@ export async function PUT(req: NextRequest, context: { params: ParamsPromise }) 
         twoFactor: true,
         newsletter: true,
         avatarUrl: true,
+        accessProfiles: {
+          include: {
+            profile: {
+              select: {
+                id: true,
+                name: true,
+              },
+            },
+          },
+        },
       },
     });
 
-    return NextResponse.json(mapUserResponse(updated));
+    return NextResponse.json({
+      ...mapUserResponse(updated),
+      accessProfile: updated.accessProfiles[0]?.profile || null,
+    });
   } catch (error: any) {
     if (error && typeof error === "object" && "code" in error && (error as any).code === "P2002") {
       return NextResponse.json({ error: "E-mail já está em uso" }, { status: 409 });

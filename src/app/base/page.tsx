@@ -3,10 +3,9 @@
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import styled, { keyframes } from "styled-components";
-import { useRouter } from "next/navigation";
 import NotificationBell from "@/components/NotificationBell";
 import Link from "next/link";
-import { usePermissions } from "@/hooks/usePermissions";
+import StandardLayout from "@/components/StandardLayout";
 
 type DocumentItem = {
   id: number;
@@ -86,20 +85,6 @@ const FADE_IN = keyframes`
 `;
 
 export default function BasePage() {
-  const router = useRouter();
-  const { hasPermission } = usePermissions();
-  const canViewDocuments = hasPermission("knowledge.documents.view");
-  const canViewFiles = hasPermission("knowledge.files.view");
-  const canCreate = hasPermission("knowledge.create");
-  const canEdit = hasPermission("knowledge.edit");
-  const canDelete = hasPermission("knowledge.delete");
-  const canManagePasswords = hasPermission("knowledge.passwords.manage");
-  const [sidebarOpen, setSidebarOpen] = useState<boolean>(true);
-  const [menuOpen, setMenuOpen] = useState<boolean>(false);
-  const [configSubmenuOpen, setConfigSubmenuOpen] = useState<boolean>(false);
-  const [confirmOpen, setConfirmOpen] = useState<boolean>(false);
-  const [sessionUser, setSessionUser] = useState<{ id: number; email: string; name: string | null } | null>(null);
-  const [avatarUrl, setAvatarUrl] = useState<string>("");
 
   const [activeTab, setActiveTab] = useState<"documents" | "files" | "passwords">("documents");
   
@@ -162,174 +147,18 @@ export default function BasePage() {
   const [passwordSortOrder, setPasswordSortOrder] = useState<"asc" | "desc">("desc");
   const [passwordVisibility, setPasswordVisibility] = useState<Record<number, boolean>>({});
 
-  const firstLinkRef = useRef<HTMLAnchorElement | null>(null);
-  const footerRef = useRef<HTMLElement | null>(null);
-  const menuRef = useRef<HTMLDivElement | null>(null);
-  const firstMenuItemRef = useRef<HTMLButtonElement | null>(null);
-  const configButtonRef = useRef<HTMLButtonElement | null>(null);
-  const configSubmenuRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
-    const saved = localStorage.getItem("sidebar_open");
-    if (saved !== null) setSidebarOpen(saved === "true");
-  }, []);
-
-  useEffect(() => {
-    localStorage.setItem("sidebar_open", String(sidebarOpen));
-  }, [sidebarOpen]);
-
-  useEffect(() => {
-    if (sidebarOpen && firstLinkRef.current) {
-      firstLinkRef.current.focus();
-    }
-  }, [sidebarOpen]);
-
-  useEffect(() => {
-    (async () => {
-      try {
-        const res = await fetch("/api/session");
-        if (res.ok) {
-          const json = await res.json();
-          setSessionUser(json.user);
-        }
-      } catch {}
-    })();
-  }, []);
-
-  useEffect(() => {
-    (async () => {
-      try {
-        const res = await fetch("/api/profile");
-        if (res.ok) {
-          const json = await res.json();
-          setAvatarUrl(resolveAvatarUrl(json?.avatarUrl || ""));
-        }
-      } catch {}
-    })();
-  }, []);
-
-  useEffect(() => {
-    // Se a aba de senhas não está disponível e está selecionada, mudar para documentos
-    if (activeTab === "passwords" && !canManagePasswords) {
-      setActiveTab("documents");
-      return;
-    }
-    
-    // Se a aba de documentos não está disponível e está selecionada, mudar para arquivos
-    if (activeTab === "documents" && !canViewDocuments) {
-      if (canViewFiles) {
-        setActiveTab("files");
-      } else if (canManagePasswords) {
-        setActiveTab("passwords");
-      }
-      return;
-    }
-    
-    // Se a aba de arquivos não está disponível e está selecionada, mudar para documentos
-    if (activeTab === "files" && !canViewFiles) {
-      if (canViewDocuments) {
-        setActiveTab("documents");
-      } else if (canManagePasswords) {
-        setActiveTab("passwords");
-      }
-      return;
-    }
-    
-    if (activeTab === "documents" && canViewDocuments) {
+    if (activeTab === "documents") {
       loadDocuments();
-    } else if (activeTab === "files" && canViewFiles) {
+    } else if (activeTab === "files") {
       loadFiles();
-    } else if (activeTab === "passwords" && canManagePasswords) {
+    } else if (activeTab === "passwords") {
       loadPasswords();
     }
-  }, [activeTab, canManagePasswords, canViewDocuments, canViewFiles]);
+  }, [activeTab]);
 
-  useEffect(() => {
-    function onDocDown(e: MouseEvent | TouchEvent) {
-      const target = e.target as Node;
-      if (menuRef.current && !menuRef.current.contains(target) && footerRef.current && !footerRef.current.contains(target)) {
-        setMenuOpen(false);
-      }
-    }
-    document.addEventListener("mousedown", onDocDown);
-    document.addEventListener("touchstart", onDocDown);
-    return () => {
-      document.removeEventListener("mousedown", onDocDown);
-      document.removeEventListener("touchstart", onDocDown);
-    };
-  }, []);
 
-  useEffect(() => {
-    if (menuOpen && firstMenuItemRef.current) {
-      firstMenuItemRef.current.focus();
-    }
-  }, [menuOpen]);
-
-  // Posicionar menu do usuário quando renderizado via portal
-  useEffect(() => {
-    if (!menuOpen) return;
-    const updatePosition = () => {
-      const footerEl = footerRef.current;
-      const menuEl = typeof window !== "undefined" && document?.getElementById("user-menu");
-      if (footerEl && menuEl) {
-        const rect = (footerEl as HTMLElement).getBoundingClientRect();
-        const menu = menuEl as HTMLElement;
-        menu.style.left = `${rect.left + rect.width + 8}px`;
-        menu.style.bottom = `${window.innerHeight - rect.bottom}px`;
-      }
-    };
-    updatePosition();
-    if (typeof window !== "undefined") {
-      window.addEventListener("resize", updatePosition);
-      window.addEventListener("scroll", updatePosition, true);
-      return () => {
-        window.removeEventListener("resize", updatePosition);
-        window.removeEventListener("scroll", updatePosition, true);
-      };
-    }
-  }, [menuOpen]);
-
-  // Posicionar ConfigSubmenu dinamicamente
-  useEffect(() => {
-    if (!configSubmenuOpen || !configButtonRef.current || !configSubmenuRef.current) return;
-    const updatePosition = () => {
-      const buttonEl = configButtonRef.current;
-      const submenu = configSubmenuRef.current;
-      if (!buttonEl || !submenu) return;
-      const rect = buttonEl.getBoundingClientRect();
-      submenu.style.left = `${rect.left + rect.width + 8}px`;
-      submenu.style.top = `${rect.top}px`;
-    };
-    updatePosition();
-    if (typeof window !== "undefined") {
-      window.addEventListener("resize", updatePosition);
-      window.addEventListener("scroll", updatePosition, true);
-      return () => {
-        window.removeEventListener("resize", updatePosition);
-        window.removeEventListener("scroll", updatePosition, true);
-      };
-    }
-  }, [configSubmenuOpen]);
-
-  // Fechar ConfigSubmenu ao clicar fora
-  useEffect(() => {
-    if (!configSubmenuOpen) return;
-    function onDocDown(event: MouseEvent | TouchEvent) {
-      const target = event.target as unknown as HTMLElement | null;
-      if (!target) return;
-      const configSubmenuContains = (configSubmenuRef.current as unknown as { contains?: (el: HTMLElement) => boolean })?.contains?.(target);
-      const configButtonContains = (configButtonRef.current as unknown as { contains?: (el: HTMLElement) => boolean })?.contains?.(target);
-      if (!configSubmenuContains && !configButtonContains) {
-        setConfigSubmenuOpen(false);
-      }
-    }
-    document.addEventListener("mousedown", onDocDown);
-    document.addEventListener("touchstart", onDocDown);
-    return () => {
-      document.removeEventListener("mousedown", onDocDown);
-      document.removeEventListener("touchstart", onDocDown);
-    };
-  }, [configSubmenuOpen]);
 
 
   useEffect(() => {
@@ -564,13 +393,6 @@ export default function BasePage() {
     }
   }
 
-  async function onLogout() {
-    try {
-      await fetch("/api/logout", { method: "POST" });
-    } catch {}
-    setMenuOpen(false);
-    window.location.assign("/");
-  }
 
   function formatDateTime(value?: string | null) {
     if (!value) return "-";
@@ -1229,201 +1051,8 @@ export default function BasePage() {
   const viewPassword = viewPasswordId ? passwordItems.find(p => p.id === viewPasswordId) : null;
 
   return (
-    <Page>
-      <TopBar role="navigation" aria-label="Barra de navegação">
-        <Brand>Helpdesk</Brand>
-        <TopBarActions>
-          <NotificationBell />
-        </TopBarActions>
-        <MenuToggle
-          aria-label={sidebarOpen ? "Fechar menu lateral" : "Abrir menu lateral"}
-          aria-controls="sidebar"
-          aria-expanded={sidebarOpen}
-          onClick={() => setSidebarOpen((v) => !v)}
-        >
-          {sidebarOpen ? "Fechar menu" : "Abrir menu"}
-        </MenuToggle>
-      </TopBar>
-      <Shell>
-        <Sidebar
-          id="sidebar"
-          aria-label="Menu lateral"
-          aria-expanded={sidebarOpen}
-          aria-hidden={!sidebarOpen}
-          $open={sidebarOpen}
-          onKeyDown={(e) => { if (e.key === "Escape") setSidebarOpen(false); }}
-        >
-          <nav role="navigation" aria-label="Navegação principal">
-            <MenuScroll>
-              <NavItem ref={firstLinkRef} href="/home" aria-label="Início">
-                <svg viewBox="0 0 24 24" fill="currentColor">
-                  <path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/>
-                </svg>
-                <span>Início</span>
-              </NavItem>
-              <NavItem href="/tickets" aria-label="Tickets">
-                <svg viewBox="0 0 24 24" fill="currentColor">
-                  <path d="M20 6h-2.18c.11-.31.18-.65.18-1a2.996 2.996 0 0 0-5.5-1.65l-.5.67-.5-.68C10.96 2.54 10 2 9 2 7.34 2 6 3.34 6 5c0 .35.07.69.18 1H4c-1.11 0-1.99.89-1.99 2L2 19c0 1.11.89 2 2 2h16c1.11 0 2-.89 2-2V8c0-1.11-.89-2-2-2zm-5-2c.55 0 1 .45 1 1s-.45 1-1 1-1-.45-1-1 .45-1 1-1zM9 4c.55 0 1 .45 1 1s-.45 1-1 1-1-.45-1-1 .45-1 1-1zm11 15H4v-2h16v2zm0-5H4V8h5.08L7 10.83 8.62 12 11 8.76l1-1.36 1 1.36L15.38 12 17 10.83 14.92 8H20v6z"/>
-                </svg>
-                <span>Tickets</span>
-              </NavItem>
-              <NavItem href="/base" aria-label="Base" aria-current="page">
-                <svg viewBox="0 0 24 24" fill="currentColor">
-                  <path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-5 14H7v-2h7v2zm3-4H7v-2h10v2zm0-4H7V7h10v2z"/>
-                </svg>
-                <span>Base</span>
-              </NavItem>
-              <NavItem href="/agenda" aria-label="Agenda">
-                <svg viewBox="0 0 24 24" fill="currentColor">
-                  <path d="M19 4h-1V2h-2v2H8V2H6v2H5c-1.11 0-1.99.9-1.99 2L3 20c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 16H5V9h14v11zM5 7V6h14v1H5zm7 6H7v-2h5v2z"/>
-                </svg>
-                <span>Agenda</span>
-              </NavItem>
-              <NavItem href="/history" aria-label="Histórico">
-                <svg viewBox="0 0 24 24" fill="currentColor">
-                  <path d="M13 3c-4.97 0-9 4.03-9 9H1l3.89 3.89.07.14L9 12H6c0-3.87 3.13-7 7-7s7 3.13 7 7-3.13 7-7 7c-1.93 0-3.68-.79-4.94-2.06l-1.42 1.42C8.27 19.99 10.51 21 13 21c4.97 0 9-4.03 9-9s-4.03-9-9-9zm-1 5v5l4.28 2.54.72-1.21-3.5-2.08V8H12z"/>
-                </svg>
-                <span>Histórico</span>
-              </NavItem>
-              <NavItem href="/relatorios" aria-label="Relatórios">
-                <svg viewBox="0 0 24 24" fill="currentColor">
-                  <path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zM9 17H7v-7h2v7zm4 0h-2V7h2v10zm4 0h-2v-4h2v4z"/>
-                </svg>
-                <span>Relatórios</span>
-              </NavItem>
-              <NavItem href="/aprovacoes" aria-label="Aprovações">
-                <svg viewBox="0 0 24 24" fill="currentColor">
-                  <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/>
-                </svg>
-                <span>Aprovações</span>
-              </NavItem>
-              <NavItem href="/projetos" aria-label="Projetos">
-                <svg viewBox="0 0 24 24" fill="currentColor">
-                  <path d="M10 4H4c-1.11 0-2 .89-2 2v12c0 1.11.89 2 2 2h16c1.11 0 2-.89 2-2V8c0-1.11-.89-2-2-2h-8l-2-2z"/>
-                </svg>
-                <span>Projetos</span>
-              </NavItem>
-              <div style={{ position: "relative" }}>
-                <NavItemButton
-                  type="button"
-                  ref={configButtonRef}
-                  onClick={() => setConfigSubmenuOpen(!configSubmenuOpen)}
-                  aria-label="Configurações"
-                >
-                  <svg viewBox="0 0 24 24" fill="currentColor">
-                    <path d="M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58c.18-.14.23-.41.12-.61l-1.92-3.32c-.12-.22-.37-.29-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54c-.04-.24-.24-.41-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96c-.22-.08-.47 0-.59.22L2.74 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.05.3-.07.62-.07.94s.02.64.07.94l-2.03 1.58c-.18.14-.23.41-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58zM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6z"/>
-                  </svg>
-                  <span>Config</span>
-                </NavItemButton>
-                {typeof window !== "undefined" && document && configSubmenuOpen && createPortal(
-                  <ConfigSubmenu
-                    ref={configSubmenuRef}
-                    $open={configSubmenuOpen}
-                  >
-                    <ConfigSubmenuItem
-                      href="/users"
-                      onClick={() => {
-                        setConfigSubmenuOpen(false);
-                        router.push("/users");
-                      }}
-                    >
-                      <svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16">
-                        <path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z"/>
-                      </svg>
-                      Usuários
-                    </ConfigSubmenuItem>
-                    <ConfigSubmenuItem
-                      href="/config?section=forms"
-                      onClick={() => {
-                        setConfigSubmenuOpen(false);
-                        router.push("/config?section=forms");
-                      }}
-                    >
-                      <svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16">
-                        <path d="M14 2H6c-1.1 0-1.99.9-1.99 2L4 20c0 1.1.89 2 1.99 2H18c1.1 0 2-.9 2-2V8l-6-6zm2 16H8v-2h8v2zm0-4H8v-2h8v2zm-3-5V3.5L18.5 9H13z"/>
-                      </svg>
-                      Formulários
-                    </ConfigSubmenuItem>
-                    <ConfigSubmenuItem
-                      href="/config?section=webhooks"
-                      onClick={() => {
-                        setConfigSubmenuOpen(false);
-                        router.push("/config?section=webhooks");
-                      }}
-                    >
-                      <svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16">
-                        <path d="M17.71 7.71L12 2h-1v7.59L6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 11 14.41V22h1l5.71-5.71-4.3-4.29 4.3-4.29zM13 3.83l3.88 3.88-3.88 3.88V3.83zm0 12.34v-7.76l3.88 3.88L13 16.17z"/>
-                      </svg>
-                      Webhooks
-                    </ConfigSubmenuItem>
-                    <ConfigSubmenuItem
-                      href="/config/perfildeacesso"
-                      onClick={() => {
-                        setConfigSubmenuOpen(false);
-                        router.push("/config/perfildeacesso");
-                      }}
-                    >
-                      <svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16">
-                        <path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4zm0 10.99h7c-.53 4.12-3.28 7.79-7 8.94V12H5V6.3l7-3.11v8.8z"/>
-                      </svg>
-                      Perfil de Acesso
-                    </ConfigSubmenuItem>
-                  </ConfigSubmenu>,
-                  document.body
-                )}
-              </div>
-            </MenuScroll>
-          </nav>
-          <UserFooter
-            aria-label="Menu do usuário"
-            role="button"
-            tabIndex={0}
-            aria-haspopup="menu"
-            aria-expanded={menuOpen}
-            aria-controls="user-menu"
-            onClick={() => setMenuOpen((v) => !v)}
-            onKeyDown={(e) => {
-              if (e.key === "Enter" || e.key === " ") setMenuOpen((v) => !v);
-              if (e.key === "Escape") setMenuOpen(false);
-              if (e.key === "ArrowDown") setMenuOpen(true);
-            }}
-            ref={footerRef as any}
-          >
-            <Avatar aria-label="Foto do usuário" role="img">
-              {avatarUrl ? <img src={avatarUrl} alt="Avatar" decoding="async" /> : (sessionUser?.name?.[0] || "U")}
-            </Avatar>
-            <UserName aria-label="Nome do usuário">{sessionUser?.name ?? sessionUser?.email ?? "Usuário"}</UserName>
-          </UserFooter>
-          {typeof window !== "undefined" && document && menuOpen && createPortal(
-            <UserMenu
-              id="user-menu"
-              role="menu"
-              aria-labelledby="user-menu-button"
-              $open={menuOpen}
-              ref={menuRef as any}
-            >
-              <UserMenuItem
-                role="menuitem"
-                tabIndex={0}
-                ref={firstMenuItemRef as any}
-                onClick={() => { setMenuOpen(false); window.location.assign("/profile"); }}
-              >
-                Perfil
-              </UserMenuItem>
-              <UserMenuItem
-                role="menuitem"
-                tabIndex={0}
-                $variant="danger"
-                onClick={() => { setMenuOpen(false); setConfirmOpen(true); }}
-              >
-                Sair
-              </UserMenuItem>
-            </UserMenu>,
-            document.body
-          )}
-        </Sidebar>
-        <Overlay $show={sidebarOpen} onClick={() => setSidebarOpen(false)} aria-hidden={!sidebarOpen} />
-        <Content>
+    <StandardLayout>
+      <Content>
           <MainCard>
             <CardHeader>
               <HeaderSection>
@@ -1455,87 +1084,75 @@ export default function BasePage() {
                   Recarregar
                 </ActionButton>
                 {activeTab === "documents" ? (
-                  canCreate && (
-                    <PrimaryButton type="button" onClick={openCreateModal}>
-                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                        <line x1="12" y1="5" x2="12" y2="19"/>
-                        <line x1="5" y1="12" x2="19" y2="12"/>
-                      </svg>
-                      Novo documento
-                    </PrimaryButton>
-                  )
+                  <PrimaryButton type="button" onClick={openCreateModal}>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <line x1="12" y1="5" x2="12" y2="19"/>
+                      <line x1="5" y1="12" x2="19" y2="12"/>
+                    </svg>
+                    Novo documento
+                  </PrimaryButton>
                 ) : activeTab === "files" ? (
-                  canCreate && (
-                    <PrimaryButton type="button" onClick={openFileUploadModal}>
-                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
-                        <polyline points="17 8 12 3 7 8"/>
-                        <line x1="12" y1="3" x2="12" y2="15"/>
-                      </svg>
-                      Enviar arquivo
-                    </PrimaryButton>
-                  )
+                  <PrimaryButton type="button" onClick={openFileUploadModal}>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                      <polyline points="17 8 12 3 7 8"/>
+                      <line x1="12" y1="3" x2="12" y2="15"/>
+                    </svg>
+                    Enviar arquivo
+                  </PrimaryButton>
                 ) : (
-                  canManagePasswords && (
-                    <PrimaryButton type="button" onClick={openPasswordCreateModal}>
-                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                        <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
-                        <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
-                      </svg>
-                      Nova senha
-                    </PrimaryButton>
-                  )
+                  <PrimaryButton type="button" onClick={openPasswordCreateModal}>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
+                      <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+                    </svg>
+                    Nova senha
+                  </PrimaryButton>
                 )}
               </HeaderActions>
             </CardHeader>
             <TabsContainer>
-              {canViewDocuments && (
-                <TabButton 
-                  type="button"
-                  $active={activeTab === "documents"}
-                  onClick={() => setActiveTab("documents")}
-                >
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
-                    <polyline points="14 2 14 8 20 8"/>
-                  </svg>
-                  Documentos
-                </TabButton>
-              )}
-              {canViewFiles && (
-                <TabButton 
-                  type="button"
-                  $active={activeTab === "files"}
-                  onClick={() => setActiveTab("files")}
-                >
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
-                    <polyline points="17 8 12 3 7 8"/>
-                    <line x1="12" y1="3" x2="12" y2="15"/>
-                  </svg>
-                  Arquivos
-                </TabButton>
-              )}
-              {canManagePasswords && (
-                <TabButton 
-                  type="button"
-                  $active={activeTab === "passwords"}
-                  onClick={() => setActiveTab("passwords")}
-                >
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
-                    <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
-                  </svg>
-                  Senhas
-                </TabButton>
-              )}
+              <TabButton 
+                type="button"
+                $active={activeTab === "documents"}
+                onClick={() => setActiveTab("documents")}
+              >
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                  <polyline points="14 2 14 8 20 8"/>
+                </svg>
+                Documentos
+              </TabButton>
+              <TabButton 
+                type="button"
+                $active={activeTab === "files"}
+                onClick={() => setActiveTab("files")}
+              >
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                  <polyline points="17 8 12 3 7 8"/>
+                  <line x1="12" y1="3" x2="12" y2="15"/>
+                </svg>
+                Arquivos
+              </TabButton>
+              <TabButton 
+                type="button"
+                $active={activeTab === "passwords"}
+                onClick={() => setActiveTab("passwords")}
+              >
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
+                  <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+                </svg>
+                Senhas
+              </TabButton>
             </TabsContainer>
             {(editFeedback || fileEditFeedback || passwordEditFeedback || passwordCreateFeedback) && !isEditOpen && !isCreateOpen && !isFileEditOpen && !isFileUploadOpen && !isPasswordEditOpen && !isPasswordCreateOpen && (
               <Feedback role={(editFeedback || fileEditFeedback || passwordEditFeedback || passwordCreateFeedback)?.type === "error" ? "alert" : "status"} $variant={(editFeedback || fileEditFeedback || passwordEditFeedback || passwordCreateFeedback)?.type || "success"}>
                 {(editFeedback || fileEditFeedback || passwordEditFeedback || passwordCreateFeedback)?.text}
               </Feedback>
             )}
-            {activeTab === "documents" && canViewDocuments ? (
+            {activeTab === "documents" ? (
               <>
                 <FiltersBar>
                   <SearchWrapper>
@@ -1604,7 +1221,7 @@ export default function BasePage() {
                     ? "Tente ajustar os filtros de busca para encontrar documentos."
                     : "Comece criando seu primeiro documento na base de conhecimento."}
                 </EmptyText>
-                {!searchQuery && !filterCategory && canCreate && (
+                {!searchQuery && !filterCategory && (
                   <PrimaryButton type="button" onClick={openCreateModal} style={{ marginTop: "16px" }}>
                     Criar primeiro documento
                   </PrimaryButton>
@@ -1625,22 +1242,18 @@ export default function BasePage() {
                             <circle cx="12" cy="12" r="3"/>
                           </svg>
                         </IconButton>
-                        {canEdit && (
-                          <IconButton type="button" onClick={() => openEditModal(item.id)} title="Editar">
-                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                              <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
-                              <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
-                            </svg>
-                          </IconButton>
-                        )}
-                        {canDelete && (
-                          <IconButton type="button" onClick={() => deleteDocument(item.id)} $danger title="Excluir">
-                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                              <polyline points="3 6 5 6 21 6"/>
-                              <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
-                            </svg>
-                          </IconButton>
-                        )}
+                        <IconButton type="button" onClick={() => openEditModal(item.id)} title="Editar">
+                          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                            <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+                            <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+                          </svg>
+                        </IconButton>
+                        <IconButton type="button" onClick={() => deleteDocument(item.id)} $danger title="Excluir">
+                          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                            <polyline points="3 6 5 6 21 6"/>
+                            <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+                          </svg>
+                        </IconButton>
                       </CardActions>
                     </CardTop>
                     <CardBody onClick={() => openViewModal(item.id)}>
@@ -1670,7 +1283,7 @@ export default function BasePage() {
               </DocumentsGrid>
                 )}
               </>
-            ) : activeTab === "files" && canViewFiles ? (
+            ) : activeTab === "files" ? (
               <>
                 <DropZone
                   $isDragging={isDragging}
@@ -1768,7 +1381,7 @@ export default function BasePage() {
                         ? "Tente ajustar os filtros de busca para encontrar arquivos."
                         : "Comece enviando seu primeiro arquivo para a base de conhecimento."}
                     </EmptyText>
-                    {!fileSearchQuery && !fileFilterCategory && canCreate && (
+                    {!fileSearchQuery && !fileFilterCategory && (
                       <PrimaryButton type="button" onClick={openFileUploadModal} style={{ marginTop: "16px" }}>
                         Enviar primeiro arquivo
                       </PrimaryButton>
@@ -1787,22 +1400,18 @@ export default function BasePage() {
                                 <circle cx="12" cy="12" r="3"/>
                               </svg>
                             </IconButton>
-                            {canEdit && (
-                              <IconButton type="button" onClick={() => openFileEditModal(item.id)} title="Editar">
-                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                                  <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
-                                  <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
-                                </svg>
-                              </IconButton>
-                            )}
-                            {canDelete && (
-                              <IconButton type="button" onClick={() => deleteFile(item.id)} $danger title="Excluir">
-                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                                  <polyline points="3 6 5 6 21 6"/>
-                                  <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
-                                </svg>
-                              </IconButton>
-                            )}
+                            <IconButton type="button" onClick={() => openFileEditModal(item.id)} title="Editar">
+                              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+                                <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+                              </svg>
+                            </IconButton>
+                            <IconButton type="button" onClick={() => deleteFile(item.id)} $danger title="Excluir">
+                              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                <polyline points="3 6 5 6 21 6"/>
+                                <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+                              </svg>
+                            </IconButton>
                           </FileCardActions>
                         </FileCardTop>
                         <FileCardBody onClick={() => openFileView(item.id)}>
@@ -1838,7 +1447,7 @@ export default function BasePage() {
                   </FilesGrid>
                 )}
               </>
-            ) : activeTab === "passwords" && canManagePasswords ? (
+            ) : (
               <>
                 <FiltersBar>
                   <SearchWrapper>
@@ -1907,7 +1516,7 @@ export default function BasePage() {
                         ? "Tente ajustar os filtros de busca para encontrar senhas."
                         : "Comece criando sua primeira senha no cofre."}
                     </EmptyText>
-                    {!passwordSearchQuery && !passwordFilterCategory && canManagePasswords && (
+                    {!passwordSearchQuery && !passwordFilterCategory && (
                       <PrimaryButton type="button" onClick={openPasswordCreateModal} style={{ marginTop: "16px" }}>
                         Criar primeira senha
                       </PrimaryButton>
@@ -1928,22 +1537,18 @@ export default function BasePage() {
                                 <circle cx="12" cy="12" r="3"/>
                               </svg>
                             </IconButton>
-                            {canManagePasswords && (
-                              <IconButton type="button" onClick={() => openPasswordEditModal(item.id)} title="Editar">
-                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                                  <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
-                                  <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
-                                </svg>
-                              </IconButton>
-                            )}
-                            {canManagePasswords && (
-                              <IconButton type="button" onClick={() => deletePassword(item.id)} $danger title="Excluir">
-                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                                  <polyline points="3 6 5 6 21 6"/>
-                                  <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
-                                </svg>
-                              </IconButton>
-                            )}
+                            <IconButton type="button" onClick={() => openPasswordEditModal(item.id)} title="Editar">
+                              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+                                <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+                              </svg>
+                            </IconButton>
+                            <IconButton type="button" onClick={() => deletePassword(item.id)} $danger title="Excluir">
+                              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                <polyline points="3 6 5 6 21 6"/>
+                                <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+                              </svg>
+                            </IconButton>
                           </CardActions>
                         </CardTop>
                         <CardBody onClick={() => openPasswordView(item.id)}>
@@ -1982,10 +1587,8 @@ export default function BasePage() {
                   </DocumentsGrid>
                 )}
               </>
-            ) : null}
+            )}
           </MainCard>
-        </Content>
-      </Shell>
 
       {viewDocument && (
         <>
@@ -2018,11 +1621,9 @@ export default function BasePage() {
               )}
             </ViewModalContent>
             <ViewModalActions>
-              {canEdit && (
-                <ActionButton type="button" onClick={() => { closeViewModal(); openEditModal(viewDocument.id); }}>
-                  Editar documento
-                </ActionButton>
-              )}
+              <ActionButton type="button" onClick={() => { closeViewModal(); openEditModal(viewDocument.id); }}>
+                Editar documento
+              </ActionButton>
               <PrimaryButton type="button" onClick={closeViewModal}>
                 Fechar
               </PrimaryButton>
@@ -2359,11 +1960,9 @@ export default function BasePage() {
               </div>
             </ViewModalContent>
             <ViewModalActions>
-              {canEdit && (
-                <ActionButton type="button" onClick={() => { closeFileView(); openFileEditModal(viewFile.id); }}>
-                  Editar informações
-                </ActionButton>
-              )}
+              <ActionButton type="button" onClick={() => { closeFileView(); openFileEditModal(viewFile.id); }}>
+                Editar informações
+              </ActionButton>
               <PrimaryButton type="button" onClick={closeFileView}>
                 Fechar
               </PrimaryButton>
@@ -2371,6 +1970,7 @@ export default function BasePage() {
           </ViewModal>
         </>
       )}
+      </Content>
 
       {isFileUploadOpen && (
         <>
@@ -2636,11 +2236,9 @@ export default function BasePage() {
               </div>
             </ViewModalContent>
             <ViewModalActions>
-              {canManagePasswords && (
-                <ActionButton type="button" onClick={() => { closePasswordView(); openPasswordEditModal(viewPassword.id); }}>
-                  Editar senha
-                </ActionButton>
-              )}
+              <ActionButton type="button" onClick={() => { closePasswordView(); openPasswordEditModal(viewPassword.id); }}>
+                Editar senha
+              </ActionButton>
               <PrimaryButton type="button" onClick={closePasswordView}>
                 Fechar
               </PrimaryButton>
@@ -2865,25 +2463,7 @@ export default function BasePage() {
         </>
       )}
 
-      {confirmOpen && (
-        <>
-          <ConfirmBackdrop $open={confirmOpen} onClick={() => setConfirmOpen(false)} aria-hidden={!confirmOpen} />
-          <ConfirmDialog
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="confirm-exit-title"
-            $open={confirmOpen}
-            onKeyDown={(e) => { if (e.key === "Escape") setConfirmOpen(false); }}
-          >
-            <ConfirmTitle id="confirm-exit-title">Você deseja realmente sair?</ConfirmTitle>
-            <ConfirmActions>
-              <CancelButton type="button" onClick={() => setConfirmOpen(false)}>Cancelar</CancelButton>
-              <ConfirmButton type="button" onClick={onLogout}>Confirmar</ConfirmButton>
-            </ConfirmActions>
-          </ConfirmDialog>
-        </>
-      )}
-    </Page>
+    </StandardLayout>
   );
 }
 
@@ -2990,86 +2570,6 @@ const NavItem = styled(Link)`
     flex-shrink: 0;
     width: 20px;
     height: 20px;
-  }
-`;
-
-const NavItemButton = styled.button`
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 4px;
-  padding: 10px 4px;
-  border-radius: 8px;
-  border: none;
-  background: transparent;
-  color: inherit;
-  text-decoration: none;
-  font-size: 0.7rem;
-  font-weight: 500;
-  transition: all 0.2s ease;
-  width: 100%;
-  cursor: pointer;
-  position: relative;
-  &:hover { background: #f3f4f6; }
-  &:focus { outline: none; }
-  &:focus-visible { outline: none; }
-
-  svg {
-    flex-shrink: 0;
-    width: 20px;
-    height: 20px;
-  }
-`;
-
-const ConfigSubmenu = styled.div<{ $open: boolean }>`
-  position: fixed;
-  background: #fff;
-  border: 1px solid var(--border);
-  border-radius: 12px;
-  box-shadow: 0 12px 28px rgba(0,0,0,0.12);
-  min-width: 180px;
-  padding: 8px;
-  transform: translateY(${(p) => (p.$open ? "0" : "8px")});
-  opacity: ${(p) => (p.$open ? 1 : 0)};
-  pointer-events: ${(p) => (p.$open ? "auto" : "none")};
-  transition: opacity .18s ease, transform .18s ease;
-  z-index: 9999;
-  isolation: isolate;
-
-  @media (max-width: 960px) {
-    left: 16px !important;
-    top: auto !important;
-    bottom: 96px !important;
-  }
-`;
-
-const ConfigSubmenuItem = styled.a`
-  width: 100%;
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 10px 12px;
-  border: none;
-  background: transparent;
-  border-radius: 8px;
-  cursor: pointer;
-  text-align: left;
-  color: inherit;
-  text-decoration: none;
-  font-size: 0.9rem;
-  &:hover {
-    background: #f3f4f6;
-  }
-  &:active {
-    background: #e9ecef;
-  }
-  &:focus { outline: none; }
-  &:focus-visible { outline: none; }
-
-  svg {
-    flex-shrink: 0;
-    opacity: 0.8;
   }
 `;
 

@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAuthenticatedUser } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { hasPermission } from "@/lib/permissions";
 
 type ParamsPromise = Promise<{ id: string }>;
 
@@ -85,12 +84,6 @@ export async function PUT(req: NextRequest, context: { params: ParamsPromise }) 
   const user = await getAuthenticatedUser();
   if (!user) return NextResponse.json({ error: "Não autenticado" }, { status: 401 });
 
-  // Verificar permissão para editar projetos
-  const canEdit = await hasPermission(user.id, "projects.edit");
-  if (!canEdit && user.id !== 1) {
-    return NextResponse.json({ error: "Sem permissão para editar projetos" }, { status: 403 });
-  }
-
   try {
     const id = await parseRawId(context.params);
     const body = (await req.json().catch(() => null)) as Record<string, unknown> | null;
@@ -143,12 +136,6 @@ export async function PUT(req: NextRequest, context: { params: ParamsPromise }) 
 
     // Atualizar membros se fornecido
     if (Array.isArray(body.memberIds)) {
-      // Verificar permissão para gerenciar membros
-      const canManageMembers = await hasPermission(user.id, "projects.manage_members");
-      if (!canManageMembers && user.id !== 1) {
-        return NextResponse.json({ error: "Sem permissão para gerenciar membros do projeto" }, { status: 403 });
-      }
-
       const memberIds = (body.memberIds as unknown[])
         .map((id) => Number(id))
         .filter((id) => !isNaN(id) && id > 0 && id !== user.id); // Não incluir o criador
@@ -237,12 +224,6 @@ export async function PUT(req: NextRequest, context: { params: ParamsPromise }) 
 export async function DELETE(req: NextRequest, context: { params: ParamsPromise }) {
   const user = await getAuthenticatedUser();
   if (!user) return NextResponse.json({ error: "Não autenticado" }, { status: 401 });
-
-  // Verificar permissão para deletar projetos
-  const canDelete = await hasPermission(user.id, "projects.delete");
-  if (!canDelete && user.id !== 1) {
-    return NextResponse.json({ error: "Sem permissão para deletar projetos" }, { status: 403 });
-  }
 
   try {
     const id = await parseRawId(context.params);

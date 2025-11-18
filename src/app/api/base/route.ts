@@ -2,7 +2,6 @@ import { NextRequest, NextResponse } from "next/server";
 import { getAuthenticatedUser } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { encrypt, decrypt } from "@/lib/encryption";
-import { hasPermission } from "@/lib/permissions";
 
 function sanitizeString(value: unknown, maxLength = 10000) {
   if (typeof value !== "string") return "";
@@ -65,10 +64,6 @@ export async function GET() {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    if (!(await hasPermission(auth.id, "knowledge.documents.view"))) {
-      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-    }
-
     const documents = await prisma.document.findMany({
       include: {
         createdBy: {
@@ -98,10 +93,6 @@ export async function POST(req: NextRequest) {
   if (!auth) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
-
-    if (!(await hasPermission(auth.id, "knowledge.create"))) {
-      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-    }
 
   const payload = await req.json().catch(() => null);
   if (!payload || typeof payload !== "object") {
