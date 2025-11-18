@@ -1162,7 +1162,7 @@ export default function AprovacoesPage() {
 
   return (
     <StandardLayout>
-      <Content>
+        <Content>
           <div>
             <PageHeader>
               <RefreshButton onClick={handleRefresh} disabled={refreshing || (activeTab === "pending" ? loading : historyLoading)}>
@@ -1664,7 +1664,7 @@ export default function AprovacoesPage() {
               )}
             </CardBody>
           </Card>
-      </Content>
+        </Content>
       
       {confirmOpen && confirmAction && typeof window !== "undefined" && createPortal(
         <ConfirmBackdrop $open={confirmOpen} onClick={() => { setConfirmOpen(false); setConfirmAction(null); }} aria-hidden={!confirmOpen}>

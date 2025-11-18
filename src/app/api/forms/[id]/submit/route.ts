@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { sendTicketNotificationEmail, sendNotificationEmail } from "@/lib/email";
 import fs from "fs";
 import path from "path";
 
@@ -171,7 +172,41 @@ export async function POST(req: NextRequest, context: { params: ParamsPromise })
           formId: id,
           status: "PENDING",
         },
+        include: {
+          form: {
+            include: {
+              approvers: {
+                include: {
+                  user: {
+                    select: {
+                      id: true,
+                      name: true,
+                      email: true,
+                      newsletter: true,
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
       });
+
+      // Enviar email para os aprovadores com newsletter ativado
+      const appUrl = process.env.APP_URL || process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
+      for (const approver of approval.form.approvers) {
+        if (approver.user.newsletter && approver.user.email) {
+          await sendNotificationEmail(
+            approver.user.email,
+            "Nova Aprovação Pendente",
+            `Uma nova submissão do formulário <strong>${form.title}</strong> aguarda sua aprovação.<br><br>ID da Submissão: #${submission.id}`,
+            "approval",
+            `${appUrl}/aprovacoes`,
+            approver.user.name
+          );
+        }
+      }
+
       return NextResponse.json({ success: true, requiresApproval: true, approvalId: approval.id, submissionId: submission.id, formId: form.id });
     }
 
@@ -191,8 +226,31 @@ export async function POST(req: NextRequest, context: { params: ParamsPromise })
           userId,
           submissionId: submission.id,
         },
+        include: {
+          user: {
+            select: {
+              id: true,
+              name: true,
+              email: true,
+              newsletter: true,
+            },
+          },
+        },
       });
       ticketId = ticket.id;
+
+      // Enviar email para o usuário se tiver newsletter ativado
+      if (ticket.user.newsletter && ticket.user.email) {
+        await sendTicketNotificationEmail(
+          ticket.user.email,
+          {
+            id: ticket.id,
+            title: ticket.title,
+          },
+          "created",
+          ticket.user.name
+        );
+      }
     }
     return NextResponse.json({ success: true, ticketId, submissionId: submission.id, formId: form.id });
   } catch (error) {

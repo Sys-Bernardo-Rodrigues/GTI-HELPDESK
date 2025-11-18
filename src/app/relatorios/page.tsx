@@ -553,10 +553,10 @@ export default function ReportsPage() {
   if (loading) {
     return (
       <StandardLayout>
-        <LoadingContainer>
-          <LoadingSpinner />
-          <LoadingText>Carregando relatórios...</LoadingText>
-        </LoadingContainer>
+            <LoadingContainer>
+              <LoadingSpinner />
+              <LoadingText>Carregando relatórios...</LoadingText>
+            </LoadingContainer>
       </StandardLayout>
     );
   }

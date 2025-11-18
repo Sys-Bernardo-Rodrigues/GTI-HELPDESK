@@ -420,6 +420,8 @@ type Profile = {
   phoneVerified: boolean;
   pendingEmail: string;
   emailVerifiedAt: string | null;
+  emailVerificationToken: string | null;
+  twoFactor: boolean;
 };
 
 export default function ProfilePage() {
@@ -438,6 +440,10 @@ export default function ProfilePage() {
   const [pwdConfirm, setPwdConfirm] = useState<string>("");
   const [pwdSaving, setPwdSaving] = useState<boolean>(false);
   const [pwdMessage, setPwdMessage] = useState<string>("");
+  const [twoFactorCode, setTwoFactorCode] = useState<string>("");
+  const [twoFactorLoading, setTwoFactorLoading] = useState<boolean>(false);
+  const [twoFactorMessage, setTwoFactorMessage] = useState<string>("");
+  const [showTwoFactorActivate, setShowTwoFactorActivate] = useState<boolean>(false);
 
   function resolveAvatarUrl(u?: string): string {
     if (!u) return "";
@@ -471,6 +477,16 @@ export default function ProfilePage() {
         }
       } catch {}
     })();
+
+    // Verificar se há parâmetro de email verificado na URL
+    if (typeof window !== "undefined") {
+      const params = new URLSearchParams(window.location.search);
+      if (params.get("emailVerified") === "true") {
+        setEmailMessage("E-mail verificado com sucesso!");
+        // Remover parâmetro da URL
+        window.history.replaceState({}, "", "/profile");
+      }
+    }
   }, []);
 
   async function onSave(e: React.FormEvent) {
@@ -567,19 +583,111 @@ export default function ProfilePage() {
     setEmailMessage("");
     try {
       const res = await fetch("/api/profile/email", {
-        method: "POST",
+        method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ newEmail: emailNew }),
+        body: JSON.stringify({ email: emailNew }),
       });
       const json = await res.json();
-      if (!res.ok) throw new Error(json?.error || "Falha ao atualizar e-mail");
+      if (!res.ok) throw new Error(json?.error || json?.message || "Falha ao atualizar e-mail");
       setProfile((p) => (p ? { ...p, pendingEmail: emailNew } : p));
-      setEmailMessage("Verificação enviada para o novo e-mail.");
+      setEmailMessage(json?.message || "Verificação enviada para o novo e-mail.");
       setEmailNew("");
     } catch (err: any) {
       setEmailMessage(err?.message || String(err));
     } finally {
       setEmailSaving(false);
+    }
+  }
+
+  async function onVerifyEmail() {
+    if (!profile?.emailVerificationToken) return;
+    window.location.href = `/api/profile/email/verify?token=${profile.emailVerificationToken}`;
+  }
+
+  async function onRequestTwoFactorCode() {
+    setTwoFactorLoading(true);
+    setTwoFactorMessage("");
+    try {
+      const res = await fetch("/api/profile/two-factor/request-code", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+      });
+      const json = await res.json();
+      if (!res.ok || !json.ok) {
+        throw new Error(json?.error || "Falha ao solicitar código");
+      }
+      setTwoFactorMessage(json?.message || "Código enviado para seu e-mail");
+      if (json?.code) {
+        console.log("Código 2FA (dev):", json.code);
+      }
+      setShowTwoFactorActivate(true);
+    } catch (err: any) {
+      setTwoFactorMessage(err?.message || String(err));
+    } finally {
+      setTwoFactorLoading(false);
+    }
+  }
+
+  async function onActivateTwoFactor(e: React.FormEvent) {
+    e.preventDefault();
+    if (!twoFactorCode) {
+      setTwoFactorMessage("Informe o código de verificação");
+      return;
+    }
+    setTwoFactorLoading(true);
+    setTwoFactorMessage("");
+    try {
+      const res = await fetch("/api/profile/two-factor/activate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ code: twoFactorCode }),
+      });
+      const json = await res.json();
+      if (!res.ok || !json.ok) {
+        throw new Error(json?.error || "Falha ao ativar 2FA");
+      }
+      setProfile((p) => (p ? { ...p, twoFactor: true } : p));
+      setTwoFactorMessage(json?.message || "2FA ativado com sucesso");
+      setTwoFactorCode("");
+      setShowTwoFactorActivate(false);
+      // Recarregar perfil
+      const profileRes = await fetch("/api/profile");
+      if (profileRes.ok) {
+        const profileJson = await profileRes.json();
+        setProfile(profileJson as Profile);
+      }
+    } catch (err: any) {
+      setTwoFactorMessage(err?.message || String(err));
+    } finally {
+      setTwoFactorLoading(false);
+    }
+  }
+
+  async function onDeactivateTwoFactor() {
+    if (!confirm("Tem certeza que deseja desativar a autenticação de 2 fatores?")) return;
+    setTwoFactorLoading(true);
+    setTwoFactorMessage("");
+    try {
+      const res = await fetch("/api/profile/two-factor/deactivate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+      });
+      const json = await res.json();
+      if (!res.ok || !json.ok) {
+        throw new Error(json?.error || "Falha ao desativar 2FA");
+      }
+      setProfile((p) => (p ? { ...p, twoFactor: false } : p));
+      setTwoFactorMessage(json?.message || "2FA desativado com sucesso");
+      // Recarregar perfil
+      const profileRes = await fetch("/api/profile");
+      if (profileRes.ok) {
+        const profileJson = await profileRes.json();
+        setProfile(profileJson as Profile);
+      }
+    } catch (err: any) {
+      setTwoFactorMessage(err?.message || String(err));
+    } finally {
+      setTwoFactorLoading(false);
     }
   }
 
@@ -620,7 +728,7 @@ export default function ProfilePage() {
 
   return (
     <StandardLayout>
-      <Content>
+        <Content>
           <ProfileHeader>
             <ProfileHeaderContent>
               <ProfileAvatar>
@@ -760,15 +868,6 @@ export default function ProfilePage() {
                   <div style={{ marginTop: "8px" }}>
                     <Label style={{ marginBottom: "12px", display: "block" }}>Preferências da conta</Label>
                     <CheckboxList>
-                      <CheckboxItem htmlFor="twoFactor">
-                        <input
-                          id="twoFactor"
-                          type="checkbox"
-                          checked={!!profile?.account?.twoFactor}
-                          onChange={() => setProfile((prev) => (prev ? { ...prev, account: { ...prev.account, twoFactor: !prev.account?.twoFactor } } : prev))}
-                        />
-                        <span>Autenticação em dois fatores</span>
-                      </CheckboxItem>
                       <CheckboxItem htmlFor="newsletter">
                         <input
                           id="newsletter"
@@ -818,10 +917,21 @@ export default function ProfilePage() {
                 {profile?.pendingEmail && (
                   <InlineInfo>
                     Verificação pendente para <strong>{profile.pendingEmail}</strong>
+                    {profile?.emailVerificationToken && (
+                      <div style={{ marginTop: "8px" }}>
+                        <PrimaryButton
+                          type="button"
+                          onClick={onVerifyEmail}
+                          style={{ fontSize: "0.875rem", padding: "8px 16px" }}
+                        >
+                          Verificar agora
+                        </PrimaryButton>
+                      </div>
+                    )}
                   </InlineInfo>
                 )}
                 {emailMessage && (
-                  <FormMessage $variant={emailMessage.includes("enviada") ? "success" : "error"}>
+                  <FormMessage $variant={emailMessage.includes("enviada") || emailMessage.includes("confirmação") ? "success" : "error"}>
                     {emailMessage}
                   </FormMessage>
                 )}
@@ -918,8 +1028,135 @@ export default function ProfilePage() {
                 </VerificationItem>
               </VerificationList>
             </Card>
+
+            <Card>
+              <CardHeader>
+                <HeaderIcon>
+                  <svg viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+                  </svg>
+                </HeaderIcon>
+                <div>
+                  <CardTitle>Autenticação de 2 Fatores (2FA)</CardTitle>
+                  <Muted>Proteja sua conta com verificação adicional por e-mail</Muted>
+                </div>
+              </CardHeader>
+              <div style={{ padding: "20px" }}>
+                <VerificationItem style={{ marginBottom: "20px" }}>
+                  <div>
+                    <VerificationLabel>Status 2FA</VerificationLabel>
+                    <Muted style={{ marginTop: "4px", fontSize: "0.75rem" }}>
+                      {profile?.twoFactor
+                        ? "Autenticação de 2 fatores está ativa"
+                        : "Autenticação de 2 fatores está desativada"}
+                    </Muted>
+                  </div>
+                  <VerificationStatus $verified={!!profile?.twoFactor}>
+                    {profile?.twoFactor ? "Ativo" : "Inativo"}
+                  </VerificationStatus>
+                </VerificationItem>
+
+                {!profile?.twoFactor ? (
+                  <div>
+                    {!showTwoFactorActivate ? (
+                      <div>
+                        <p style={{ marginBottom: "16px", fontSize: "0.875rem", color: "#64748b" }}>
+                          Ao ativar, você receberá um código por e-mail sempre que fizer login.
+                        </p>
+                        <PrimaryButton
+                          type="button"
+                          onClick={onRequestTwoFactorCode}
+                          disabled={twoFactorLoading}
+                        >
+                          {twoFactorLoading ? "Enviando código..." : "Ativar 2FA"}
+                        </PrimaryButton>
+                      </div>
+                    ) : (
+                      <form onSubmit={onActivateTwoFactor}>
+                        <Field>
+                          <Label htmlFor="two-factor-code">Código de Verificação</Label>
+                          <Input
+                            id="two-factor-code"
+                            type="text"
+                            inputMode="numeric"
+                            pattern="[0-9]*"
+                            maxLength={6}
+                            placeholder="000000"
+                            value={twoFactorCode}
+                            onChange={(e) => setTwoFactorCode(e.target.value.replace(/\D/g, ""))}
+                            required
+                          />
+                          <Muted style={{ marginTop: "4px", fontSize: "0.75rem" }}>
+                            Digite o código de 6 dígitos enviado para seu e-mail
+                          </Muted>
+                        </Field>
+                        {twoFactorMessage && (
+                          <FormMessage $variant={twoFactorMessage.includes("sucesso") || twoFactorMessage.includes("ativado") ? "success" : "error"}>
+                            {twoFactorMessage}
+                          </FormMessage>
+                        )}
+                        <div style={{ display: "flex", gap: "8px", marginTop: "16px" }}>
+                          <PrimaryButton type="submit" disabled={twoFactorLoading}>
+                            {twoFactorLoading ? "Ativando..." : "Confirmar e Ativar"}
+                          </PrimaryButton>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setShowTwoFactorActivate(false);
+                              setTwoFactorCode("");
+                              setTwoFactorMessage("");
+                            }}
+                            style={{
+                              padding: "12px 24px",
+                              border: "1px solid #e5e7eb",
+                              borderRadius: "10px",
+                              background: "white",
+                              color: "#374151",
+                              fontWeight: 600,
+                              fontSize: "0.875rem",
+                              cursor: "pointer",
+                            }}
+                          >
+                            Cancelar
+                          </button>
+                        </div>
+                      </form>
+                    )}
+                  </div>
+                ) : (
+                  <div>
+                    <p style={{ marginBottom: "16px", fontSize: "0.875rem", color: "#64748b" }}>
+                      Sua conta está protegida com autenticação de 2 fatores. Você receberá um código por e-mail sempre que fizer login.
+                    </p>
+                    {twoFactorMessage && (
+                      <FormMessage $variant={twoFactorMessage.includes("sucesso") || twoFactorMessage.includes("desativado") ? "success" : "error"}>
+                        {twoFactorMessage}
+                      </FormMessage>
+                    )}
+                    <button
+                      type="button"
+                      onClick={onDeactivateTwoFactor}
+                      disabled={twoFactorLoading}
+                      style={{
+                        padding: "12px 24px",
+                        border: "none",
+                        borderRadius: "10px",
+                        background: "#fee2e2",
+                        color: "#dc2626",
+                        fontWeight: 600,
+                        fontSize: "0.875rem",
+                        cursor: twoFactorLoading ? "not-allowed" : "pointer",
+                        opacity: twoFactorLoading ? 0.6 : 1,
+                      }}
+                    >
+                      {twoFactorLoading ? "Desativando..." : "Desativar 2FA"}
+                    </button>
+                  </div>
+                )}
+              </div>
+            </Card>
           </ProfileGrid>
-      </Content>
+        </Content>
     </StandardLayout>
   );
 }

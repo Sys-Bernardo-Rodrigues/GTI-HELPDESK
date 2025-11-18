@@ -1052,7 +1052,7 @@ export default function BasePage() {
 
   return (
     <StandardLayout>
-      <Content>
+        <Content>
           <MainCard>
             <CardHeader>
               <HeaderSection>

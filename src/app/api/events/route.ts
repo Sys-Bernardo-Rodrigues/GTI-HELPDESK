@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAuthenticatedUser } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { sendEventNotificationEmail } from "@/lib/email";
 
 export async function GET(req: NextRequest) {
   const user = await getAuthenticatedUser();
@@ -247,9 +248,39 @@ export async function POST(req: NextRequest) {
         isAllDay,
         userId: user.id,
       },
+      include: {
+        user: {
+          select: {
+            name: true,
+            email: true,
+            newsletter: true,
+          },
+        },
+      },
     });
 
-    return NextResponse.json(event);
+    // Enviar email para usuários com newsletter ativado
+    if (event.user.newsletter) {
+      await sendEventNotificationEmail(event.user.email, {
+        title: event.title,
+        description: event.description,
+        startDate: event.startDate,
+        endDate: event.endDate,
+        location: event.location,
+      }, event.user.name);
+    }
+
+    return NextResponse.json({
+      id: event.id,
+      title: event.title,
+      description: event.description,
+      startDate: event.startDate,
+      endDate: event.endDate,
+      location: event.location,
+      color: event.color,
+      isAllDay: event.isAllDay,
+      userId: event.userId,
+    });
   } catch (error) {
     console.error("[events:POST]", error);
     return NextResponse.json({ error: "Erro ao criar evento" }, { status: 500 });

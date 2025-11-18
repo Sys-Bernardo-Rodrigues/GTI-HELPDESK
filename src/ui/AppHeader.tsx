@@ -28,7 +28,7 @@ export default function AppHeader({ open, onToggle }: Props) {
 
   return (
     <TopBar role="navigation" aria-label="Barra de navegação">
-      <Brand>Helpdesk</Brand>
+      <Brand>WitchDesk</Brand>
       <MainNav aria-label="Navegação principal">
         <NavLink href="/home" aria-label="Início">Início</NavLink>
         <NavLink href="/tickets" aria-label="Tickets">Tickets</NavLink>

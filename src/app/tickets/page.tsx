@@ -2662,7 +2662,7 @@ const ConfirmBackdrop = styled.div<{ $open: boolean }>`
   opacity: ${(p) => (p.$open ? 1 : 0)};
   pointer-events: ${(p) => (p.$open ? "auto" : "none")};
   transition: opacity .18s ease;
-  z-index: 30;
+  z-index: 10001;
 `;
 
 const ConfirmDialog = styled.div<{ $open: boolean }>`
@@ -2677,7 +2677,7 @@ const ConfirmDialog = styled.div<{ $open: boolean }>`
   width: min(480px, 94vw);
   padding: 18px;
   transition: opacity .18s ease, transform .18s ease;
-  z-index: 35;
+  z-index: 10002;
 `;
 
 const ConfirmTitle = styled.h2`

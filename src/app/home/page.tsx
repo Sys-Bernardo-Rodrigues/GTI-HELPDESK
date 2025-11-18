@@ -504,10 +504,61 @@ export default function HomePage() {
         if (res.ok) {
           const json = await res.json();
           setUser(json.user);
+        } else {
+          console.error("Erro ao carregar sessão:", res.status);
         }
-      } catch {}
+      } catch (error) {
+        console.error("Erro ao carregar sessão:", error);
+      }
     })();
   }, []);
+
+  // Recarregar dados quando a página voltar ao foco
+  useEffect(() => {
+    function onVisibility() {
+      if (document.visibilityState === "visible" && user?.id) {
+        // Recarregar dados quando a página voltar ao foco
+        const today = new Date();
+        const startOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+        const endOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 23, 59, 59);
+        
+        Promise.all([
+          fetch("/api/tickets").then((res) => res.ok ? res.json() : null),
+          fetch(`/api/events?startDate=${startOfDay.toISOString()}&endDate=${endOfDay.toISOString()}&onlyMine=true`).then((res) => res.ok ? res.json() : null),
+        ]).then(([ticketsData, eventsData]) => {
+          if (ticketsData?.items) {
+            setTickets(ticketsData.items);
+          }
+          if (eventsData?.items) {
+            const eventsList = eventsData.items || [];
+            const scheduledTickets = (ticketsData?.items || []).filter((ticket: TicketItem) => {
+              if (!ticket.scheduledAt) return false;
+              const scheduledDate = new Date(ticket.scheduledAt);
+              const isToday = scheduledDate >= startOfDay && scheduledDate <= endOfDay;
+              const isMine = ticket.userId === user.id || ticket.assignedTo?.id === user.id;
+              return isToday && isMine;
+            });
+            const ticketEvents = scheduledTickets.map((ticket: TicketItem) => ({
+              id: ticket.id + 1000000,
+              title: ticket.title,
+              startDate: ticket.scheduledAt!,
+              endDate: ticket.scheduledAt!,
+              isAllDay: false,
+              color: "#3b82f6",
+              userAvatar: ticket.assignedTo?.avatarUrl || ticket.requester?.avatarUrl || null,
+              userName: ticket.assignedTo?.name || ticket.requester?.name || null,
+              type: "ticket",
+            }));
+            setEvents([...eventsList, ...ticketEvents]);
+          }
+        }).catch((error) => {
+          console.error("Erro ao recarregar dados:", error);
+        });
+      }
+    }
+    document.addEventListener("visibilitychange", onVisibility);
+    return () => document.removeEventListener("visibilitychange", onVisibility);
+  }, [user?.id]);
 
   // Buscar tickets e eventos
   useEffect(() => {
@@ -560,6 +611,12 @@ export default function HomePage() {
           }));
           
           setEvents([...eventsList, ...ticketEvents]);
+        } else {
+          console.error("Erro ao carregar eventos:", eventsRes.status, await eventsRes.text());
+        }
+        
+        if (!ticketsRes.ok) {
+          console.error("Erro ao carregar tickets:", ticketsRes.status, await ticketsRes.text());
         }
       } catch (error) {
         console.error("Erro ao carregar dados:", error);
@@ -568,7 +625,7 @@ export default function HomePage() {
       }
     }
     loadData();
-  }, []);
+  }, [user?.id]);
 
   // Filtrar tickets em atraso
   const overdueTickets = useMemo(() => {

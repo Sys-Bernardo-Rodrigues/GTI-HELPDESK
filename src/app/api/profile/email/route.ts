@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getAuthenticatedUser } from "@/lib/auth";
+import { sendEmailVerificationEmail, generateCode } from "@/lib/email";
 
 function isValidEmail(email: string) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
@@ -27,12 +28,25 @@ export async function PUT(req: NextRequest) {
   if (exists) return NextResponse.json({ error: "E-mail já em uso" }, { status: 409 });
 
   const token = generateToken();
-  await prisma.user.update({
+  const dbUser = await prisma.user.update({
     where: { id: user.id },
     data: { pendingEmail: email, emailVerificationToken: token },
+    select: { name: true },
   });
 
-  // In produção, enviaria um e-mail contendo o link abaixo:
+  // Enviar email de verificação
+  const emailSent = await sendEmailVerificationEmail(email, token, dbUser.name || undefined);
+
+  if (!emailSent) {
+    console.warn("Falha ao enviar email de verificação, mas token foi gerado");
+  }
+
   const verifyUrl = `${req.nextUrl.origin}/api/profile/email/verify?token=${token}`;
-  return NextResponse.json({ success: true, message: "E-mail de confirmação enviado", verifyUrl });
+  return NextResponse.json({
+    success: true,
+    message: emailSent
+      ? "E-mail de confirmação enviado. Verifique sua caixa de entrada."
+      : "Token gerado. Verifique o console para o link de verificação.",
+    verifyUrl: emailSent ? undefined : verifyUrl, // Só retorna URL se email não foi enviado
+  });
 }

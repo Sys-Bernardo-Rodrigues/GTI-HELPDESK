@@ -24,5 +24,8 @@ export async function GET(req: NextRequest) {
     },
   });
 
-  return NextResponse.json({ success: true, message: "E-mail confirmado com sucesso" });
+  // Redirecionar para a página de perfil com mensagem de sucesso
+  const redirectUrl = new URL("/profile", req.nextUrl.origin);
+  redirectUrl.searchParams.set("emailVerified", "true");
+  return NextResponse.redirect(redirectUrl);
 }

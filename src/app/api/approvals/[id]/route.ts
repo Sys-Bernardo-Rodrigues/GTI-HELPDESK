@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAuthenticatedUser } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { sendApprovalNotificationEmail, sendTicketNotificationEmail } from "@/lib/email";
 
 type ParamsPromise = Promise<{ id: string }>;
 
@@ -64,6 +65,14 @@ export async function POST(req: NextRequest, context: { params: ParamsPromise })
       form: {
         include: {
           fields: true,
+          user: {
+            select: {
+              id: true,
+              name: true,
+              email: true,
+              newsletter: true,
+            },
+          },
         },
       },
     },
@@ -93,6 +102,8 @@ export async function POST(req: NextRequest, context: { params: ParamsPromise })
     const payload = JSON.parse(approval.submission.data);
     const summary = buildSummary(payload, approval.form.title, approval.form.fields);
 
+    let createdTicket: { id: number; title: string; user: { email: string; name: string | null; newsletter: boolean } } | null = null;
+
     await prisma.$transaction(async (tx) => {
       // Atualizar aprovação
       await tx.formApproval.update({
@@ -105,15 +116,51 @@ export async function POST(req: NextRequest, context: { params: ParamsPromise })
       });
 
       // Criar ticket
-      await tx.ticket.create({
+      const ticket = await tx.ticket.create({
         data: {
           title: `Resposta: ${approval.form.title}`,
           description: summary,
           userId,
           submissionId: approval.submissionId,
         },
+        include: {
+          user: {
+            select: {
+              email: true,
+              name: true,
+              newsletter: true,
+            },
+          },
+        },
       });
+      createdTicket = ticket;
     });
+
+    // Enviar email para o criador do formulário se tiver newsletter ativado
+    if (approval.form.user?.newsletter && approval.form.user.email) {
+      await sendApprovalNotificationEmail(
+        approval.form.user.email,
+        {
+          formTitle: approval.form.title,
+          submissionId: approval.submissionId,
+          status: "APPROVED",
+        },
+        approval.form.user.name
+      );
+    }
+
+    // Enviar email para o usuário do ticket se tiver newsletter ativado
+    if (createdTicket && createdTicket.user.newsletter && createdTicket.user.email) {
+      await sendTicketNotificationEmail(
+        createdTicket.user.email,
+        {
+          id: createdTicket.id,
+          title: createdTicket.title,
+        },
+        "created",
+        createdTicket.user.name
+      );
+    }
 
     return NextResponse.json({ success: true, status, message: "Formulário aprovado e ticket criado com sucesso" });
   } else {
@@ -126,6 +173,19 @@ export async function POST(req: NextRequest, context: { params: ParamsPromise })
         reviewedAt: new Date(),
       },
     });
+
+    // Enviar email para o criador do formulário se tiver newsletter ativado
+    if (approval.form.user?.newsletter && approval.form.user.email) {
+      await sendApprovalNotificationEmail(
+        approval.form.user.email,
+        {
+          formTitle: approval.form.title,
+          submissionId: approval.submissionId,
+          status: "REJECTED",
+        },
+        approval.form.user.name
+      );
+    }
 
     return NextResponse.json({ success: true, status, message: "Formulário rejeitado" });
   }

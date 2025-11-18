@@ -3,8 +3,16 @@ import StyledComponentsRegistry from "@/lib/styled-registry";
 import GlobalStyles from "@/ui/GlobalStyles";
 
 export const metadata: Metadata = {
-  title: "GTI Helpdesk",
-  description: "Sistema de Helpdesk",
+  title: "WitchDesk",
+  description: "Sistema de Helpdesk WitchDesk",
+  icons: {
+    icon: [
+      { url: "/icon.svg", type: "image/svg+xml" },
+      { url: "/icon.png", type: "image/png", sizes: "32x32" },
+    ],
+    shortcut: "/icon.svg",
+    apple: "/icon.svg",
+  },
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

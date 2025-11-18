@@ -209,16 +209,16 @@ export default function UsersPage() {
         });
       } else {
         // Fallback para dados locais
-        setSelectedUserId(userId);
-        setEditForm({
-          name: item.name,
-          email: item.email,
-          phone: item.phone,
-          jobTitle: item.jobTitle,
-          company: item.company,
-          avatarUrl: item.avatarUrl,
-          twoFactor: item.twoFactor,
-          newsletter: item.newsletter,
+    setSelectedUserId(userId);
+    setEditForm({
+      name: item.name,
+      email: item.email,
+      phone: item.phone,
+      jobTitle: item.jobTitle,
+      company: item.company,
+      avatarUrl: item.avatarUrl,
+      twoFactor: item.twoFactor,
+      newsletter: item.newsletter,
           accessProfileId: item.accessProfile?.id || null,
         });
       }
@@ -235,7 +235,7 @@ export default function UsersPage() {
         twoFactor: item.twoFactor,
         newsletter: item.newsletter,
         accessProfileId: item.accessProfile?.id || null,
-      });
+    });
     }
     setEditFeedback(null);
     setEditOpen(true);
@@ -386,7 +386,7 @@ export default function UsersPage() {
 
   return (
     <StandardLayout>
-      <Content>
+        <Content>
           <Card>
             <CardHeader>
               <HeaderIcon aria-hidden>
@@ -396,7 +396,7 @@ export default function UsersPage() {
               </HeaderIcon>
               <div>
                 <CardTitle>Usuários</CardTitle>
-                <Muted>Visualize todos os usuários do helpdesk e gerencie seus dados.</Muted>
+                <Muted>Visualize todos os usuários do WitchDesk e gerencie seus dados.</Muted>
               </div>
               <HeaderActions>
                 <ActionButton type="button" onClick={() => loadUsers()} disabled={listLoading}>
@@ -796,7 +796,7 @@ export default function UsersPage() {
       </Content>
     </StandardLayout>
   );
-}
+  }
 
 const Content = styled.main`
   display: grid;

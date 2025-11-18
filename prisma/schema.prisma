@@ -18,13 +18,17 @@ model User {
   jobTitle               String?
   company                String?
   avatarUrl              String?
-  twoFactor              Boolean            @default(false)
+  twoFactor              Boolean            @default(true)
   newsletter             Boolean            @default(false)
   phoneVerified          Boolean            @default(false)
   discordTag             String?            @unique
   pendingEmail           String?
   emailVerificationToken String?
   emailVerifiedAt        DateTime?
+  passwordResetToken     String?
+  passwordResetExpires   DateTime?
+  twoFactorCode          String?
+  twoFactorCodeExpires   DateTime?
   createdAt              DateTime           @default(now())
   forms                  Form[]
   formsToApprove         FormApprover[]

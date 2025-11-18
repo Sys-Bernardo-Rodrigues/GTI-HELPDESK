@@ -9,9 +9,35 @@ Projeto Next.js com TypeScript, banco MariaDB em Docker e ORM Prisma. Inclui mod
 ## Configuração
 1) Copie o arquivo de exemplo e ajuste suas variáveis:
 ```bash
-cp .env.example .env
+cp env.example .env
 # Edite usuário, senha e nome do banco se desejar
 ```
+
+### Configuração de Email (SMTP)
+Para habilitar o envio de emails (verificação de email, notificações, etc), configure as seguintes variáveis no `.env`:
+
+```env
+EMAIL_ENABLED=true
+SMTP_HOST=smtp.gmail.com
+SMTP_PORT=587
+SMTP_SECURE=false
+SMTP_USER=seu-email@gmail.com
+SMTP_PASSWORD=sua-senha-de-app
+EMAIL_FROM=noreply@witchdesk.com
+EMAIL_FROM_NAME=WitchDesk
+APP_URL=http://localhost:3000
+```
+
+**Para Gmail:**
+1. Ative a verificação em duas etapas na sua conta Google
+2. Crie uma "Senha de App" em: https://myaccount.google.com/apppasswords
+3. Use essa senha no `SMTP_PASSWORD`
+
+**Outros provedores comuns:**
+- **Outlook/Hotmail**: `smtp-mail.outlook.com:587`
+- **SendGrid**: `smtp.sendgrid.net:587` (use API key como senha)
+- **Mailgun**: `smtp.mailgun.org:587`
+- **Amazon SES**: `email-smtp.region.amazonaws.com:587`
 
 2) Suba o banco de dados:
 ```bash

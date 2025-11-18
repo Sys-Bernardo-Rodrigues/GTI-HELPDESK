@@ -37,6 +37,24 @@ const TopBarActions = styled.div`
 const Brand = styled.div`
   font-weight: 800;
   color: var(--primary-700);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+`;
+
+const BrandIcon = styled.div`
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+
+  svg {
+    width: 100%;
+    height: 100%;
+    color: var(--primary-700);
+  }
 `;
 
 const MenuToggle = styled.button`
@@ -306,10 +324,11 @@ const ConfirmBackdrop = styled.div<{ $open: boolean }>`
   transition: opacity 0.2s ease;
 `;
 
-const ConfirmDialog = styled.dialog<{ $open: boolean }>`
+const ConfirmDialog = styled.div<{ $open: boolean }>`
   position: fixed;
-  inset: 0;
-  margin: auto;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
   width: min(90vw, 400px);
   max-height: min(90vh, 300px);
   padding: 24px;
@@ -323,7 +342,7 @@ const ConfirmDialog = styled.dialog<{ $open: boolean }>`
   gap: 20px;
   opacity: ${(p) => (p.$open ? 1 : 0)};
   pointer-events: ${(p) => (p.$open ? "auto" : "none")};
-  transition: opacity 0.2s ease;
+  transition: opacity 0.2s ease, transform 0.2s ease;
 `;
 
 const ConfirmTitle = styled.h2`
@@ -575,7 +594,18 @@ export default function StandardLayout({ children }: StandardLayoutProps) {
   return (
     <Page>
       <TopBar role="navigation" aria-label="Barra de navegação">
-        <Brand>Helpdesk</Brand>
+        <Brand>
+          <BrandIcon>
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0,0,256,256" fill="currentColor">
+              <g fill="currentColor" fillRule="nonzero" stroke="none" strokeWidth="1" strokeLinecap="butt" strokeLinejoin="miter" strokeMiterlimit="10" strokeDasharray="" strokeDashoffset="0" fontFamily="none" fontWeight="none" fontSize="none" textAnchor="none" style={{mixBlendMode: "normal"}}>
+                <g transform="translate(256,256.85152) rotate(180) scale(5.12,5.12)">
+                  <path d="M25.00391,2.33398c-0.17825,0 -0.35712,0.04758 -0.51562,0.14258l-19.00391,11.41992c-0.301,0.181 -0.48437,0.50642 -0.48437,0.85742v20.46875c0,0.349 0.18052,0.67152 0.47852,0.85352l5,3.05273c0.666,0.407 1.52148,-0.07352 1.52148,-0.85352v-20.16211l13,-7.93945l13,7.93945v20.20117c0,0.78 0.85353,1.26047 1.51953,0.85547l5,-3.03906c0.299,-0.182 0.48047,-0.50547 0.48047,-0.85547v-20.52148c0,-0.351 -0.18337,-0.67642 -0.48437,-0.85742l-18.99805,-11.41992c-0.1585,-0.095 -0.33542,-0.14258 -0.51367,-0.14258zM21.99805,17.17578c-0.17381,0.00013 -0.35303,0.04669 -0.51953,0.14844l-5,3.05469c-0.298,0.182 -0.47852,0.50356 -0.47852,0.85156v20.79297c0,0.351 0.18338,0.67642 0.48438,0.85742l8.00391,4.80859c0.317,0.191 0.7123,0.19 1.0293,0l7.99805,-4.80664c0.301,-0.181 0.48438,-0.50642 0.48438,-0.85742v-20.79492c0,-0.348 -0.18052,-0.67056 -0.47852,-0.85156l-5,-3.05469c-0.666,-0.407 -1.52148,0.07251 -1.52148,0.85352v20.59375l-2,1.22266l-2,-1.22266v-20.59375c0,-0.58575 -0.48052,-1.00233 -1.00195,-1.00195z"></path>
+                </g>
+              </g>
+            </svg>
+          </BrandIcon>
+          WitchDesk
+        </Brand>
         <TopBarActions>
           <NotificationBell />
         </TopBarActions>
@@ -719,7 +749,7 @@ export default function StandardLayout({ children }: StandardLayoutProps) {
             </UserMenu>,
             document.body
           )}
-          {confirmOpen && (
+          {typeof window !== "undefined" && document && confirmOpen && createPortal(
             <>
               <ConfirmBackdrop $open={confirmOpen} onClick={() => setConfirmOpen(false)} aria-hidden={!confirmOpen} />
               <ConfirmDialog
@@ -735,7 +765,8 @@ export default function StandardLayout({ children }: StandardLayoutProps) {
                   <ConfirmButton type="button" onClick={onLogout}>Confirmar</ConfirmButton>
                 </ConfirmActions>
               </ConfirmDialog>
-            </>
+            </>,
+            document.body
           )}
         </Sidebar>
         <Overlay $show={open} onClick={() => setOpen(false)} aria-hidden={!open} />

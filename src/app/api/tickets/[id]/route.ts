@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAuthenticatedUser } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { sendTicketNotificationEmail } from "@/lib/email";
 
 type TicketStatus = "OPEN" | "IN_PROGRESS" | "OBSERVATION" | "RESOLVED" | "CLOSED";
 
@@ -97,8 +98,8 @@ export async function PUT(req: NextRequest, context: { params: ParamsPromise }) 
       where: { id },
       data,
       include: {
-        user: { select: { id: true, name: true, email: true } },
-        assignedTo: { select: { id: true, name: true, email: true } },
+        user: { select: { id: true, name: true, email: true, newsletter: true } },
+        assignedTo: { select: { id: true, name: true, email: true, newsletter: true } },
         category: { select: { id: true, name: true } },
         submission: {
           select: {
@@ -114,6 +115,33 @@ export async function PUT(req: NextRequest, context: { params: ParamsPromise }) 
         },
       },
     });
+
+    // Enviar emails de notificação se newsletter estiver ativado
+    if (assignedToId !== undefined && updated.assignedTo && updated.assignedTo.newsletter && updated.assignedTo.email) {
+      // Ticket foi atribuído
+      await sendTicketNotificationEmail(
+        updated.assignedTo.email,
+        {
+          id: updated.id,
+          title: updated.title,
+          status: updated.status,
+        },
+        "assigned",
+        updated.assignedTo.name
+      );
+    } else if (statusProvided && updated.user && updated.user.newsletter && updated.user.email) {
+      // Ticket foi atualizado (status mudou)
+      await sendTicketNotificationEmail(
+        updated.user.email,
+        {
+          id: updated.id,
+          title: updated.title,
+          status: updated.status,
+        },
+        "updated",
+        updated.user.name
+      );
+    }
 
     return NextResponse.json({
       id: updated.id,

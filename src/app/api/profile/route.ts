@@ -26,6 +26,8 @@ export async function GET() {
     phoneVerified: dbUser.phoneVerified ?? false,
     pendingEmail: dbUser.pendingEmail ?? "",
     emailVerifiedAt: dbUser.emailVerifiedAt ?? null,
+    emailVerificationToken: dbUser.emailVerificationToken ?? null,
+    twoFactor: dbUser.twoFactor ?? false,
   });
 }
 
@@ -67,6 +69,8 @@ export async function PUT(req: NextRequest) {
       phoneVerified: updated.phoneVerified ?? false,
       pendingEmail: updated.pendingEmail ?? "",
       emailVerifiedAt: updated.emailVerifiedAt ?? null,
+      emailVerificationToken: updated.emailVerificationToken ?? null,
+      twoFactor: updated.twoFactor ?? false,
     });
   } catch (e) {
     return NextResponse.json({ error: "Falha ao salvar no banco" }, { status: 500 });

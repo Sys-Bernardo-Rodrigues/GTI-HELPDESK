@@ -120,7 +120,31 @@ export async function POST(req: NextRequest, context: { params: ParamsPromise })
         description: summary,
         userId,
       },
+      include: {
+        user: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+            newsletter: true,
+          },
+        },
+      },
     });
+
+    // Enviar email para o usuário se tiver newsletter ativado
+    if (ticket.user.newsletter && ticket.user.email) {
+      const { sendTicketNotificationEmail } = await import("@/lib/email");
+      await sendTicketNotificationEmail(
+        ticket.user.email,
+        {
+          id: ticket.id,
+          title: ticket.title,
+        },
+        "created",
+        ticket.user.name
+      );
+    }
 
     return NextResponse.json({ 
       success: true, 
