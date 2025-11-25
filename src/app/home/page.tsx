@@ -303,15 +303,17 @@ const ChatMessage = styled.div<{ $isUser: boolean }>`
 `;
 
 type ChatMessageRole = "user" | "assistant";
-type ChatMessageSource = "local-ai" | "rule-based" | "system";
+type ChatMessageSource = "local-ai" | "rule-based" | "system" | "cache" | "action";
 
 type ChatMessageItem = {
   id: string;
   role: ChatMessageRole;
   content: string;
   createdAt: number;
-  source?: ChatMessageSource;
+  source?: ChatMessageSource | "cache" | "action";
   intent?: string | null;
+  suggestions?: string[];
+  feedback?: { isHelpful: boolean | null; submitted: boolean };
 };
 
 const CHAT_SUGGESTIONS: Array<{ title: string; description: string; prompt: string }> = [
@@ -337,11 +339,52 @@ const CHAT_SUGGESTIONS: Array<{ title: string; description: string; prompt: stri
   },
 ];
 
-const SOURCE_TAGS: Record<ChatMessageSource, { label: string; bg: string; color: string }> = {
+const SOURCE_TAGS: Record<ChatMessageSource | "cache" | "action", { label: string; bg: string; color: string }> = {
   "local-ai": { label: "IA Local", bg: "rgba(79, 70, 229, 0.12)", color: "#4338ca" },
   "rule-based": { label: "Resposta rápida", bg: "rgba(5, 150, 105, 0.15)", color: "#047857" },
+  cache: { label: "Cache", bg: "rgba(59, 130, 246, 0.12)", color: "#2563eb" },
+  action: { label: "Ação executada", bg: "rgba(16, 185, 129, 0.15)", color: "#059669" },
   system: { label: "Sistema", bg: "rgba(249, 115, 22, 0.15)", color: "#ea580c" },
 };
+
+const FeedbackButtons = styled.div`
+  display: flex;
+  gap: 8px;
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px solid rgba(0, 0, 0, 0.05);
+`;
+
+const FeedbackButton = styled.button<{ $helpful?: boolean; $active?: boolean }>`
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 12px;
+  border: 1px solid ${(p) => (p.$active ? (p.$helpful ? "#10b981" : "#ef4444") : "#e2e8f0")};
+  border-radius: 8px;
+  background: ${(p) => (p.$active ? (p.$helpful ? "rgba(16, 185, 129, 0.1)" : "rgba(239, 68, 68, 0.1)") : "#fff")};
+  color: ${(p) => (p.$active ? (p.$helpful ? "#059669" : "#dc2626") : "#64748b")};
+  font-size: 0.75rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+
+  &:hover:not(:disabled) {
+    border-color: ${(p) => (p.$helpful ? "#10b981" : "#ef4444")};
+    background: ${(p) => (p.$helpful ? "rgba(16, 185, 129, 0.15)" : "rgba(239, 68, 68, 0.15)")};
+    color: ${(p) => (p.$helpful ? "#059669" : "#dc2626")};
+  }
+
+  &:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
+
+  svg {
+    width: 14px;
+    height: 14px;
+  }
+`;
 
 const INTENT_LABELS: Record<string, string> = {
   document: "Documentos",
@@ -1082,6 +1125,34 @@ export default function HomePage() {
     void sendTextMessage(prompt);
   }
 
+  async function handleFeedback(messageId: string, isHelpful: boolean, intent?: string | null, source?: string | null) {
+    try {
+      const response = await fetch("/api/chat/feedback", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          messageId,
+          isHelpful,
+          intent,
+          source,
+        }),
+      });
+
+      if (response.ok) {
+        // Atualizar estado da mensagem
+        setChatMessages((prev) =>
+          prev.map((msg) =>
+            msg.id === messageId
+              ? { ...msg, feedback: { isHelpful, submitted: true } }
+              : msg
+          )
+        );
+      }
+    } catch (error) {
+      console.error("Erro ao enviar feedback:", error);
+    }
+  }
+
   // Iniciar gravação de áudio
   async function startRecording() {
     try {
@@ -1285,8 +1356,9 @@ export default function HomePage() {
       appendMessage({
         role: "assistant",
         content: data.message,
-        source: (data.source as ChatMessageSource) ?? "rule-based",
+        source: (data.source as ChatMessageSource | "cache") ?? "rule-based",
         intent: data.intent,
+        suggestions: data.suggestions,
       });
     } catch (error) {
       console.error("Erro ao enviar mensagem:", error);
@@ -1405,7 +1477,56 @@ export default function HomePage() {
                           </FooterChips>
                         </MessageFooter>
                       )}
+                      {msg.role === "assistant" && msg.source !== "action" && (
+                        <FeedbackButtons>
+                          <FeedbackButton
+                            type="button"
+                            $helpful={true}
+                            $active={msg.feedback?.isHelpful === true}
+                            onClick={() => handleFeedback(msg.id, true, msg.intent, msg.source)}
+                            disabled={msg.feedback?.submitted}
+                            title="Esta resposta foi útil"
+                          >
+                            <svg viewBox="0 0 24 24" fill="currentColor">
+                              <path d="M1 21h4V9H1v12zm22-11c0-1.1-.9-2-2-2h-6.31l.95-4.57.03-.32c0-.41-.17-.79-.44-1.06L14.17 1 7.59 7.59C7.22 7.96 7 8.45 7 9v10c0 1.1.9 2 2 2h9c.83 0 1.54-.5 1.84-1.22l3.02-7.05c.09-.23.14-.47.14-.73v-2z" />
+                            </svg>
+                            Útil
+                          </FeedbackButton>
+                          <FeedbackButton
+                            type="button"
+                            $helpful={false}
+                            $active={msg.feedback?.isHelpful === false}
+                            onClick={() => handleFeedback(msg.id, false, msg.intent, msg.source)}
+                            disabled={msg.feedback?.submitted}
+                            title="Esta resposta não foi útil"
+                          >
+                            <svg viewBox="0 0 24 24" fill="currentColor">
+                              <path d="M15 3H6c-.83 0-1.54.5-1.84 1.22l-3.02 7.05c-.09.23-.14.47-.14.73v2c0 1.1.9 2 2 2h6.31l-.95 4.57-.03.32c0 .41.17.79.44 1.06L9.83 23l6.59-6.59c.36-.36.58-.86.58-1.41V5c0-1.1-.9-2-2-2zm4 0v12h4V3h-4z" />
+                            </svg>
+                            Não útil
+                          </FeedbackButton>
+                        </FeedbackButtons>
+                      )}
                     </MessageBubble>
+                    {msg.role === "assistant" && msg.suggestions && msg.suggestions.length > 0 && (
+                      <SuggestionsWrapper style={{ marginTop: "8px", padding: "0" }}>
+                        <SuggestionLabel style={{ fontSize: "0.7rem", marginBottom: "4px" }}>
+                          Sugestões relacionadas:
+                        </SuggestionLabel>
+                        <SuggestionList style={{ gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))" }}>
+                          {msg.suggestions.map((suggestion, idx) => (
+                            <SuggestionCard
+                              key={idx}
+                              type="button"
+                              onClick={() => handleSuggestionClick(suggestion)}
+                              style={{ padding: "8px 12px" }}
+                            >
+                              <span style={{ fontSize: "0.8rem" }}>{suggestion}</span>
+                            </SuggestionCard>
+                          ))}
+                        </SuggestionList>
+                      </SuggestionsWrapper>
+                    )}
                   </ChatMessage>
                 );
               })}

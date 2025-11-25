@@ -2,11 +2,34 @@ import { NextRequest, NextResponse } from "next/server";
 import { getAuthenticatedUser } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { decrypt } from "@/lib/encryption";
+import { callLocalAi, isLocalAiEnabled, LocalAiMessage } from "@/lib/localAi";
+import crypto from "crypto";
 
 type Message = {
   role: "user" | "assistant";
   content: string;
 };
+
+type ConversationEntry = {
+  role: "user" | "assistant";
+  content: string;
+};
+
+const MAX_HISTORY_ITEMS = 8;
+const CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutos
+
+// Cache simples em memória (pode ser substituído por Redis depois)
+const responseCache = new Map<string, { response: string; timestamp: number }>();
+
+// Limpar cache antigo periodicamente
+setInterval(() => {
+  const now = Date.now();
+  for (const [key, value] of responseCache.entries()) {
+    if (now - value.timestamp > CACHE_TTL_MS) {
+      responseCache.delete(key);
+    }
+  }
+}, 60000); // Limpar a cada minuto
 
 // Função para normalizar texto (remover acentos, lowercase)
 function normalizeText(text: string): string {
@@ -17,6 +40,50 @@ function normalizeText(text: string): string {
     .trim();
 }
 
+// Sistema de sinônimos expandidos
+const RAW_SYNONYM_GROUPS: Record<string, string[]> = {
+  ticket: ["ticket", "tickets", "chamado", "chamados", "solicitacao", "solicitacoes", "incidente", "incidentes", "protocolo", "protocolos"],
+  document: ["documento", "documentos", "artigo", "artigos", "manual", "manuais", "procedimento", "procedimentos", "tutorial", "tutoriais", "guia", "guias", "kb", "base", "documentacao", "documentação"],
+  password: ["senha", "senhas", "password", "passwords", "credencial", "credenciais", "login", "logins", "acesso", "acessos", "usuario", "usuarios", "conta", "contas"],
+  file: ["arquivo", "arquivos", "anexo", "anexos", "upload", "uploads", "download", "downloads", "documento anexado"],
+  agenda: ["agenda", "agendas", "compromisso", "compromissos", "reuniao", "reunioes", "reunião", "reuniões", "evento", "eventos", "calendario", "calendário"],
+  history: ["historico", "historicos", "histórico", "históricos", "atualizacao", "atualizacoes", "atualização", "atualizações", "comentario", "comentarios", "comentário", "comentários", "log", "logs", "registro", "registros"],
+  statistics: ["estatistica", "estatisticas", "estatística", "estatísticas", "metrica", "metricas", "métrica", "métricas", "dashboard", "resumo", "quantidade", "quantidades", "total", "totais", "numeros", "números", "dados"],
+  report: ["relatorio", "relatorios", "relatório", "relatórios", "analise", "analises", "análise", "análises", "insights"],
+};
+
+const SYNONYM_GROUPS: Record<string, Set<string>> = Object.entries(RAW_SYNONYM_GROUPS).reduce(
+  (acc, [key, synonyms]) => {
+    const normalizedKey = normalizeText(key);
+    const normalizedSet = new Set<string>([normalizedKey]);
+    synonyms.forEach((term) => normalizedSet.add(normalizeText(term)));
+    acc[normalizedKey] = normalizedSet;
+    return acc;
+  },
+  {} as Record<string, Set<string>>
+);
+
+const SYNONYM_LOOKUP: Record<string, string> = {};
+Object.entries(SYNONYM_GROUPS).forEach(([canonical, terms]) => {
+  terms.forEach((term) => {
+    SYNONYM_LOOKUP[term] = canonical;
+  });
+});
+
+function expandKeywords(keywords: string[]): string[] {
+  const expanded = new Set<string>();
+  for (const keyword of keywords) {
+    const normalized = normalizeText(keyword);
+    const canonical = SYNONYM_LOOKUP[normalized] || normalized;
+    expanded.add(canonical);
+    const relatedTerms = SYNONYM_GROUPS[canonical];
+    if (relatedTerms) {
+      relatedTerms.forEach((term) => expanded.add(term));
+    }
+  }
+  return Array.from(expanded);
+}
+
 // Função para extrair palavras-chave de uma pergunta
 function extractKeywords(text: string): string[] {
   const normalized = normalizeText(text);
@@ -25,14 +92,16 @@ function extractKeywords(text: string): string[] {
     "em", "no", "na", "nos", "nas", "por", "para", "com", "sem",
     "que", "qual", "quais", "como", "quando", "onde", "porque",
     "é", "são", "está", "estão", "foi", "foram", "ser", "estar",
-    "tem", "têm", "ter", "ter", "me", "te", "se", "nos", "vocês",
+    "tem", "têm", "ter", "me", "te", "se", "nos", "vocês",
     "eu", "ele", "ela", "eles", "elas", "nós", "você", "vocês",
     "mostre", "mostrar", "listar", "lista", "buscar", "busca", "encontrar", "encontre"
   ]);
   
-  return normalized
+  const baseKeywords = normalized
     .split(/\s+/)
     .filter(word => word.length > 2 && !stopWords.has(word));
+  
+  return expandKeywords(baseKeywords);
 }
 
 // Função para calcular similaridade entre duas strings (Jaccard similarity)
@@ -46,13 +115,40 @@ function calculateSimilarity(str1: string, str2: string): number {
   return union.size > 0 ? intersection.size / union.size : 0;
 }
 
-// Função para extrair número de ID de uma pergunta
+// Função para extrair número de ID de uma pergunta (melhorada)
 function extractId(text: string): number | null {
   const match = text.match(/#?(\d+)/);
   return match ? parseInt(match[1], 10) : null;
 }
 
-// Função para extrair data da pergunta
+// Função para extrair URLs de uma pergunta
+function extractUrls(text: string): string[] {
+  const urlRegex = /(https?:\/\/[^\s]+)/g;
+  return text.match(urlRegex) || [];
+}
+
+// Função para extrair emails de uma pergunta
+function extractEmails(text: string): string[] {
+  const emailRegex = /[\w.-]+@[\w.-]+\.\w+/g;
+  return text.match(emailRegex) || [];
+}
+
+// Função melhorada para extrair entidades nomeadas
+function extractNamedEntities(text: string): {
+  ids: number[];
+  urls: string[];
+  emails: string[];
+  dates: Array<{ date: Date; isToday?: boolean; isTomorrow?: boolean }>;
+} {
+  return {
+    ids: [extractId(text)].filter((id): id is number => id !== null),
+    urls: extractUrls(text),
+    emails: extractEmails(text),
+    dates: [extractDate(text)].filter((d): d is NonNullable<typeof d> => d !== null),
+  };
+}
+
+// Função para extrair data da pergunta (melhorada)
 function extractDate(text: string): { date?: Date; isToday?: boolean; isTomorrow?: boolean } | null {
   const normalized = normalizeText(text);
   const today = new Date();
@@ -68,6 +164,27 @@ function extractDate(text: string): { date?: Date; isToday?: boolean; isTomorrow
     const tomorrow = new Date(today);
     tomorrow.setDate(tomorrow.getDate() + 1);
     return { date: tomorrow, isTomorrow: true };
+  }
+  
+  // Detectar "ontem"
+  if (normalized.includes("ontem") || normalized.includes("yesterday")) {
+    const yesterday = new Date(today);
+    yesterday.setDate(yesterday.getDate() - 1);
+    return { date: yesterday };
+  }
+  
+  // Detectar "semana passada", "última semana"
+  if (normalized.includes("semana passada") || normalized.includes("ultima semana") || normalized.includes("última semana")) {
+    const lastWeek = new Date(today);
+    lastWeek.setDate(lastWeek.getDate() - 7);
+    return { date: lastWeek };
+  }
+  
+  // Detectar "próxima semana"
+  if (normalized.includes("proxima semana") || normalized.includes("próxima semana") || normalized.includes("next week")) {
+    const nextWeek = new Date(today);
+    nextWeek.setDate(nextWeek.getDate() + 7);
+    return { date: nextWeek };
   }
   
   // Tentar extrair data no formato DD/MM/YYYY ou YYYY-MM-DD
@@ -90,6 +207,43 @@ function extractDate(text: string): { date?: Date; isToday?: boolean; isTomorrow
   }
   
   return null;
+}
+
+// Função para sanitizar histórico de conversa
+function sanitizeHistory(entries: any): ConversationEntry[] {
+  if (!Array.isArray(entries)) return [];
+  const cleaned = entries
+    .map((entry) => {
+      const role = entry?.role === "assistant" ? "assistant" : "user";
+      const content = typeof entry?.content === "string" ? entry.content.trim() : "";
+      return { role, content };
+    })
+    .filter((entry) => entry.content.length > 0);
+  return cleaned.slice(-MAX_HISTORY_ITEMS);
+}
+
+// Função para gerar chave de cache baseada na mensagem e contexto
+function generateCacheKey(message: string, intent: any, userId: number): string {
+  const normalized = normalizeText(message);
+  const intentStr = JSON.stringify(intent);
+  return crypto.createHash("md5").update(`${userId}:${normalized}:${intentStr}`).digest("hex");
+}
+
+// Função para buscar resposta no cache
+function getCachedResponse(cacheKey: string): string | null {
+  const cached = responseCache.get(cacheKey);
+  if (cached && Date.now() - cached.timestamp < CACHE_TTL_MS) {
+    return cached.response;
+  }
+  if (cached) {
+    responseCache.delete(cacheKey);
+  }
+  return null;
+}
+
+// Função para salvar resposta no cache
+function setCachedResponse(cacheKey: string, response: string): void {
+  responseCache.set(cacheKey, { response, timestamp: Date.now() });
 }
 
 // Função para extrair nome de usuário da pergunta
@@ -149,17 +303,89 @@ function detectFilters(text: string): {
   return filters;
 }
 
+// Função para detectar ações diretas
+function detectAction(text: string): {
+  action: "close_ticket" | "create_document" | "update_ticket_status" | null;
+  ticketId?: number;
+  status?: string;
+  documentTitle?: string;
+  documentContent?: string;
+} | null {
+  const normalized = normalizeText(text);
+  const ticketId = extractId(text);
+  
+  // Detectar "fechar ticket #X" ou "encerrar ticket #X"
+  if (
+    (normalized.includes("fechar") || normalized.includes("encerrar") || normalized.includes("finalizar")) &&
+    (normalized.includes("ticket") || normalized.includes("chamado")) &&
+    ticketId !== null
+  ) {
+    return {
+      action: "close_ticket",
+      ticketId,
+      status: "CLOSED",
+    };
+  }
+  
+  // Detectar "mudar status do ticket #X para Y"
+  if (
+    normalized.includes("mudar") || normalized.includes("alterar") || normalized.includes("atualizar")
+  ) {
+    if (normalized.includes("status") && ticketId !== null) {
+      let status: string | undefined;
+      if (normalized.includes("aberto") || normalized.includes("open")) status = "OPEN";
+      else if (normalized.includes("andamento") || normalized.includes("progress")) status = "IN_PROGRESS";
+      else if (normalized.includes("resolvido") || normalized.includes("resolved")) status = "RESOLVED";
+      else if (normalized.includes("fechado") || normalized.includes("closed")) status = "CLOSED";
+      else if (normalized.includes("observacao") || normalized.includes("observation")) status = "OBSERVATION";
+      
+      if (status) {
+        return {
+          action: "update_ticket_status",
+          ticketId,
+          status,
+        };
+      }
+    }
+  }
+  
+  // Detectar "criar documento sobre X" ou "adicionar documento X"
+  if (
+    (normalized.includes("criar") || normalized.includes("adicionar") || normalized.includes("novo")) &&
+    (normalized.includes("documento") || normalized.includes("artigo") || normalized.includes("manual"))
+  ) {
+    // Tentar extrair título do documento
+    const titleMatch = text.match(/(?:sobre|título|nome|chamado|de|do|da)\s+(.+?)(?:\s+com\s+conteúdo|\s+com\s+texto|$)/i);
+    const title = titleMatch ? titleMatch[1].trim() : text.replace(/(?:criar|adicionar|novo)\s+(?:documento|artigo|manual)\s+(?:sobre|título|nome|chamado|de|do|da)?\s*/i, "").trim();
+    
+    return {
+      action: "create_document",
+      documentTitle: title || "Novo Documento",
+      documentContent: "", // Será preenchido pelo usuário ou gerado
+    };
+  }
+  
+  return null;
+}
+
 // Função para detectar intenção da pergunta (melhorada)
 function detectIntent(text: string): {
-  type: "document" | "ticket" | "statistics" | "password" | "history" | "report" | "file" | "agenda" | "help" | "general";
+  type: "document" | "ticket" | "statistics" | "password" | "history" | "report" | "file" | "agenda" | "help" | "general" | "action";
   keywords: string[];
   filters?: any;
   id?: number | null;
+  action?: ReturnType<typeof detectAction>;
 } {
   const normalized = normalizeText(text);
   const keywords = extractKeywords(text);
   const id = extractId(text);
   const filters = detectFilters(text);
+  const action = detectAction(text);
+  
+  // Se detectou uma ação, retornar tipo "action"
+  if (action) {
+    return { type: "action", keywords, filters, id, action };
+  }
   
   // Detectar busca por ID específico
   if (id !== null) {
@@ -1230,6 +1456,160 @@ function generateResponse(
   }
 }
 
+// Função para construir mensagens para a IA local
+type AiPayload = {
+  question: string;
+  intent: ReturnType<typeof detectIntent>;
+  deterministicResponse: string;
+  documents: any[];
+  tickets: any[];
+  passwords: any[];
+  history: any[];
+  files: any[];
+  agenda: any;
+  statistics: any;
+  reports: any;
+  conversationHistory: ConversationEntry[];
+};
+
+function buildAiMessages(payload: AiPayload): LocalAiMessage[] {
+  const context = buildAiContext(payload);
+  const historyMessages: LocalAiMessage[] = (payload.conversationHistory || []).map((entry) => ({
+    role: entry.role,
+    content: entry.content,
+  }));
+  
+  return [
+    {
+      role: "system",
+      content:
+        "Você é Dobby, assistente virtual interno do GTI Helpdesk. Responda sempre em português, com tom cordial, proativo e objetivo. Seja empático, cite apenas dados presentes no contexto e encerre oferecendo ajuda adicional. Use formatação markdown quando apropriado (listas, negrito, etc).",
+    },
+    ...historyMessages,
+    {
+      role: "user",
+      content: context,
+    },
+  ];
+}
+
+function buildAiContext(payload: AiPayload): string {
+  const { question, intent, deterministicResponse } = payload;
+  const sections: string[] = [];
+
+  sections.push(`Pergunta original do usuário:\n${question}`);
+  sections.push(
+    `Intenção detectada: ${intent.type}\nPalavras-chave: ${
+      intent.keywords.length ? intent.keywords.join(", ") : "não identificadas"
+    }`
+  );
+
+  if (payload.conversationHistory?.length) {
+    const convoPreview = payload.conversationHistory
+      .slice(-5)
+      .map((entry) => `${entry.role === "assistant" ? "Dobby" : "Usuário"}: ${entry.content}`)
+      .join("\n");
+    sections.push(`Histórico recente da conversa:\n${convoPreview}`);
+  }
+
+  if (payload.documents?.length) {
+    const docLines = payload.documents.slice(0, 3).map((doc: any, idx: number) => {
+      const preview = doc.content ? doc.content.substring(0, 120) : "";
+      const category = doc.category ? ` [${doc.category}]` : "";
+      return `${idx + 1}. ${doc.title}${category}${preview ? ` — ${preview}...` : ""}`;
+    });
+    sections.push(`Documentos relevantes encontrados (${payload.documents.length}):\n${docLines.join("\n")}`);
+  }
+
+  if (payload.tickets?.length) {
+    const ticketLines = payload.tickets.slice(0, 3).map((ticket: any, idx: number) => {
+      const status = ticket.status ? ` | Status: ${ticket.status}` : "";
+      const category = ticket.category?.name ? ` | Categoria: ${ticket.category.name}` : "";
+      const desc = ticket.description ? ticket.description.substring(0, 100) : "";
+      return `${idx + 1}. Ticket #${ticket.id}: ${ticket.title}${status}${category}${desc ? ` — ${desc}...` : ""}`;
+    });
+    sections.push(`Tickets relevantes encontrados (${payload.tickets.length}):\n${ticketLines.join("\n")}`);
+  }
+
+  if (payload.passwords?.length) {
+    const pwdLines = payload.passwords.slice(0, 3).map((password: any, idx: number) => {
+      return `${idx + 1}. ${password.title}`;
+    });
+    sections.push(`Credenciais encontradas (${payload.passwords.length}):\n${pwdLines.join("\n")}`);
+  }
+
+  if (payload.files?.length) {
+    const fileLines = payload.files.slice(0, 3).map((file: any, idx: number) => {
+      const category = file.category ? ` [${file.category}]` : "";
+      return `${idx + 1}. ${file.originalName}${category}`;
+    });
+    sections.push(`Arquivos encontrados (${payload.files.length}):\n${fileLines.join("\n")}`);
+  }
+
+  if (payload.history?.length) {
+    const historyLines = payload.history.slice(0, 3).map((update: any, idx: number) => {
+      const content = update.content.substring(0, 100);
+      return `${idx + 1}. Ticket #${update.ticket.id} — ${content}...`;
+    });
+    sections.push(`Histórico recente (${payload.history.length} registros):\n${historyLines.join("\n")}`);
+  }
+
+  if (payload.agenda) {
+    const totalEvents = payload.agenda.events?.length || 0;
+    const totalTickets = payload.agenda.tickets?.length || 0;
+    if (totalEvents > 0 || totalTickets > 0) {
+      const date = payload.agenda.date ? new Date(payload.agenda.date).toLocaleDateString("pt-BR") : "sem data";
+      sections.push(`Agenda: ${totalEvents} evento(s), ${totalTickets} ticket(s) em ${date}.`);
+    }
+  }
+
+  if (payload.statistics) {
+    sections.push(
+      "Estatísticas principais:\n" +
+        `- Tickets total: ${payload.statistics.totalTickets}\n` +
+        `- Abertos: ${payload.statistics.openTickets} | Em andamento: ${payload.statistics.inProgressTickets} | Resolvidos: ${payload.statistics.resolvedTickets}\n` +
+        `- Documentos cadastrados: ${payload.statistics.totalDocuments}\n` +
+        `- Senhas salvas: ${payload.statistics.totalPasswords}`
+    );
+  }
+
+  sections.push(`Resposta determinística sugerida (baseada em regras):\n${deterministicResponse}`);
+  sections.push(
+    "Com base nesses dados, escreva uma resposta humanizada e natural, utilizando parágrafos curtos, bullet points quando fizer sentido e encerrando com uma oferta de ajuda adicional. Seja específico e cite os dados encontrados."
+  );
+
+  return sections.join("\n\n");
+}
+
+// Função para gerar sugestões contextuais baseadas na resposta
+function generateContextualSuggestions(intent: ReturnType<typeof detectIntent>, results: any): string[] {
+  const suggestions: string[] = [];
+  
+  if (intent.type === "ticket" && results.tickets?.length > 0) {
+    suggestions.push(`Detalhes do ticket #${results.tickets[0].id}`);
+    if (results.tickets[0].status !== "CLOSED") {
+      suggestions.push("Atualizar status do ticket");
+    }
+  }
+  
+  if (intent.type === "document" && results.documents?.length > 0) {
+    suggestions.push(`Ver documento completo: ${results.documents[0].title}`);
+  }
+  
+  if (intent.type === "statistics") {
+    suggestions.push("Relatório detalhado de tickets");
+    suggestions.push("Estatísticas por categoria");
+  }
+  
+  if (intent.type === "general" || intent.type === "help") {
+    suggestions.push("Como criar um ticket?");
+    suggestions.push("Como buscar documentos?");
+    suggestions.push("Ver minha agenda");
+  }
+  
+  return suggestions.slice(0, 3); // Máximo 3 sugestões
+}
+
 export async function POST(req: NextRequest) {
   const user = await getAuthenticatedUser();
   if (!user) {
@@ -1247,8 +1627,92 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Mensagem é obrigatória" }, { status: 400 });
     }
     
+    // Obter histórico de conversa (se fornecido)
+    const conversationHistory = sanitizeHistory((body as any).history || []);
+    
     // Detectar intenção
     const intent = detectIntent(message);
+    
+    // Se detectou uma ação, processar ação diretamente
+    if (intent.type === "action" && intent.action) {
+      try {
+        const actionResponse = await fetch(`${req.nextUrl.origin}/api/chat/actions`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            action: intent.action.action,
+            ticketId: intent.action.ticketId,
+            status: intent.action.status,
+            documentTitle: intent.action.documentTitle,
+            documentContent: intent.action.documentContent,
+          }),
+        });
+
+        if (actionResponse.ok) {
+          const actionData = await actionResponse.json();
+          return NextResponse.json({
+            message: `✅ ${actionData.message}\n\n${actionData.ticket ? `Ticket #${actionData.ticket.id} atualizado com sucesso.` : ""}${actionData.document ? `Documento "${actionData.document.title}" criado.` : ""}`,
+            intent: intent.type,
+            source: "action",
+            actionResult: actionData,
+            sources: {
+              documents: 0,
+              files: 0,
+              tickets: 0,
+              passwords: 0,
+              history: 0,
+            },
+          });
+        } else {
+          const errorData = await actionResponse.json().catch(() => ({}));
+          return NextResponse.json({
+            message: `❌ Não foi possível executar a ação: ${errorData.error || "Erro desconhecido"}`,
+            intent: intent.type,
+            source: "action",
+            error: errorData.error,
+            sources: {
+              documents: 0,
+              files: 0,
+              tickets: 0,
+              passwords: 0,
+              history: 0,
+            },
+          });
+        }
+      } catch (error) {
+        console.error("[chat:POST] Erro ao executar ação:", error);
+        return NextResponse.json({
+          message: "❌ Erro ao executar ação. Tente novamente.",
+          intent: intent.type,
+          source: "action",
+          sources: {
+            documents: 0,
+            files: 0,
+            tickets: 0,
+            passwords: 0,
+            history: 0,
+          },
+        });
+      }
+    }
+    
+    // Verificar cache antes de processar
+    const cacheKey = generateCacheKey(message, intent, user.id);
+    const cachedResponse = getCachedResponse(cacheKey);
+    if (cachedResponse) {
+      return NextResponse.json({
+        message: cachedResponse,
+        intent: intent.type,
+        source: "cache",
+        sources: {
+          documents: 0,
+          files: 0,
+          tickets: 0,
+          passwords: 0,
+          history: 0,
+        },
+      });
+    }
     
     // Buscar informações baseadas na intenção
     let documents: any[] = [];
@@ -1308,12 +1772,60 @@ export async function POST(req: NextRequest) {
       }
     }
     
-    // Gerar resposta
-    const response = generateResponse(intent, documents, tickets, passwords, history, files, agenda, statistics, reports, message);
+    // Gerar resposta determinística (fallback)
+    const deterministicResponse = generateResponse(intent, documents, tickets, passwords, history, files, agenda, statistics, reports, message);
+    
+    // Tentar usar IA local se habilitada
+    let finalResponse = deterministicResponse;
+    let responseSource: "local-ai" | "rule-based" | "cache" = "rule-based";
+    
+    if (isLocalAiEnabled()) {
+      try {
+        const aiMessages = buildAiMessages({
+          question: message,
+          intent,
+          deterministicResponse,
+          documents,
+          tickets,
+          passwords,
+          history,
+          files,
+          agenda,
+          statistics,
+          reports,
+          conversationHistory,
+        });
+
+        const aiReply = await callLocalAi(aiMessages, { temperature: 0.7 });
+        if (aiReply && aiReply.trim().length > 0) {
+          finalResponse = aiReply;
+          responseSource = "local-ai";
+        }
+      } catch (error) {
+        console.error("[chat:POST] Erro ao chamar IA local, usando fallback:", error);
+        // Fallback para resposta determinística já está definido
+      }
+    }
+    
+    // Salvar no cache
+    setCachedResponse(cacheKey, finalResponse);
+    
+    // Gerar sugestões contextuais
+    const suggestions = generateContextualSuggestions(intent, {
+      documents,
+      tickets,
+      passwords,
+      history,
+      files,
+      agenda,
+      statistics,
+    });
     
     return NextResponse.json({
-      message: response,
+      message: finalResponse,
       intent: intent.type,
+      source: responseSource,
+      suggestions: suggestions.length > 0 ? suggestions : undefined,
       sources: {
         documents: documents.length,
         files: files.length,

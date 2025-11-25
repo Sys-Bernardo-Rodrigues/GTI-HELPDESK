@@ -8,22 +8,31 @@ Bem-vindo à documentação completa do sistema GTI Helpdesk. Este diretório co
 
 ### 🎯 Documentos Principais
 
-1. **[Resumo Executivo](./RESUMO_EXECUTIVO.md)** ⭐
+1. **[Melhorias Implementadas](./MELHORIAS_IMPLEMENTADAS.md)** ⭐ **NOVO**
+   - Resumo das melhorias já implementadas
+   - Detalhes técnicos de cada funcionalidade
+   - Status e progresso atual
+   - **Veja o que já foi feito!**
+
+2. **[Resumo Executivo](./RESUMO_EXECUTIVO.md)** ⭐
    - Visão geral das melhorias propostas
    - Priorização e timeline
+   - Status de implementação atualizado
    - Recomendações imediatas
    - **Comece por aqui!**
 
-2. **[Revisão Completa e Melhorias](./REVISAO_E_MELHORIAS.md)**
+3. **[Revisão Completa e Melhorias](./REVISAO_E_MELHORIAS.md)**
    - Análise detalhada de todas as áreas do sistema
    - Lista completa de melhorias sugeridas
    - Categorização por funcionalidade
+   - Status de implementação atualizado
    - **Leitura completa para entender tudo**
 
-3. **[Roadmap de Implementação](./ROADMAP_IMPLEMENTACAO.md)**
+4. **[Roadmap de Implementação](./ROADMAP_IMPLEMENTACAO.md)**
    - Plano detalhado de implementação
    - Sprints e tarefas específicas
    - Estimativas de tempo
+   - Progresso atualizado (Sprint 1-2 concluído)
    - **Use para planejar o desenvolvimento**
 
 ### 🔧 Documentação Técnica
@@ -82,9 +91,10 @@ Bem-vindo à documentação completa do sistema GTI Helpdesk. Este diretório co
 
 | Documento | Status | Última Atualização |
 |-----------|--------|-------------------|
-| Resumo Executivo | ✅ Completo | 2024 |
-| Revisão e Melhorias | ✅ Completo | 2024 |
-| Roadmap | ✅ Completo | 2024 |
+| Melhorias Implementadas | ✅ Completo | 2024 (Novo) |
+| Resumo Executivo | ✅ Completo | 2024 (Atualizado) |
+| Revisão e Melhorias | ✅ Completo | 2024 (Atualizado) |
+| Roadmap | ✅ Completo | 2024 (Atualizado) |
 | System Audit | ✅ Completo | Anterior |
 | Análise Completa | ✅ Completo | Anterior |
 | Settings | ✅ Completo | Anterior |
@@ -94,6 +104,18 @@ Bem-vindo à documentação completa do sistema GTI Helpdesk. Este diretório co
 ---
 
 ## 🔄 Atualizações Recentes
+
+### 2024 - Sprint 1-2 Concluído ✅
+- ✅ **Sprint 1-2: Melhorias no Dobby - 100% CONCLUÍDO**
+- ✅ IA local reintroduzida com fallback inteligente
+- ✅ Sistema de sinônimos expandidos (8 grupos)
+- ✅ Detecção de entidades nomeadas
+- ✅ Contexto de conversa persistente
+- ✅ Cache de respostas (em memória)
+- ✅ Ações diretas (fechar ticket, criar documento)
+- ✅ Sistema de feedback (botões útil/não útil)
+- ✅ Sugestões contextuais
+- ✅ Documentação atualizada com progresso
 
 ### 2024 - Revisão Completa do Sistema
 - ✅ Criado documento de revisão completa

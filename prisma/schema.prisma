@@ -10,18 +10,18 @@ datasource db {
 }
 
 model User {
-  id                     Int                @id @default(autoincrement())
-  email                  String             @unique
+  id                     Int                 @id @default(autoincrement())
+  email                  String              @unique
   name                   String
   passwordHash           String?
   phone                  String?
   jobTitle               String?
   company                String?
   avatarUrl              String?
-  twoFactor              Boolean            @default(true)
-  newsletter             Boolean            @default(false)
-  phoneVerified          Boolean            @default(false)
-  discordTag             String?            @unique
+  twoFactor              Boolean             @default(true)
+  newsletter             Boolean             @default(false)
+  phoneVerified          Boolean             @default(false)
+  discordTag             String?             @unique
   pendingEmail           String?
   emailVerificationToken String?
   emailVerifiedAt        DateTime?
@@ -29,10 +29,10 @@ model User {
   passwordResetExpires   DateTime?
   twoFactorCode          String?
   twoFactorCodeExpires   DateTime?
-  createdAt              DateTime           @default(now())
+  createdAt              DateTime            @default(now())
   forms                  Form[]
   formsToApprove         FormApprover[]
-  assignedTickets        Ticket[]           @relation("TicketAssignedTo")
+  assignedTickets        Ticket[]            @relation("TicketAssignedTo")
   tickets                Ticket[]
   TicketUpdate           TicketUpdate[]
   documents              Document[]
@@ -41,11 +41,12 @@ model User {
   webhooks               Webhook[]
   events                 Event[]
   formApprovals          FormApproval[]
-  createdProjects        Project[]          @relation("ProjectCreator")
-  projectMemberships     ProjectMember[]    @relation("ProjectMember")
-  assignedTasks          ProjectTask[]      @relation("TaskAssignedTo")
-  createdTasks           ProjectTask[]      @relation("TaskCreator")
+  createdProjects        Project[]           @relation("ProjectCreator")
+  projectMemberships     ProjectMember[]     @relation("ProjectMember")
+  assignedTasks          ProjectTask[]       @relation("TaskAssignedTo")
+  createdTasks           ProjectTask[]       @relation("TaskCreator")
   accessProfiles         UserAccessProfile[]
+  chatFeedbacks          ChatFeedback[]
 }
 
 model Category {
@@ -369,12 +370,12 @@ enum TaskPriority {
 }
 
 model AccessProfile {
-  id          Int                  @id @default(autoincrement())
+  id          Int                 @id @default(autoincrement())
   name        String
-  description String?              @db.Text
-  isDefault   Boolean              @default(false)
-  createdAt   DateTime             @default(now())
-  updatedAt   DateTime             @updatedAt
+  description String?             @db.Text
+  isDefault   Boolean             @default(false)
+  createdAt   DateTime            @default(now())
+  updatedAt   DateTime            @updatedAt
   pages       AccessProfilePage[]
   users       UserAccessProfile[]
 }
@@ -391,14 +392,31 @@ model AccessProfilePage {
 }
 
 model UserAccessProfile {
-  id        Int            @id @default(autoincrement())
+  id        Int           @id @default(autoincrement())
   userId    Int
   profileId Int
-  createdAt DateTime       @default(now())
-  user      User           @relation(fields: [userId], references: [id], onDelete: Cascade)
-  profile   AccessProfile  @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  createdAt DateTime      @default(now())
+  user      User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  profile   AccessProfile @relation(fields: [profileId], references: [id], onDelete: Cascade)
 
   @@unique([userId, profileId])
   @@index([userId])
   @@index([profileId])
+}
+
+model ChatFeedback {
+  id        Int      @id @default(autoincrement())
+  userId    Int
+  messageId String // ID da mensagem no chat (gerado no frontend)
+  isHelpful Boolean // true = útil, false = não útil
+  comment   String?  @db.Text
+  intent    String?
+  source    String? // local-ai, rule-based, cache
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([messageId])
+  @@index([isHelpful])
+  @@index([createdAt])
 }

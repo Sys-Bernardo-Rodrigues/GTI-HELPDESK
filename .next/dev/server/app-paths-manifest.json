@@ -2,6 +2,7 @@
   "/_not-found/page": "app/_not-found/page.js",
   "/agenda/page": "app/agenda/page.js",
   "/api/browser/session/route": "app/api/browser/session/route.js",
+  "/api/chat/route": "app/api/chat/route.js",
   "/api/events/route": "app/api/events/route.js",
   "/api/profile/route": "app/api/profile/route.js",
   "/api/session/route": "app/api/session/route.js",

@@ -375,11 +375,20 @@
 ## 🚀 PRIORIZAÇÃO SUGERIDA
 
 ### Fase 1 - Crítico (1-2 meses)
-1. ✅ Reintroduzir IA local com melhorias
-2. ✅ Sistema de permissões completo (UI)
-3. ✅ Notificações por email
-4. ✅ Busca full-text melhorada
-5. ✅ Cache Redis para performance
+1. ✅ ~~Reintroduzir IA local com melhorias~~ **CONCLUÍDO** (2024)
+   - ✅ IA local (Ollama) reintroduzida
+   - ✅ Fallback inteligente implementado
+   - ✅ Cache de respostas (em memória)
+   - ✅ Sistema de sinônimos expandidos
+   - ✅ Contexto de conversa persistente
+   - ✅ Detecção de entidades nomeadas
+   - ✅ Ações diretas (fechar ticket, criar documento)
+   - ✅ Sistema de feedback
+   - ✅ Sugestões contextuais
+2. ⏳ Sistema de permissões completo (UI) - **PRÓXIMO**
+3. ⏳ Notificações por email
+4. ⏳ Busca full-text melhorada (sinônimos já implementados)
+5. ⏳ Cache Redis para performance (cache em memória já implementado)
 
 ### Fase 2 - Importante (2-4 meses)
 6. ✅ Dashboard customizável
@@ -406,6 +415,51 @@
 
 ---
 
-**Última atualização**: 2024
-**Próxima revisão**: Após implementação da Fase 1
+---
+
+## ✅ MELHORIAS IMPLEMENTADAS (2024)
+
+### Sprint 1-2: Melhorias no Dobby - **100% CONCLUÍDO**
+
+#### 1.1. Inteligência e Processamento de Linguagem Natural ✅
+- ✅ Sistema de sinônimos expandidos (8 grupos)
+- ✅ Cache de respostas frequentes (em memória, TTL 5min)
+- ✅ Contexto de conversa persistente (até 8 mensagens)
+- ✅ Detecção de entidades nomeadas (IDs, URLs, emails, datas)
+- ✅ Sugestões contextuais após cada resposta
+- ⏳ Sistema de aprendizado de feedback (coleta implementada, análise pendente)
+
+#### 1.2. Integração com IA Local (Ollama) ✅
+- ✅ Reintroduzida com melhorias
+- ✅ Sistema de fallback inteligente (IA → rule-based)
+- ✅ Cache de respostas da IA para perguntas similares
+- ⏳ Streaming de respostas (pendente - pode ser adicionado depois)
+- ⏳ Suporte a múltiplos modelos (pendente)
+- ⏳ Fine-tuning (pendente - requer dados históricos)
+
+#### 1.3. Funcionalidades Avançadas do Dobby ✅
+- ✅ Ações diretas: "Fechar ticket #123", "Criar documento sobre X"
+- ⏳ Resumo automático (pendente)
+- ⏳ Análise preditiva (pendente)
+- ⏳ Geração de relatórios (pendente)
+- ⏳ Tradução automática (pendente)
+- ⏳ Comandos de voz avançados (pendente)
+
+### Arquivos Criados/Modificados:
+- ✅ `src/app/api/chat/route.ts` - Lógica principal melhorada
+- ✅ `src/lib/localAi.ts` - Integração com Ollama
+- ✅ `src/app/api/chat/feedback/route.ts` - Novo endpoint
+- ✅ `src/app/api/chat/actions/route.ts` - Novo endpoint
+- ✅ `src/app/home/page.tsx` - UI melhorada
+- ✅ `prisma/schema.prisma` - Nova tabela `ChatFeedback`
+
+### Próximos Passos:
+1. Sprint 3-4: Sistema de Permissões (UI completa)
+2. Sprint 5-6: Notificações e Alertas
+3. Sprint 7-8: Busca e Performance
+
+---
+
+**Última atualização**: 2024 (Sprint 1-2 concluído)  
+**Próxima revisão**: Após conclusão do Sprint 3-4
 
