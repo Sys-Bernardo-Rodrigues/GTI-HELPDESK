@@ -101,6 +101,20 @@ Definidos em `prisma/schema.prisma`:
 - `db:generate`: gera cliente Prisma
 - `db:studio`: abre Prisma Studio
 
+## Inteligência Artificial Local (Dobby)
+- O assistente virtual pode usar um modelo de linguagem rodando localmente (Ollama/LocalAI), garantindo que nenhum dado saia do servidor interno.
+- Configure no `.env`:
+  - `LOCAL_AI_ENABLED=true`
+  - `LOCAL_AI_URL=http://localhost:11434`
+  - `LOCAL_AI_MODEL=llama3` (ou outro modelo disponível no host)
+  - `LOCAL_AI_TIMEOUT_MS=15000` (opcional)
+- Para subir o serviço via Docker:
+  ```bash
+  docker compose up -d ollama
+  docker exec -it gti-helpdesk-ollama ollama pull llama3
+  ```
+- O endpoint `/api/chat` tenta usar o modelo local primeiro e recorre ao fallback determinístico se o serviço estiver indisponível.
+
 ## Estrutura
 - `src/app/...`: App Router do Next.js
 - `src/app/api/health/route.ts`: rota de healthcheck

@@ -3,6 +3,26 @@ import { getAuthenticatedUser } from "@/lib/auth";
 
 export const runtime = "nodejs";
 
+type HistoryEntry = { role: "user" | "assistant"; content: string };
+
+function parseHistoryPayload(value: string | null): HistoryEntry[] {
+  if (!value) return [];
+  try {
+    const parsed = JSON.parse(value);
+    if (!Array.isArray(parsed)) return [];
+    return parsed
+      .map((entry) => {
+        const role = entry?.role === "assistant" ? "assistant" : "user";
+        const content = typeof entry?.content === "string" ? entry.content.trim() : "";
+        return { role, content };
+      })
+      .filter((entry) => entry.content.length > 0)
+      .slice(-6);
+  } catch {
+    return [];
+  }
+}
+
 // Função para transcrever áudio usando API externa
 async function transcribeAudio(audioBlob: Blob, audioType: string): Promise<string | null> {
   try {
@@ -173,7 +193,12 @@ async function transcribeWithGoogle(audioBlob: Blob, audioType: string, apiKey: 
 }
 
 // Processar mensagem usando o mesmo sistema do chat principal
-async function processMessageWithDobby(message: string, userId: number, authCookie?: string): Promise<string> {
+async function processMessageWithDobby(
+  message: string,
+  userId: number,
+  authCookie: string | undefined,
+  history: HistoryEntry[]
+): Promise<{ message: string; source?: string; intent?: string }> {
   // Chamar a API do chat normal para processar a mensagem
   // Isso garante que o Dobby entenda o áudio da mesma forma que entende texto
   try {
@@ -190,32 +215,42 @@ async function processMessageWithDobby(message: string, userId: number, authCook
     const response = await fetch(`${baseUrl}/api/chat`, {
       method: "POST",
       headers,
-      body: JSON.stringify({ message }),
+      body: JSON.stringify({ message, history }),
     });
     
     if (response.ok) {
-      const data = await response.json() as { message: string };
-      return data.message;
+      const data = await response.json() as { message: string; source?: string; intent?: string };
+      return data;
     }
   } catch (error) {
     console.error("Erro ao processar mensagem via chat:", error);
   }
   
   // Fallback: retornar mensagem padrão se não conseguir processar
-  return `Recebi seu áudio! Como posso ajudá-lo? Posso buscar informações sobre:\n\n` +
-    `📚 Base de conhecimento\n` +
-    `📁 Arquivos e downloads\n` +
-    `🎫 Tickets e chamados\n` +
-    `📅 Agenda e compromissos\n` +
-    `🔐 Senhas e credenciais\n` +
-    `📝 Histórico e atualizações\n` +
-    `📊 Estatísticas do sistema\n` +
-    `📈 Relatórios detalhados\n\n` +
-    `Faça uma pergunta específica e eu buscarei as informações para você!`;
+  return {
+    message:
+      `Recebi seu áudio! Como posso ajudá-lo? Posso buscar informações sobre:\n\n` +
+      `📚 Base de conhecimento\n` +
+      `📁 Arquivos e downloads\n` +
+      `🎫 Tickets e chamados\n` +
+      `📅 Agenda e compromissos\n` +
+      `🔐 Senhas e credenciais\n` +
+      `📝 Histórico e atualizações\n` +
+      `📊 Estatísticas do sistema\n` +
+      `📈 Relatórios detalhados\n\n` +
+      `Faça uma pergunta específica e eu buscarei as informações para você!`,
+    source: "rule-based",
+  };
 }
 
 // Função para processar áudio e entender a intenção
-async function processAudioIntent(audioFile: File, transcript: string | null, userId: number, authCookie?: string): Promise<string> {
+async function processAudioIntent(
+  audioFile: File,
+  transcript: string | null,
+  userId: number,
+  authCookie: string | undefined,
+  history: HistoryEntry[]
+): Promise<{ message: string; source?: string; intent?: string }> {
   let finalTranscript = transcript;
   
   // Se não temos transcrição do cliente, tentar transcrever usando API externa
@@ -233,11 +268,13 @@ async function processAudioIntent(audioFile: File, transcript: string | null, us
   
   // Se temos transcrição (do cliente ou da API), usar ela para entender a intenção através do sistema do Dobby
   if (finalTranscript && finalTranscript.trim().length > 0) {
-    return await processMessageWithDobby(finalTranscript.trim(), userId, authCookie);
+    return await processMessageWithDobby(finalTranscript.trim(), userId, authCookie, history);
   }
   
   // Se não temos transcrição, retornar mensagem genérica mas útil
-  return `Recebi seu áudio, mas não consegui transcrevê-lo automaticamente. Por favor:\n\n` +
+  return {
+    message:
+      `Recebi seu áudio, mas não consegui transcrevê-lo automaticamente. Por favor:\n\n` +
     `• Configure uma API de transcrição (AssemblyAI, Deepgram ou Google Speech-to-Text)\n` +
     `• Ou use um navegador compatível com transcrição de voz (Chrome, Edge ou Opera)\n` +
     `• Ou digite sua pergunta diretamente\n\n` +
@@ -248,8 +285,10 @@ async function processAudioIntent(audioFile: File, transcript: string | null, us
     `📅 Agenda e compromissos\n` +
     `🔐 Senhas e credenciais\n` +
     `📝 Histórico e atualizações\n` +
-    `📊 Estatísticas do sistema\n` +
-    `📈 Relatórios detalhados`;
+      `📊 Estatísticas do sistema\n` +
+      `📈 Relatórios detalhados`,
+    source: "rule-based",
+  };
 }
 
 export async function POST(req: NextRequest) {
@@ -276,14 +315,15 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Arquivo não é um áudio válido" }, { status: 400 });
     }
 
-    // Pegar transcrição se disponível
+    // Pegar transcrição e histórico se disponíveis
     const transcript = formData.get("transcript") as string | null;
+    const historyPayload = parseHistoryPayload(formData.get("history") as string | null);
     
     // Pegar cookie de autenticação da requisição
     const authCookie = req.headers.get("cookie") || undefined;
     
     // Processar áudio e gerar resposta do Dobby
-    const message = await processAudioIntent(audioFile, transcript, user.id, authCookie);
+    const { message, source, intent } = await processAudioIntent(audioFile, transcript, user.id, authCookie, historyPayload);
     
     // Tentar obter transcrição se não tivermos do cliente
     let finalTranscript = transcript;
@@ -299,6 +339,8 @@ export async function POST(req: NextRequest) {
       audioType: audioFile.type,
       transcript: finalTranscript || transcript || null,
       transcribed: !!finalTranscript,
+      source: source ?? "rule-based",
+      intent: intent ?? null,
     });
   } catch (error) {
     console.error("[chat:audio:POST]", error);

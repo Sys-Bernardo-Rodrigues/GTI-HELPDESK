@@ -2,11 +2,19 @@ import { NextRequest, NextResponse } from "next/server";
 import { getAuthenticatedUser } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { decrypt } from "@/lib/encryption";
+import { callLocalAi, isLocalAiEnabled, LocalAiMessage } from "@/lib/localAi";
 
 type Message = {
   role: "user" | "assistant";
   content: string;
 };
+
+type ConversationEntry = {
+  role: "user" | "assistant";
+  content: string;
+};
+
+const MAX_HISTORY_ITEMS = 8;
 
 // Função para normalizar texto (remover acentos, lowercase)
 function normalizeText(text: string): string {
@@ -17,33 +25,138 @@ function normalizeText(text: string): string {
     .trim();
 }
 
-// Função para extrair palavras-chave de uma pergunta
-function extractKeywords(text: string): string[] {
-  const normalized = normalizeText(text);
-  const stopWords = new Set([
+const STOP_WORDS = new Set(
+  [
     "o", "a", "os", "as", "um", "uma", "de", "do", "da", "dos", "das",
     "em", "no", "na", "nos", "nas", "por", "para", "com", "sem",
     "que", "qual", "quais", "como", "quando", "onde", "porque",
-    "é", "são", "está", "estão", "foi", "foram", "ser", "estar",
-    "tem", "têm", "ter", "ter", "me", "te", "se", "nos", "vocês",
+    "e", "é", "são", "está", "estão", "foi", "foram", "ser", "estar",
+    "tem", "têm", "ter", "me", "te", "se", "nos", "vocês",
     "eu", "ele", "ela", "eles", "elas", "nós", "você", "vocês",
-    "mostre", "mostrar", "listar", "lista", "buscar", "busca", "encontrar", "encontre"
-  ]);
-  
-  return normalized
+    "mostrar", "mostre", "lista", "listar", "buscar", "busca", "encontrar", "encontre",
+    "quero", "preciso", "desejo", "sobre", "mais", "menos"
+  ].map((word) => normalizeText(word))
+);
+
+const RAW_SYNONYM_GROUPS: Record<string, string[]> = {
+  ticket: ["ticket", "tickets", "chamado", "chamados", "solicitacao", "solicitacoes", "incidente", "incidentes", "protocolo", "protocolo"],
+  document: ["documento", "documentos", "artigo", "artigos", "manual", "procedimento", "tutorial", "guia", "kb", "base", "documentacao"],
+  password: ["senha", "senhas", "password", "credencial", "credenciais", "login", "logins", "acesso", "acessos", "usuario", "usuarios", "conta", "contas"],
+  file: ["arquivo", "arquivos", "anexo", "anexos", "upload", "uploads", "download", "downloads"],
+  agenda: ["agenda", "agendas", "compromisso", "compromissos", "reuniao", "reunioes", "reuniao", "evento", "eventos", "calendario", "calendario"],
+  history: ["historico", "historicos", "atualizacao", "atualizacoes", "comentario", "comentarios", "log", "logs", "registro", "registros"],
+  statistics: ["estatistica", "estatisticas", "metrica", "metricas", "dashboard", "resumo", "quantidade", "quantidades", "total", "totais", "numeros", "dados"],
+  report: ["relatorio", "relatorios", "relatório", "relatórios", "analise", "analises", "analise", "insights"],
+};
+
+const SYNONYM_GROUPS: Record<string, Set<string>> = Object.entries(RAW_SYNONYM_GROUPS).reduce(
+  (acc, [key, synonyms]) => {
+    const normalizedKey = normalizeText(key);
+    const normalizedSet = new Set<string>([normalizedKey]);
+    synonyms.forEach((term) => normalizedSet.add(normalizeText(term)));
+    acc[normalizedKey] = normalizedSet;
+    return acc;
+  },
+  {} as Record<string, Set<string>>
+);
+
+const SYNONYM_LOOKUP: Record<string, string> = {};
+Object.entries(SYNONYM_GROUPS).forEach(([canonical, terms]) => {
+  terms.forEach((term) => {
+    SYNONYM_LOOKUP[term] = canonical;
+  });
+});
+
+function expandKeywords(keywords: string[]): string[] {
+  const expanded = new Set<string>();
+  for (const keyword of keywords) {
+    const normalized = normalizeText(keyword);
+    const canonical = SYNONYM_LOOKUP[normalized] || normalized;
+    expanded.add(canonical);
+    const relatedTerms = SYNONYM_GROUPS[canonical];
+    if (relatedTerms) {
+      relatedTerms.forEach((term) => expanded.add(term));
+    }
+  }
+  return Array.from(expanded);
+}
+
+// Função para extrair palavras-chave de uma pergunta
+function extractKeywords(text: string): string[] {
+  const normalized = normalizeText(text);
+  const baseKeywords = normalized
     .split(/\s+/)
-    .filter(word => word.length > 2 && !stopWords.has(word));
+    .filter((word) => word.length > 2 && !STOP_WORDS.has(word));
+  
+  return expandKeywords(baseKeywords);
 }
 
 // Função para calcular similaridade entre duas strings (Jaccard similarity)
 function calculateSimilarity(str1: string, str2: string): number {
-  const words1 = new Set(normalizeText(str1).split(/\s+/).filter(w => w.length > 2));
-  const words2 = new Set(normalizeText(str2).split(/\s+/).filter(w => w.length > 2));
+  const words1 = new Set(normalizeText(str1).split(/\s+/).filter((w) => w.length > 2));
+  const words2 = new Set(normalizeText(str2).split(/\s+/).filter((w) => w.length > 2));
   
-  const intersection = new Set([...words1].filter(x => words2.has(x)));
+  const intersection = new Set([...words1].filter((x) => words2.has(x)));
   const union = new Set([...words1, ...words2]);
   
   return union.size > 0 ? intersection.size / union.size : 0;
+}
+
+function escapeRegExp(value: string): string {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+function sanitizeHistory(entries: any): ConversationEntry[] {
+  if (!Array.isArray(entries)) return [];
+  const cleaned = entries
+    .map((entry) => {
+      const role = entry?.role === "assistant" ? "assistant" : "user";
+      const content = typeof entry?.content === "string" ? entry.content.trim() : "";
+      return { role, content };
+    })
+    .filter((entry) => entry.content.length > 0);
+  return cleaned.slice(-MAX_HISTORY_ITEMS);
+}
+
+function buildSnippet(text: string | null | undefined, keywords: string[], maxLength = 160): string | null {
+  if (!text) return null;
+  if (!keywords.length) {
+    return text.length > maxLength ? `${text.slice(0, maxLength)}...` : text;
+  }
+  
+  const normalizedText = normalizeText(text);
+  let bestIndex = -1;
+  let matchedKeyword: string | null = null;
+  
+  for (const keyword of keywords) {
+    const idx = normalizedText.indexOf(keyword);
+    if (idx !== -1 && (bestIndex === -1 || idx < bestIndex)) {
+      bestIndex = idx;
+      matchedKeyword = keyword;
+    }
+  }
+  
+  if (bestIndex === -1) {
+    return text.length > maxLength ? `${text.slice(0, maxLength)}...` : text;
+  }
+  
+  const start = Math.max(0, bestIndex - 60);
+  const end = Math.min(text.length, bestIndex + (matchedKeyword?.length || 0) + 80);
+  let snippet = text.slice(start, end).trim();
+  
+  if (start > 0) {
+    snippet = `...${snippet}`;
+  }
+  if (end < text.length) {
+    snippet = `${snippet}...`;
+  }
+  
+  if (matchedKeyword) {
+    const regex = new RegExp(escapeRegExp(matchedKeyword), "ig");
+    snippet = snippet.replace(regex, (match) => `**${match}**`);
+  }
+  
+  return snippet;
 }
 
 // Função para extrair número de ID de uma pergunta
@@ -359,7 +472,11 @@ async function searchDocuments(keywords: string[], userId: number): Promise<any[
   
   // Busca semântica melhorada
   const scoredDocs = decryptedDocs.map(doc => {
-    const docText = normalizeText(`${doc.title} ${doc.content} ${doc.category || ""} ${doc.tags || ""}`);
+    const docText = normalizeText(`${doc.title} ${doc.content || ""} ${doc.category || ""} ${doc.tags || ""}`);
+    const normalizedTitle = normalizeText(doc.title);
+    const normalizedContent = normalizeText(doc.content || "");
+    const normalizedCategory = normalizeText(doc.category || "");
+    const normalizedTags = normalizeText(doc.tags || "");
     let score = 0;
     
     // Calcular similaridade geral
@@ -369,16 +486,16 @@ async function searchDocuments(keywords: string[], userId: number): Promise<any[
     
     // Pontuação por palavras-chave
     for (const keyword of keywords) {
-      if (doc.title.toLowerCase().includes(keyword)) {
+      if (normalizedTitle.includes(keyword)) {
         score += 5; // Título tem peso maior
       }
-      if (doc.content.toLowerCase().includes(keyword)) {
+      if (normalizedContent.includes(keyword)) {
         score += 2;
       }
-      if (doc.category?.toLowerCase().includes(keyword)) {
+      if (normalizedCategory.includes(keyword)) {
         score += 3;
       }
-      if (doc.tags?.toLowerCase().includes(keyword)) {
+      if (normalizedTags.includes(keyword)) {
         score += 2;
       }
     }
@@ -449,6 +566,9 @@ async function searchTickets(keywords: string[], userId: number, filters?: any, 
   // Busca semântica melhorada com scoring
   const scoredTickets = allTickets.map(ticket => {
     const ticketText = normalizeText(`${ticket.title} ${ticket.description || ""} ${ticket.category?.name || ""}`);
+    const normalizedTitle = normalizeText(ticket.title);
+    const normalizedDescription = normalizeText(ticket.description || "");
+    const normalizedCategory = normalizeText(ticket.category?.name || "");
     let score = 0;
     
     // Calcular similaridade geral
@@ -458,13 +578,13 @@ async function searchTickets(keywords: string[], userId: number, filters?: any, 
     
     // Pontuação por palavras-chave individuais
     for (const keyword of keywords) {
-      if (ticket.title.toLowerCase().includes(keyword)) {
+      if (normalizedTitle.includes(keyword)) {
         score += 5; // Título tem peso maior
       }
-      if (ticket.description?.toLowerCase().includes(keyword)) {
+      if (normalizedDescription.includes(keyword)) {
         score += 2;
       }
-      if (ticket.category?.name.toLowerCase().includes(keyword)) {
+      if (normalizedCategory.includes(keyword)) {
         score += 3;
       }
     }
@@ -528,11 +648,12 @@ async function searchFiles(keywords: string[], userId: number): Promise<any[]> {
   // Busca simples por palavras-chave
   const scoredFiles = decryptedFiles.map(file => {
     const fileText = normalizeText(`${file.originalName} ${file.description || ""} ${file.category || ""} ${file.tags || ""}`);
+    const normalizedName = normalizeText(file.originalName);
     let score = 0;
     
     for (const keyword of keywords) {
       if (fileText.includes(keyword)) {
-        score += file.originalName.toLowerCase().includes(keyword) ? 3 : 1;
+        score += normalizedName.includes(keyword) ? 3 : 1;
       }
     }
     
@@ -605,11 +726,12 @@ async function searchPasswords(keywords: string[], userId: number): Promise<any[
   // Busca simples por palavras-chave (usando dados descriptografados)
   const scoredPasswords = decryptedPasswords.map(password => {
     const passwordText = normalizeText(`${password.title} ${password.username || ""} ${password.url || ""} ${password.notes || ""} ${password.category || ""} ${password.tags || ""}`);
+    const normalizedTitle = normalizeText(password.title);
     let score = 0;
     
     for (const keyword of keywords) {
       if (passwordText.includes(keyword)) {
-        score += password.title.toLowerCase().includes(keyword) ? 3 : 1;
+        score += normalizedTitle.includes(keyword) ? 3 : 1;
       }
     }
     
@@ -646,11 +768,12 @@ async function searchHistory(keywords: string[], userId: number): Promise<any[]>
   // Busca simples por palavras-chave
   const scoredUpdates = allUpdates.map(update => {
     const updateText = normalizeText(`${update.content} ${update.ticket.title} ${update.ticket.category?.name || ""}`);
+    const normalizedContent = normalizeText(update.content);
     let score = 0;
     
     for (const keyword of keywords) {
       if (updateText.includes(keyword)) {
-        score += update.content.toLowerCase().includes(keyword) ? 2 : 1;
+        score += normalizedContent.includes(keyword) ? 2 : 1;
       }
     }
     
@@ -890,7 +1013,7 @@ function generateResponse(
   documents: any[],
   tickets: any[],
   passwords: any[],
-  history: any[],
+  historyUpdates: any[],
   files: any[],
   agenda: any,
   statistics: any,
@@ -904,15 +1027,22 @@ function generateResponse(
       }
       
       let docResponse = `Encontrei ${documents.length} documento(s) relacionado(s):\n\n`;
-      documents.forEach((doc, idx) => {
+      documents.slice(0, 5).forEach((doc, idx) => {
         docResponse += `${idx + 1}. **${doc.title}**\n`;
-        if (doc.category) docResponse += `   Categoria: ${doc.category}\n`;
-        if (doc.content) {
-          const preview = doc.content.substring(0, 150);
-          docResponse += `   ${preview}${doc.content.length > 150 ? "..." : ""}\n`;
+        if (doc.category) docResponse += `   📁 Categoria: ${doc.category}\n`;
+        const preview = buildSnippet(doc.content, intent.keywords);
+        if (preview) {
+          docResponse += `   📝 ${preview}\n`;
+        }
+        if (doc.tags) {
+          docResponse += `   🔖 Tags: ${doc.tags}\n`;
         }
         docResponse += "\n";
       });
+      
+      if (documents.length > 5) {
+        docResponse += `\n*Mostrando 5 de ${documents.length} documentos. Refinar a busca pode trazer resultados ainda mais precisos.*`;
+      }
       
       return docResponse;
     
@@ -929,14 +1059,15 @@ function generateResponse(
         if (ticket.category) ticketResponse += `📁 **Categoria**: ${ticket.category.name}\n`;
         if (ticket.user) ticketResponse += `👤 **Solicitante**: ${ticket.user.name || ticket.user.email}\n`;
         if (ticket.assignedTo) ticketResponse += `✅ **Atribuído a**: ${ticket.assignedTo.name || ticket.assignedTo.email}\n`;
-        if (ticket.description) {
-          const desc = ticket.description.substring(0, 200);
-          ticketResponse += `\n📝 **Descrição**: ${desc}${ticket.description.length > 200 ? "..." : ""}\n`;
+        const descriptionSnippet = buildSnippet(ticket.description, intent.keywords, 220);
+        if (descriptionSnippet) {
+          ticketResponse += `\n📝 **Descrição**: ${descriptionSnippet}\n`;
         }
         if (ticket.updates && ticket.updates.length > 0) {
           ticketResponse += `\n📝 **Últimas Atualizações**:\n`;
           ticket.updates.slice(0, 3).forEach((update: any) => {
-            ticketResponse += `   • ${update.content.substring(0, 100)}${update.content.length > 100 ? "..." : ""}\n`;
+            const updateSnippet = buildSnippet(update.content, intent.keywords, 140) ?? update.content.substring(0, 120);
+            ticketResponse += `   • ${updateSnippet}${update.content.length > 120 && !updateSnippet?.endsWith("...") ? "..." : ""}\n`;
             ticketResponse += `     Por: ${update.user?.name || update.user?.email || "Sistema"} em ${new Date(update.createdAt).toLocaleDateString("pt-BR")}\n`;
           });
         }
@@ -953,9 +1084,9 @@ function generateResponse(
         } else {
           ticketResponse += `   ⚠️ Não atribuído\n`;
         }
-        if (ticket.description) {
-          const desc = ticket.description.substring(0, 80);
-          ticketResponse += `   📝 ${desc}${ticket.description.length > 80 ? "..." : ""}\n`;
+        const descriptionSnippet = buildSnippet(ticket.description, intent.keywords, 140);
+        if (descriptionSnippet) {
+          ticketResponse += `   📝 ${descriptionSnippet}\n`;
         }
         ticketResponse += "\n";
       });
@@ -982,9 +1113,9 @@ function generateResponse(
         if (password.category) passwordResponse += `   Categoria: ${password.category}\n`;
         // Mostrar senha descriptografada completa
         passwordResponse += `   🔐 Senha: ${password.password}\n`;
-        if (password.notes) {
-          const preview = password.notes.substring(0, 100);
-          passwordResponse += `   Notas: ${preview}${password.notes.length > 100 ? "..." : ""}\n`;
+        const notesSnippet = buildSnippet(password.notes, intent.keywords, 140);
+        if (notesSnippet) {
+          passwordResponse += `   📝 Notas: ${notesSnippet}\n`;
         }
         passwordResponse += "\n";
       });
@@ -1002,9 +1133,9 @@ function generateResponse(
         fileResponse += `   Tipo: ${file.mimeType}\n`;
         fileResponse += `   Tamanho: ${(file.size / 1024).toFixed(2)} KB\n`;
         if (file.category) fileResponse += `   Categoria: ${file.category}\n`;
-        if (file.description) {
-          const preview = file.description.substring(0, 100);
-          fileResponse += `   Descrição: ${preview}${file.description.length > 100 ? "..." : ""}\n`;
+        const descriptionSnippet = buildSnippet(file.description, intent.keywords, 140);
+        if (descriptionSnippet) {
+          fileResponse += `   📝 Descrição: ${descriptionSnippet}\n`;
         }
         fileResponse += `   Caminho: ${file.path}\n`;
         fileResponse += "\n";
@@ -1013,14 +1144,15 @@ function generateResponse(
       return fileResponse;
     
     case "history":
-      if (history.length === 0) {
+      if (historyUpdates.length === 0) {
         return "Não encontrei histórico relacionado à sua busca.";
       }
       
-      let historyResponse = `Encontrei ${history.length} registro(s) no histórico:\n\n`;
-      history.slice(0, 5).forEach((update, idx) => {
+      let historyResponse = `Encontrei ${historyUpdates.length} registro(s) no histórico:\n\n`;
+      historyUpdates.slice(0, 5).forEach((update, idx) => {
         historyResponse += `${idx + 1}. **Ticket #${update.ticket.id}**: ${update.ticket.title}\n`;
-        historyResponse += `   Atualização: ${update.content.substring(0, 100)}${update.content.length > 100 ? "..." : ""}\n`;
+        const historySnippet = buildSnippet(update.content, intent.keywords, 140) ?? update.content.substring(0, 120);
+        historyResponse += `   📝 ${historySnippet}${update.content.length > 120 && !historySnippet.endsWith("...") ? "..." : ""}\n`;
         if (update.user) historyResponse += `   Por: ${update.user.name || update.user.email}\n`;
         historyResponse += `   Data: ${new Date(update.createdAt).toLocaleDateString("pt-BR")}\n`;
         historyResponse += "\n";
@@ -1176,58 +1308,206 @@ function generateResponse(
       
       if (documents.length > 0) {
         allResults.push(`📚 **Documentos encontrados** (${documents.length}):\n` +
-          documents.slice(0, 3).map((doc, idx) => 
-            `${idx + 1}. ${doc.title}`
-          ).join("\n"));
+          documents.slice(0, 3).map((doc, idx) => {
+            const snippet = buildSnippet(doc.content, intent.keywords, 120);
+            return `${idx + 1}. ${doc.title}${snippet ? ` — ${snippet}` : ""}`;
+          }).join("\n"));
       }
       
       if (files.length > 0) {
         allResults.push(`📁 **Arquivos encontrados** (${files.length}):\n` +
-          files.slice(0, 3).map((file, idx) => 
-            `${idx + 1}. ${file.originalName}`
-          ).join("\n"));
+          files.slice(0, 3).map((file, idx) => {
+            const snippet = buildSnippet(file.description, intent.keywords, 120);
+            return `${idx + 1}. ${file.originalName}${snippet ? ` — ${snippet}` : ""}`;
+          }).join("\n"));
       }
       
       if (tickets.length > 0) {
         allResults.push(`🎫 **Tickets encontrados** (${tickets.length}):\n` +
-          tickets.slice(0, 3).map((ticket, idx) => 
-            `${idx + 1}. Ticket #${ticket.id}: ${ticket.title}`
-          ).join("\n"));
+          tickets.slice(0, 3).map((ticket, idx) => {
+            const snippet = buildSnippet(ticket.description, intent.keywords, 120);
+            return `${idx + 1}. Ticket #${ticket.id}: ${ticket.title}${snippet ? ` — ${snippet}` : ""}`;
+          }).join("\n"));
       }
       
       if (passwords.length > 0) {
         allResults.push(`🔐 **Credenciais encontradas** (${passwords.length}):\n` +
-          passwords.slice(0, 3).map((pwd, idx) => 
-            `${idx + 1}. ${pwd.title}`
-          ).join("\n"));
+          passwords.slice(0, 3).map((pwd, idx) => {
+            const snippet = buildSnippet(pwd.notes, intent.keywords, 120);
+            return `${idx + 1}. ${pwd.title}${snippet ? ` — ${snippet}` : ""}`;
+          }).join("\n"));
       }
       
       if (allResults.length > 0) {
         return `Encontrei informações relacionadas à sua busca:\n\n` +
           allResults.join("\n\n") +
-          `\n\n💡 **Dica**: Seja mais específico para obter resultados mais precisos. Por exemplo:\n` +
-          `• "Documentos sobre backup"\n` +
-          `• "Tickets abertos sobre rede"\n` +
-          `• "Senhas do servidor"`;
+          `\n\n💡 **Dica**: refine a pergunta adicionando contexto (ex.: "tickets abertos sobre rede" ou "documentos de backup") para respostas ainda melhores.`;
       }
       
-      return `Desculpe, não encontrei informações relacionadas à sua busca. Tente ser mais específico ou use palavras-chave relacionadas a:\n\n` +
-        `• Documentos da base de conhecimento\n` +
-        `• Arquivos e downloads\n` +
-        `• Tickets e chamados (ex: "tickets abertos", "meus tickets")\n` +
-        `• Agenda e compromissos (ex: "agenda de hoje", "compromissos do João")\n` +
-        `• Senhas e credenciais (descriptografadas)\n` +
-        `• Histórico e atualizações\n` +
-        `• Estatísticas e relatórios\n\n` +
-        `**Exemplos de perguntas:**\n` +
-        `• "Quantos tickets estão abertos?"\n` +
-        `• "Agenda de hoje"\n` +
-        `• "Quantos tickets o Bernardo tem para hoje?"\n` +
-        `• "Senhas do servidor"\n` +
-        `• "Arquivos sobre rede"\n` +
-        `• "Meus tickets em andamento"\n` +
-        `• "Ticket #123"`;
+      return `Desculpe, não encontrei informações diretamente relacionadas. Experimente mencionar o tipo de informação desejada (documentos, tickets, agenda, arquivos, senhas, histórico) ou inclua palavras-chave mais específicas da sua área.\n\n` +
+        `Exemplos:\n` +
+        `• "Documentos sobre backup do servidor"\n` +
+        `• "Tickets abertos do time de rede"\n` +
+        `• "Agenda do João amanhã"\n` +
+        `• "Senhas do firewall"\n` +
+        `• "Arquivos de onboarding"\n` +
+        `• "Ticket #123"\n` +
+        `• "Estatísticas da semana"`;
   }
+}
+
+type IntentResult = ReturnType<typeof detectIntent>;
+
+type AiPayload = {
+  question: string;
+  intent: IntentResult;
+  deterministicResponse: string;
+  documents: any[];
+  tickets: any[];
+  passwords: any[];
+  historyUpdates: any[];
+  files: any[];
+  agenda: any;
+  statistics: any;
+  reports: any;
+  conversationHistory: ConversationEntry[];
+};
+
+function buildAiMessages(payload: AiPayload): LocalAiMessage[] {
+  const context = buildAiContext(payload);
+  const historyMessages: LocalAiMessage[] = (payload.conversationHistory || []).map((entry) => ({
+    role: entry.role,
+    content: entry.content,
+  }));
+  return [
+    {
+      role: "system",
+      content:
+        "Você é Dobby, assistente virtual interno do GTI. Responda sempre em português, com tom cordial, proativo e objetivo. Seja empático, cite apenas dados presentes no contexto e encerre oferecendo ajuda adicional.",
+    },
+    ...historyMessages,
+    {
+      role: "user",
+      content: context,
+    },
+  ];
+}
+
+function buildAiContext(payload: AiPayload): string {
+  const { question, intent, deterministicResponse } = payload;
+  const sections: string[] = [];
+
+  sections.push(`Pergunta original:\n${question}`);
+  sections.push(
+    `Intenção detectada: ${intent.type}\nPalavras-chave: ${
+      intent.keywords.length ? intent.keywords.join(", ") : "não identificadas"
+    }`
+  );
+
+  if (payload.conversationHistory?.length) {
+    const convoPreview = payload.conversationHistory
+      .slice(-5)
+      .map((entry) => `${entry.role === "assistant" ? "Dobby" : "Usuário"}: ${entry.content}`)
+      .join("\n");
+    sections.push(`Histórico recente:\n${convoPreview}`);
+  }
+
+  const docSection = summarizeDocuments(payload.documents, intent.keywords);
+  if (docSection) sections.push(docSection);
+
+  const ticketSection = summarizeTickets(payload.tickets, intent.keywords);
+  if (ticketSection) sections.push(ticketSection);
+
+  const passwordSection = summarizePasswords(payload.passwords);
+  if (passwordSection) sections.push(passwordSection);
+
+  const fileSection = summarizeFiles(payload.files, intent.keywords);
+  if (fileSection) sections.push(fileSection);
+
+  const historySection = summarizeHistory(payload.historyUpdates, intent.keywords);
+  if (historySection) sections.push(historySection);
+
+  const agendaSection = summarizeAgenda(payload.agenda);
+  if (agendaSection) sections.push(agendaSection);
+
+  const statsSection = summarizeStatistics(payload.statistics);
+  if (statsSection) sections.push(statsSection);
+
+  sections.push(`Resumo determinístico sugerido:\n${deterministicResponse}`);
+  sections.push(
+    "Com base nesses dados, escreva uma resposta humanizada, utilizando parágrafos curtos, bullet points quando fizer sentido e encerrando com uma oferta de ajuda adicional."
+  );
+
+  return sections.join("\n\n");
+}
+
+function summarizeDocuments(documents: any[], keywords: string[]): string | null {
+  if (!documents?.length) return null;
+  const lines = documents.slice(0, 3).map((doc: any, idx: number) => {
+    const snippet = buildSnippet(doc.content, keywords, 120);
+    const category = doc.category ? ` [${doc.category}]` : "";
+    return `${idx + 1}. ${doc.title}${category}${snippet ? ` — ${snippet}` : ""}`;
+  });
+  return `Documentos relevantes (${documents.length}):\n${lines.join("\n")}`;
+}
+
+function summarizeTickets(tickets: any[], keywords: string[]): string | null {
+  if (!tickets?.length) return null;
+  const lines = tickets.slice(0, 3).map((ticket: any, idx: number) => {
+    const snippet = buildSnippet(ticket.description, keywords, 120);
+    const status = ticket.status ? ` | Status: ${ticket.status}` : "";
+    const category = ticket.category?.name ? ` | Categoria: ${ticket.category.name}` : "";
+    return `${idx + 1}. Ticket #${ticket.id}: ${ticket.title}${status}${category}${snippet ? ` — ${snippet}` : ""}`;
+  });
+  return `Tickets relevantes (${tickets.length}):\n${lines.join("\n")}`;
+}
+
+function summarizePasswords(passwords: any[]): string | null {
+  if (!passwords?.length) return null;
+  const lines = passwords.slice(0, 3).map((password: any, idx: number) => {
+    const owner = password.createdBy ? ` | Criado por: ${password.createdBy.name || password.createdBy.email}` : "";
+    return `${idx + 1}. ${password.title}${owner}`;
+  });
+  return `Credenciais encontradas (${passwords.length}):\n${lines.join("\n")}`;
+}
+
+function summarizeFiles(files: any[], keywords: string[]): string | null {
+  if (!files?.length) return null;
+  const lines = files.slice(0, 3).map((file: any, idx: number) => {
+    const snippet = buildSnippet(file.description, keywords, 100);
+    return `${idx + 1}. ${file.originalName}${file.category ? ` [${file.category}]` : ""}${snippet ? ` — ${snippet}` : ""}`;
+  });
+  return `Arquivos encontrados (${files.length}):\n${lines.join("\n")}`;
+}
+
+function summarizeHistory(history: any[], keywords: string[]): string | null {
+  if (!history?.length) return null;
+  const lines = history.slice(0, 3).map((update: any, idx: number) => {
+    const snippet = buildSnippet(update.content, keywords, 100) ?? update.content.substring(0, 100);
+    return `${idx + 1}. Ticket #${update.ticket.id} — ${snippet}`;
+  });
+  return `Histórico recente (${history.length} registros):\n${lines.join("\n")}`;
+}
+
+function summarizeAgenda(agenda: any): string | null {
+  if (!agenda) return null;
+  const totalEvents = agenda.events?.length || 0;
+  const totalTickets = agenda.tickets?.length || 0;
+  if (totalEvents === 0 && totalTickets === 0) return null;
+  const date = agenda.date ? new Date(agenda.date).toLocaleDateString("pt-BR") : "sem data";
+  const owner = agenda.userName ? ` para ${agenda.userName}` : "";
+  return `Agenda${owner} em ${date}: ${totalEvents} evento(s), ${totalTickets} ticket(s).`;
+}
+
+function summarizeStatistics(statistics: any): string | null {
+  if (!statistics) return null;
+  return (
+    "Estatísticas principais:\n" +
+    `- Tickets total: ${statistics.totalTickets}\n` +
+    `- Abertos: ${statistics.openTickets} | Em andamento: ${statistics.inProgressTickets} | Resolvidos: ${statistics.resolvedTickets}\n` +
+    `- Documentos cadastrados: ${statistics.totalDocuments}\n` +
+    `- Senhas salvas: ${statistics.totalPasswords}`
+  );
 }
 
 export async function POST(req: NextRequest) {
@@ -1246,6 +1526,8 @@ export async function POST(req: NextRequest) {
     if (!message) {
       return NextResponse.json({ error: "Mensagem é obrigatória" }, { status: 400 });
     }
+
+    const conversationHistory = sanitizeHistory((body as any).history);
     
     // Detectar intenção
     const intent = detectIntent(message);
@@ -1254,7 +1536,7 @@ export async function POST(req: NextRequest) {
     let documents: any[] = [];
     let tickets: any[] = [];
     let passwords: any[] = [];
-    let history: any[] = [];
+    let historyUpdates: any[] = [];
     let files: any[] = [];
     let agenda: any = null;
     let statistics: any = null;
@@ -1289,7 +1571,7 @@ export async function POST(req: NextRequest) {
     }
     
     if (intent.type === "history" || intent.type === "general") {
-      history = await searchHistory(intent.keywords, user.id);
+      historyUpdates = await searchHistory(intent.keywords, user.id);
     }
     
     if (intent.type === "agenda") {
@@ -1308,18 +1590,63 @@ export async function POST(req: NextRequest) {
       }
     }
     
-    // Gerar resposta
-    const response = generateResponse(intent, documents, tickets, passwords, history, files, agenda, statistics, reports, message);
+    // Gerar resposta determinística
+    const deterministicResponse = generateResponse(
+      intent,
+      documents,
+      tickets,
+      passwords,
+      historyUpdates,
+      files,
+      agenda,
+      statistics,
+      reports,
+      message
+    );
+
+    if (isLocalAiEnabled()) {
+      const aiMessages = buildAiMessages({
+        question: message,
+        intent,
+        deterministicResponse,
+        documents,
+        tickets,
+        passwords,
+        historyUpdates,
+        files,
+        agenda,
+        statistics,
+        reports,
+        conversationHistory,
+      });
+
+      const aiReply = await callLocalAi(aiMessages);
+      if (aiReply) {
+        return NextResponse.json({
+          message: aiReply,
+          intent: intent.type,
+          source: "local-ai",
+          sources: {
+            documents: documents.length,
+            files: files.length,
+            tickets: tickets.length,
+            passwords: passwords.length,
+            history: historyUpdates.length,
+          },
+        });
+      }
+    }
     
     return NextResponse.json({
-      message: response,
+      message: deterministicResponse,
       intent: intent.type,
+      source: "rule-based",
       sources: {
         documents: documents.length,
         files: files.length,
         tickets: tickets.length,
         passwords: passwords.length,
-        history: history.length,
+        history: historyUpdates.length,
       },
     });
   } catch (error) {

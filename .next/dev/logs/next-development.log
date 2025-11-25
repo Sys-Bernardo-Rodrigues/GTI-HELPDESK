@@ -1,5 +1,24 @@
-[00:00:01.368] Server  LOG      ✓ Ready in 934ms
-[00:00:07.005] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
-[00:00:41.305] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
-[00:00:44.998] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
-[00:00:46.281] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
+[00:00:04.143] Server  LOG      ✓ Ready in 2.7s
+[00:00:10.730] Server  LOG      ○ Compiling /home ...
+[00:00:15.073] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
+[00:05:11.484] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
+[00:06:37.501] Server  LOG      ✓ Compiled in 129ms
+[00:07:11.477] Server  LOG      ✓ Compiled in 232ms
+[00:07:25.656] Server  LOG      ✓ Compiled in 215ms
+[00:08:04.473] Server  LOG      ✓ Compiled in 168ms
+[00:08:16.766] Server  LOG      ✓ Compiled in 152ms
+[00:08:27.779] Server  LOG      ✓ Compiled in 128ms
+[00:08:35.445] Server  LOG      ✓ Compiled in 75ms
+[00:08:43.526] Server  LOG      ✓ Compiled in 127ms
+[00:09:07.441] Server  LOG      ✓ Compiled in 222ms
+[00:09:20.305] Server  LOG      ✓ Compiled in 117ms
+[00:10:05.600] Server  LOG      ✓ Compiled in 113ms
+[00:10:05.782] Browser ERROR   uncaughtError: ReferenceError: formatTimestamp is not defined
+[00:10:22.341] Server  LOG      ✓ Compiled in 139ms
+[00:10:22.353] Server  WARN     ⚠ Fast Refresh had to perform a full reload due to a runtime error.
+[00:10:26.540] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
+[00:14:29.466] Server  LOG      ✓ Compiled in 117ms
+[00:14:36.737] Server  LOG      ✓ Compiled in 95ms
+[00:14:47.816] Server  LOG      ✓ Compiled in 118ms
+[00:20:46.359] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
+[00:21:31.147] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold

@@ -302,17 +302,282 @@ const ChatMessage = styled.div<{ $isUser: boolean }>`
   justify-content: ${(p) => (p.$isUser ? "flex-end" : "flex-start")};
 `;
 
+type ChatMessageRole = "user" | "assistant";
+type ChatMessageSource = "local-ai" | "rule-based" | "system";
+
+type ChatMessageItem = {
+  id: string;
+  role: ChatMessageRole;
+  content: string;
+  createdAt: number;
+  source?: ChatMessageSource;
+  intent?: string | null;
+};
+
+const CHAT_SUGGESTIONS: Array<{ title: string; description: string; prompt: string }> = [
+  {
+    title: "Resumo diário",
+    description: "Tickets abertos, resolvidos e próximos passos.",
+    prompt: "Faça um resumo dos tickets abertos hoje, destacando prioridades e responsáveis.",
+  },
+  {
+    title: "Agenda do time",
+    description: "Compromissos de hoje e amanhã.",
+    prompt: "Quais compromissos e tickets agendados eu tenho para hoje e amanhã?",
+  },
+  {
+    title: "Tickets críticos",
+    description: "Pendências urgentes sem atendimento.",
+    prompt: "Liste tickets críticos ou atrasados que ainda não têm responsável.",
+  },
+  {
+    title: "Base de conhecimento",
+    description: "Documentos para apoiar o atendimento.",
+    prompt: "Quais documentos de base explicam como fazer backup e recuperação de desastre?",
+  },
+];
+
+const SOURCE_TAGS: Record<ChatMessageSource, { label: string; bg: string; color: string }> = {
+  "local-ai": { label: "IA Local", bg: "rgba(79, 70, 229, 0.12)", color: "#4338ca" },
+  "rule-based": { label: "Resposta rápida", bg: "rgba(5, 150, 105, 0.15)", color: "#047857" },
+  system: { label: "Sistema", bg: "rgba(249, 115, 22, 0.15)", color: "#ea580c" },
+};
+
+const INTENT_LABELS: Record<string, string> = {
+  document: "Documentos",
+  ticket: "Tickets",
+  statistics: "Estatísticas",
+  password: "Senhas",
+  history: "Histórico",
+  report: "Relatórios",
+  file: "Arquivos",
+  agenda: "Agenda",
+  help: "Ajuda",
+  general: "Pesquisa geral",
+};
+
+type MessageBlock = { type: "paragraph"; text: string } | { type: "list"; items: string[] };
+
+function generateMessageId() {
+  if (typeof crypto !== "undefined" && "randomUUID" in crypto) {
+    return crypto.randomUUID();
+  }
+  return `msg-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+}
+
+function formatTimestamp(timestamp: number) {
+  return new Date(timestamp).toLocaleTimeString("pt-BR", {
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+}
+
+function getIntentLabel(intent?: string | null) {
+  if (!intent) return null;
+  return INTENT_LABELS[intent] || intent;
+}
+
+function getSourceMeta(source?: ChatMessageSource) {
+  if (!source) return null;
+  return SOURCE_TAGS[source] || null;
+}
+
+function parseMessageContent(content: string): MessageBlock[] {
+  const lines = content.split(/\r?\n/);
+  const blocks: MessageBlock[] = [];
+  let currentList: string[] = [];
+  let currentParagraph: string[] = [];
+
+  const flushList = () => {
+    if (currentList.length) {
+      blocks.push({ type: "list", items: [...currentList] });
+      currentList = [];
+    }
+  };
+
+  const flushParagraph = () => {
+    if (currentParagraph.length) {
+      blocks.push({ type: "paragraph", text: currentParagraph.join(" ") });
+      currentParagraph = [];
+    }
+  };
+
+  for (const rawLine of lines) {
+    const line = rawLine.trim();
+    if (!line) {
+      flushList();
+      flushParagraph();
+      continue;
+    }
+
+    if (/^[-*•]/.test(line)) {
+      flushParagraph();
+      currentList.push(line.replace(/^[-*•]\s*/, ""));
+    } else {
+      flushList();
+      currentParagraph.push(line);
+    }
+  }
+
+  flushList();
+  flushParagraph();
+
+  if (blocks.length === 0) {
+    return [{ type: "paragraph", text: content }];
+  }
+
+  return blocks;
+}
+
+function renderInlineParts(text: string) {
+  const segments = text.split(/(\*\*[^*]+\*\*|`[^`]+`)/g).filter(Boolean);
+  return segments.map((segment, idx) => {
+    if (segment.startsWith("**") && segment.endsWith("**")) {
+      return (
+        <strong key={`strong-${idx}`}>{segment.slice(2, -2)}</strong>
+      );
+    }
+    if (segment.startsWith("`") && segment.endsWith("`")) {
+      return (
+        <code key={`code-${idx}`}>{segment.slice(1, -1)}</code>
+      );
+    }
+    return <span key={`text-${idx}`}>{segment}</span>;
+  });
+}
+
+function renderMessageContent(content: string) {
+  const blocks = parseMessageContent(content);
+  return blocks.map((block, idx) => {
+    if (block.type === "list") {
+      return (
+        <ul key={`list-${idx}`}>
+          {block.items.map((item, itemIdx) => (
+            <li key={`list-item-${idx}-${itemIdx}`}>{renderInlineParts(item)}</li>
+          ))}
+        </ul>
+      );
+    }
+    return (
+      <p key={`paragraph-${idx}`}>{renderInlineParts(block.text)}</p>
+    );
+  });
+}
+
 const MessageBubble = styled.div<{ $isUser: boolean }>`
   max-width: 80%;
-  padding: 12px 16px;
+  padding: 14px 18px;
   border-radius: 16px;
   background: ${(p) => (p.$isUser ? "var(--primary-600)" : "#fff")};
   color: ${(p) => (p.$isUser ? "#fff" : "#1e293b")};
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-  font-size: 0.875rem;
+  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.08);
+  font-size: 0.9rem;
   line-height: 1.5;
-  white-space: pre-wrap;
-  word-wrap: break-word;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+`;
+
+const MessageHeader = styled.div`
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+`;
+
+const MessageHeaderLeft = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 10px;
+`;
+
+const MessageAvatar = styled.div<{ $isUser: boolean }>`
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: ${(p) => (p.$isUser ? "rgba(255, 255, 255, 0.25)" : "var(--primary-100, #e0e7ff)")};
+  color: ${(p) => (p.$isUser ? "#fff" : "#1d4ed8")};
+  font-weight: 700;
+  font-size: 0.85rem;
+  display: grid;
+  place-items: center;
+`;
+
+const MessageHeaderInfo = styled.div`
+  display: flex;
+  flex-direction: column;
+  line-height: 1.1;
+`;
+
+const MessageAuthor = styled.span`
+  font-weight: 600;
+  font-size: 0.85rem;
+`;
+
+const MessageTimestamp = styled.time`
+  font-size: 0.7rem;
+  color: #94a3b8;
+`;
+
+const MessageBody = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+
+  p {
+    margin: 0;
+  }
+
+  ul {
+    margin: 0;
+    padding-left: 20px;
+  }
+
+  li + li {
+    margin-top: 4px;
+  }
+
+  code {
+    background: rgba(15, 23, 42, 0.08);
+    padding: 0 4px;
+    border-radius: 4px;
+    font-size: 0.8rem;
+  }
+`;
+
+const MessageFooter = styled.div`
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+`;
+
+const FooterChips = styled.div`
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+`;
+
+const Pill = styled.span`
+  padding: 4px 8px;
+  border-radius: 999px;
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+`;
+
+const SourceChip = styled(Pill)<{ $variant?: ChatMessageSource }>`
+  background: ${(p) => (p.$variant ? SOURCE_TAGS[p.$variant]?.bg : "rgba(15, 23, 42, 0.1)")};
+  color: ${(p) => (p.$variant ? SOURCE_TAGS[p.$variant]?.color : "#0f172a")};
+`;
+
+const IntentChip = styled(Pill)`
+  background: rgba(59, 130, 246, 0.15);
+  color: #1d4ed8;
 `;
 
 const ChatInputContainer = styled.div`
@@ -358,6 +623,57 @@ const ChatSendButton = styled.button`
   &:disabled {
     opacity: 0.6;
     cursor: not-allowed;
+  }
+`;
+
+const SuggestionsWrapper = styled.div`
+  padding: 0 16px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+`;
+
+const SuggestionLabel = styled.p`
+  margin: 0;
+  font-size: 0.75rem;
+  color: #64748b;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+`;
+
+const SuggestionList = styled.div`
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 8px;
+`;
+
+const SuggestionCard = styled.button`
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 12px;
+  background: #fff;
+  text-align: left;
+  cursor: pointer;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+
+  strong {
+    font-size: 0.85rem;
+    color: #0f172a;
+  }
+
+  span {
+    font-size: 0.75rem;
+    color: #475569;
+  }
+
+  &:hover {
+    border-color: var(--primary-500);
+    box-shadow: 0 10px 24px rgba(15, 23, 42, 0.08);
+    transform: translateY(-1px);
   }
 `;
 
@@ -483,7 +799,7 @@ export default function HomePage() {
   const [tickets, setTickets] = useState<TicketItem[]>([]);
   const [events, setEvents] = useState<EventItem[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
-  const [chatMessages, setChatMessages] = useState<Array<{ role: "user" | "assistant"; content: string }>>([]);
+  const [chatMessages, setChatMessages] = useState<ChatMessageItem[]>([]);
   const [chatInput, setChatInput] = useState<string>("");
   const [chatLoading, setChatLoading] = useState<boolean>(false);
   const [isRecording, setIsRecording] = useState<boolean>(false);
@@ -744,6 +1060,28 @@ export default function HomePage() {
     setChatInput("");
   }
 
+  function appendMessage(message: Omit<ChatMessageItem, "id" | "createdAt"> & { createdAt?: number }) {
+    const newMessage: ChatMessageItem = {
+      id: generateMessageId(),
+      createdAt: message.createdAt ?? Date.now(),
+      ...message,
+    };
+    setChatMessages((prev) => [...prev, newMessage]);
+    return newMessage;
+  }
+
+  function buildHistoryPayload(limit = 6) {
+    return chatMessages
+      .slice(-limit)
+      .map((msg) => ({ role: msg.role, content: msg.content }));
+  }
+
+  function handleSuggestionClick(prompt: string) {
+    if (chatLoading) return;
+    setChatInput("");
+    void sendTextMessage(prompt);
+  }
+
   // Iniciar gravação de áudio
   async function startRecording() {
     try {
@@ -874,13 +1212,17 @@ export default function HomePage() {
       const userMessage = transcribedText 
         ? `🎤 [Áudio: "${transcribedText}"]`
         : "🎤 [Áudio enviado]";
-      setChatMessages((prev) => [...prev, { role: "user", content: userMessage }]);
+      appendMessage({ role: "user", content: userMessage });
       
       // Enviar áudio para a API do Dobby processar
       const formData = new FormData();
       formData.append("audio", audioBlob, "audio.webm");
       if (transcribedText) {
         formData.append("transcript", transcribedText);
+      }
+      const historyPayload = buildHistoryPayload();
+      if (historyPayload.length) {
+        formData.append("history", JSON.stringify(historyPayload));
       }
       
       const response = await fetch("/api/chat/audio", {
@@ -895,49 +1237,64 @@ export default function HomePage() {
       const data = await response.json();
       
       // Adicionar resposta do Dobby
-      setChatMessages((prev) => [...prev, { role: "assistant", content: data.message }]);
+      appendMessage({
+        role: "assistant",
+        content: data.message,
+        source: (data.source as ChatMessageSource) ?? "rule-based",
+        intent: data.intent,
+      });
       
       // Limpar input e referências
       setChatInput("");
       transcribedTextRef.current = "";
     } catch (error) {
       console.error("Erro ao processar áudio:", error);
-      setChatMessages((prev) => [
-        ...prev,
-        { role: "assistant", content: "Desculpe, ocorreu um erro ao processar o áudio. Tente novamente ou digite sua mensagem." },
-      ]);
+      appendMessage({
+        role: "assistant",
+        content: "Desculpe, ocorreu um erro ao processar o áudio. Tente novamente ou digite sua mensagem.",
+        source: "system",
+      });
     } finally {
       setChatLoading(false);
       transcribedTextRef.current = "";
     }
   }
 
-  // Função auxiliar para enviar mensagem
-  async function sendChatMessage(message: string) {
-    if (!message.trim() || chatLoading) return;
+  // Função auxiliar para enviar mensagem de texto
+  async function sendTextMessage(message: string) {
+    const trimmed = message.trim();
+    if (!trimmed || chatLoading) return;
     
-    setChatMessages((prev) => [...prev, { role: "user", content: message }]);
+    const historyPayload = buildHistoryPayload();
+    appendMessage({ role: "user", content: trimmed });
     setChatLoading(true);
     
     try {
       const response = await fetch("/api/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ message }),
+        body: JSON.stringify({ message: trimmed, history: historyPayload }),
       });
       
       if (!response.ok) {
-        throw new Error("Erro ao enviar mensagem");
+        const error = await response.json().catch(() => ({}));
+        throw new Error(error?.error || "Erro ao enviar mensagem");
       }
       
       const data = await response.json();
-      setChatMessages((prev) => [...prev, { role: "assistant", content: data.message }]);
+      appendMessage({
+        role: "assistant",
+        content: data.message,
+        source: (data.source as ChatMessageSource) ?? "rule-based",
+        intent: data.intent,
+      });
     } catch (error) {
       console.error("Erro ao enviar mensagem:", error);
-      setChatMessages((prev) => [
-        ...prev,
-        { role: "assistant", content: "Desculpe, ocorreu um erro ao processar sua mensagem. Tente novamente." },
-      ]);
+      appendMessage({
+        role: "assistant",
+        content: "Desculpe, ocorreu um erro ao processar sua mensagem. Tente novamente.",
+        source: "system",
+      });
     } finally {
       setChatLoading(false);
     }
@@ -946,38 +1303,10 @@ export default function HomePage() {
   // Enviar mensagem no chat
   async function handleChatSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (!chatInput.trim() || chatLoading) return;
-
-    const userMessage = chatInput.trim();
+    const trimmed = chatInput.trim();
+    if (!trimmed || chatLoading) return;
     setChatInput("");
-    setChatMessages((prev) => [...prev, { role: "user", content: userMessage }]);
-    setChatLoading(true);
-
-    try {
-      const res = await fetch("/api/chat", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ message: userMessage }),
-      });
-
-      if (res.ok) {
-        const data = await res.json();
-        setChatMessages((prev) => [...prev, { role: "assistant", content: data.message }]);
-      } else {
-        const error = await res.json();
-        setChatMessages((prev) => [
-          ...prev,
-          { role: "assistant", content: `Erro: ${error.error || "Não foi possível processar sua mensagem"}` },
-        ]);
-      }
-    } catch (error) {
-      setChatMessages((prev) => [
-        ...prev,
-        { role: "assistant", content: "Erro ao conectar com o assistente. Tente novamente." },
-      ]);
-    } finally {
-      setChatLoading(false);
-    }
+    await sendTextMessage(trimmed);
   }
 
 
@@ -1029,33 +1358,74 @@ export default function HomePage() {
               {chatMessages.length === 0 && (
                 <ChatMessage $isUser={false}>
                   <MessageBubble $isUser={false}>
-                    Olá! Sou o Dobby, assistente virtual do sistema. Posso ajudá-lo a encontrar informações sobre:
-                    {"\n\n"}
-                    📚 Base de conhecimento (descriptografada)
-                    {"\n"}
-                    📁 Arquivos e downloads
-                    {"\n"}
-                    🎫 Tickets e chamados
-                    {"\n"}
-                    📅 Agenda e compromissos
-                    {"\n"}
-                    🔐 Senhas e credenciais (descriptografadas)
-                    {"\n"}
-                    📝 Histórico e atualizações
-                    {"\n"}
-                    📊 Estatísticas do sistema
-                    {"\n"}
-                    📈 Relatórios detalhados
-                    {"\n\n"}
-                    Como posso ajudá-lo hoje?
+                    <MessageHeader>
+                      <MessageHeaderLeft>
+                        <MessageAvatar $isUser={false}>D</MessageAvatar>
+                        <MessageHeaderInfo>
+                          <MessageAuthor>Dobby</MessageAuthor>
+                          <MessageTimestamp>{formatTimestamp(Date.now())}</MessageTimestamp>
+                        </MessageHeaderInfo>
+                      </MessageHeaderLeft>
+                    </MessageHeader>
+                    <MessageBody>
+                      {renderMessageContent(
+                        "Olá! Sou o Dobby, seu assistente virtual. Posso apoiar com:\n\n- 📚 Base de conhecimento (documentos e arquivos)\n- 🎫 Tickets, históricos e status\n- 📅 Agenda, compromissos e lembretes\n- 🔐 Cofre de senhas e acessos\n- 📊 Estatísticas e relatórios operacionais\n\nFaça uma pergunta ou selecione um dos atalhos abaixo para começarmos!"
+                      )}
+                    </MessageBody>
                   </MessageBubble>
                 </ChatMessage>
               )}
-              {chatMessages.map((msg, idx) => (
-                <ChatMessage key={idx} $isUser={msg.role === "user"}>
-                  <MessageBubble $isUser={msg.role === "user"}>{msg.content}</MessageBubble>
-                </ChatMessage>
-              ))}
+              {chatMessages.map((msg) => {
+                const isUser = msg.role === "user";
+                const avatarInitial = isUser
+                  ? (user?.name?.[0] || user?.email?.[0] || "U").toUpperCase()
+                  : "D";
+                const authorLabel = isUser ? (user?.name || user?.email || "Você") : "Dobby";
+                const intentLabel = msg.role === "assistant" ? getIntentLabel(msg.intent) : null;
+                const sourceMeta = msg.role === "assistant" ? getSourceMeta(msg.source) : null;
+
+                return (
+                  <ChatMessage key={msg.id} $isUser={isUser}>
+                    <MessageBubble $isUser={isUser}>
+                      <MessageHeader>
+                        <MessageHeaderLeft>
+                          <MessageAvatar $isUser={isUser}>{avatarInitial}</MessageAvatar>
+                          <MessageHeaderInfo>
+                            <MessageAuthor>{authorLabel}</MessageAuthor>
+                            <MessageTimestamp>{formatTimestamp(msg.createdAt)}</MessageTimestamp>
+                          </MessageHeaderInfo>
+                        </MessageHeaderLeft>
+                      </MessageHeader>
+                      <MessageBody>{renderMessageContent(msg.content)}</MessageBody>
+                      {msg.role === "assistant" && (intentLabel || sourceMeta) && (
+                        <MessageFooter>
+                          <FooterChips>
+                            {intentLabel && <IntentChip>{intentLabel}</IntentChip>}
+                            {sourceMeta && <SourceChip $variant={msg.source}>{sourceMeta.label}</SourceChip>}
+                          </FooterChips>
+                        </MessageFooter>
+                      )}
+                    </MessageBubble>
+                  </ChatMessage>
+                );
+              })}
+              {chatMessages.length === 0 && (
+                <SuggestionsWrapper>
+                  <SuggestionLabel>Atalhos rápidos</SuggestionLabel>
+                  <SuggestionList>
+                    {CHAT_SUGGESTIONS.map((suggestion) => (
+                      <SuggestionCard
+                        key={suggestion.title}
+                        type="button"
+                        onClick={() => handleSuggestionClick(suggestion.prompt)}
+                      >
+                        <strong>{suggestion.title}</strong>
+                        <span>{suggestion.description}</span>
+                      </SuggestionCard>
+                    ))}
+                  </SuggestionList>
+                </SuggestionsWrapper>
+              )}
               {chatLoading && (
                 <ChatMessage $isUser={false}>
                   <LoadingDots>
