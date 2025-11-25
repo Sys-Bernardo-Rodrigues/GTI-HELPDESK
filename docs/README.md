@@ -1,6 +1,6 @@
-# 📚 Documentação do GTI Helpdesk
+# 📚 Documentação do WitchDesk
 
-Bem-vindo à documentação completa do sistema GTI Helpdesk. Este diretório contém toda a documentação técnica, guias e análises do projeto.
+Bem-vindo à documentação completa do sistema WitchDesk. Este diretório contém toda a documentação técnica, guias e análises do projeto.
 
 ---
 
