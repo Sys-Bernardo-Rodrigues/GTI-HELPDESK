@@ -9,7 +9,7 @@ Analisar o sistema completo, identificar pontos de melhoria e propor novas funci
 ## 📈 Status Atual do Sistema
 
 ### ✅ Pontos Fortes
-- ✅ Arquitetura sólida (Next.js + Prisma + MariaDB)
+- ✅ Arquitetura sólida (Next.js + Prisma + banco relacional configurável via `DATABASE_URL` — padrão MariaDB, com possibilidade de uso de PostgreSQL)
 - ✅ Autenticação JWT implementada
 - ✅ Criptografia para dados sensíveis
 - ✅ Schema bem estruturado (tickets, documentos, senhas, projetos)

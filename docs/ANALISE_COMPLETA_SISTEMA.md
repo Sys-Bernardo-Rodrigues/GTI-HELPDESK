@@ -2,7 +2,7 @@
 
 ## 📋 Sumário Executivo
 
-O **RootDesk** é um sistema completo de gerenciamento de suporte técnico e projetos desenvolvido em **Next.js 16** com **TypeScript**, utilizando **MariaDB** como banco de dados e **Prisma** como ORM. O sistema oferece funcionalidades abrangentes para gestão de tickets, projetos, formulários, base de conhecimento, agenda, e muito mais.
+O **RootDesk** é um sistema completo de gerenciamento de suporte técnico e projetos desenvolvido em **Next.js 16** com **TypeScript**, utilizando **Prisma** como ORM sobre um banco relacional (padrão **MariaDB**, com suporte a configuração via `DATABASE_URL` para outros providers compatíveis como **PostgreSQL**). O sistema oferece funcionalidades abrangentes para gestão de tickets, projetos, formulários, base de conhecimento, agenda, e muito mais.
 
 ---
 
@@ -12,14 +12,14 @@ O **RootDesk** é um sistema completo de gerenciamento de suporte técnico e pro
 - **Framework**: Next.js 16.0.0 (App Router)
 - **Linguagem**: TypeScript 5+
 - **UI**: Styled Components 6.1.8
-- **Banco de Dados**: MariaDB (via Docker)
+- **Banco de Dados**: MariaDB (via Docker) por padrão, configurável via `DATABASE_URL` para outros bancos suportados pelo Prisma (ex.: PostgreSQL)
 - **ORM**: Prisma 6.18.0
 - **Autenticação**: JWT (jsonwebtoken)
 - **Segurança**: bcryptjs para hash de senhas
 - **Testes**: Vitest + Testing Library
 
 ### Infraestrutura
-- **Containerização**: Docker Compose para MariaDB
+- **Containerização**: Docker Compose para MariaDB (pode ser adaptado para PostgreSQL ou outro banco suportado)
 - **Deploy**: Pronto para produção com migrações Prisma
 - **Healthcheck**: Endpoint `/api/health` para monitoramento
 

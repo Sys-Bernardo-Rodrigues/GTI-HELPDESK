@@ -7,7 +7,7 @@ Este documento registra o mapeamento completo, classificação de arquivos, aç�
 - Framework: `Next.js (App Router)` com `TypeScript`.
 - UI: `styled-components` com `GlobalStyles` e `StyledComponentsRegistry`.
 - Autenticação: JWT em cookie `auth_token`, utilitário `src/lib/auth.ts`.
-- Banco: `MariaDB` via `Prisma` (`src/lib/prisma.ts`, `prisma/schema.prisma`).
+- Banco: `MariaDB` via `Prisma` (`src/lib/prisma.ts`, `prisma/schema.prisma`), configurável via `DATABASE_URL`/`SHADOW_DATABASE_URL` (ex.: MariaDB/MySQL ou PostgreSQL).
 - API: rotas em `src/app/api/*` para `login`, `logout`, `session`, `health`, `profile` (avatar, email, discord, phone, password).
 - Scripts: `scripts/check-db.ts` (health DB) e `scripts/seed-default-user.ts` (seed do usuário padrão).
 - Testes: `vitest` + `@testing-library` com `src/app/home/__tests__/home.test.tsx` e `vitest.setup.ts`.

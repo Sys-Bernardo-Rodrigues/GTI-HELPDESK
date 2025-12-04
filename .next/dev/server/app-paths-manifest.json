@@ -6,6 +6,8 @@
   "/api/forms/route": "app/api/forms/route.js",
   "/api/login/route": "app/api/login/route.js",
   "/api/profile/route": "app/api/profile/route.js",
+  "/api/projects/[id]/tasks/route": "app/api/projects/[id]/tasks/route.js",
+  "/api/projects/route": "app/api/projects/route.js",
   "/api/session/route": "app/api/session/route.js",
   "/api/system/env/route": "app/api/system/env/route.js",
   "/api/tickets/route": "app/api/tickets/route.js",
@@ -16,5 +18,6 @@
   "/config/page": "app/config/page.js",
   "/home/page": "app/home/page.js",
   "/page": "app/page.js",
+  "/projetos/page": "app/projetos/page.js",
   "/users/page": "app/users/page.js"
 }

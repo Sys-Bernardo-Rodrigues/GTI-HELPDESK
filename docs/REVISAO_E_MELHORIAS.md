@@ -41,7 +41,7 @@
 ### 2.1. Busca Full-Text
 - ✅ **Status Atual**: Busca básica por palavras-chave com similaridade Jaccard
 - 🔄 **Melhorias Sugeridas**:
-  - **Índice de busca full-text** no MariaDB (FULLTEXT INDEX)
+  - **Índice de busca full-text** no banco relacional (por exemplo, FULLTEXT INDEX no MariaDB/MySQL ou `tsvector` no PostgreSQL)
   - **Busca fuzzy** para tolerar erros de digitação
   - **Busca por relevância** usando TF-IDF ou BM25
   - **Busca semântica** com embeddings (se IA local disponível)

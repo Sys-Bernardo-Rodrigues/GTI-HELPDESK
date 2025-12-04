@@ -9,27 +9,45 @@ A página `/config` fornece um layout responsivo com header reutilizável, menu 
   - Navegação principal (`/home`, `/config`).
   - Área de usuário com avatar (resolve URL de avatar e exibe inicial como fallback).
 
-- `src/ui/SettingsSideMenu.tsx`
-  - Menu lateral de configurações com categorias: Geral, Aparência, Notificações, Segurança, Integrações.
-  - Acessibilidade: `aria-current`, foco ao abrir, navegação por teclado (`button`).
-  - Persistência: estado de abertura do sidebar salvo em `localStorage`.
-  - Navegação cliente-side: atualiza `section` na query string via `router.replace`.
+- `src/components/StandardLayout.tsx`
+  - Layout principal com menu lateral (Início, Tickets, Base, Agenda, etc.).
+  - Item `Config` com submenu para:
+    - `Usuários` (`/users`)
+    - `Formulários` (`/config?section=forms`)
+    - `Webhooks` (`/config?section=webhooks`)
+    - `Atualizar` (`/config?section=update`)
+    - `Configurar .env` (`/config?section=env`)
+    - `Acessos` (`/config/acessos`)
 
 - `src/app/config/page.tsx`
-  - Estrutura da página com grid responsivo, overlay em mobile e card de conteúdo.
+  - Estrutura da página com grid responsivo e card central de conteúdo.
+  - Seções principais:
+    - `general`: Configurações gerais (nome do sistema, timezone).
+    - `appearance`: Tema e aparência.
+    - `notifications`: Preferências de notificações.
+    - `security`: Política de senha.
+    - `integrations`: Integrações básicas.
+    - `update`: Atualização do código via Git (`/api/system/update`).
+    - `env`: Edição visual das principais variáveis do `.env` (`/api/system/env`).
+    - `forms` e `webhooks`: Gerenciamento avançado.
   - Carregamento: skeleton com transição suave ao trocar de seção.
   - Erros: exibe mensagem quando `section` inválida.
 
 ## Uso
 
-- Acesse `http://localhost:3000/config`.
-- Troque de seção pelo menu lateral; a URL será atualizada com `?section=<key>`.
-- O estado de abertura do menu é preservado em navegações.
+- Acesse `http://localhost:3000/config?section=general` para a tela inicial de configurações.
+- Use o submenu `Config` no layout principal para navegar direto para:
+  - `/config?section=forms` (Formulários)
+  - `/config?section=webhooks` (Webhooks)
+  - `/config?section=update` (Atualizar via Git)
+  - `/config?section=env` (Configurar `.env`)
 
 ## Extensão
 
-- Adicionar novos itens ao menu em `SettingsSideMenu.tsx` e o conteúdo correspondente no `switch` de `page.tsx`.
-- Integrar com APIs reais para salvar preferências por seção.
+- Para adicionar novas seções:
+  - Inclua a nova chave em `SectionKey` em `config/page.tsx`.
+  - Adicione um novo `case` no `switch (section)` com o conteúdo desejado.
+  - Opcional: adicione item correspondente no submenu de `StandardLayout`.
 
 ## Testes
 
