@@ -45,3 +45,18 @@
 [01:18:47.903] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
 [01:18:50.320] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
 [01:18:54.402] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
+[01:48:14.598] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
+[01:49:44.288] Server  LOG      ✓ Compiled in 427ms
+[01:50:07.802] Server  LOG      ✓ Compiled in 385ms
+[01:50:08.120] Browser ERROR   uncaughtError: ReferenceError: EnvStatusRow is not defined
+[01:51:17.935] Server  ERROR    ⨯ ReferenceError: EnvStatusRow is not defined
+[01:51:18.344] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
+[01:51:18.568] Browser ERROR   uncaughtError: ReferenceError: EnvStatusRow is not defined
+[01:51:22.039] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
+[01:51:39.260] Server  ERROR    ⨯ ReferenceError: EnvStatusRow is not defined
+[01:51:39.604] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
+[01:51:39.830] Browser ERROR   uncaughtError: ReferenceError: EnvStatusRow is not defined
+[01:52:10.492] Server  LOG      ✓ Compiled in 414ms
+[01:52:10.548] Server  WARN     ⚠ Fast Refresh had to perform a full reload due to a runtime error.
+[01:52:13.749] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
+[02:13:20.777] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold

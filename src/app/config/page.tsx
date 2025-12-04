@@ -840,6 +840,20 @@ export default function ConfigPage() {
   const content = useMemo(() => {
     if (error) return <Muted role="alert">{error}</Muted>;
     if (loading) return <Skeleton aria-hidden />;
+
+    const emailEnabled =
+      String(envSettings.EMAIL_ENABLED ?? "").trim().toLowerCase() === "true";
+    const aiEnabled =
+      String(envSettings.LOCAL_AI_ENABLED ?? "").trim().toLowerCase() === "true";
+    const dbUrl = String(envSettings.DATABASE_URL ?? "").trim();
+    const dbEngine = dbUrl.startsWith("postgresql")
+      ? "PostgreSQL"
+      : dbUrl.startsWith("mysql")
+      ? "MariaDB/MySQL"
+      : dbUrl
+      ? "Detectado via URL"
+      : "Não configurado";
+
     switch (section) {
       case "general":
         return (
@@ -992,6 +1006,28 @@ export default function ConfigPage() {
               Ajuste com segurança as principais variáveis de ambiente utilizadas pelo RootDesk. Algumas mudanças exigem
               reinício do servidor.
             </SectionSubtitle>
+
+            <EnvStatusRow>
+              <EnvStatusCard>
+                <EnvStatusLabel>E-mail (SMTP)</EnvStatusLabel>
+                <EnvStatusValue $active={emailEnabled}>
+                  {emailEnabled ? "Ativo" : "Inativo"}
+                </EnvStatusValue>
+              </EnvStatusCard>
+              <EnvStatusCard>
+                <EnvStatusLabel>IA Local</EnvStatusLabel>
+                <EnvStatusValue $active={aiEnabled}>
+                  {aiEnabled ? "Ativa" : "Inativa"}
+                </EnvStatusValue>
+              </EnvStatusCard>
+              <EnvStatusCard>
+                <EnvStatusLabel>Banco de dados</EnvStatusLabel>
+                <EnvStatusValue $active={Boolean(dbUrl)}>
+                  {dbEngine}
+                </EnvStatusValue>
+              </EnvStatusCard>
+            </EnvStatusRow>
+
             {envFeedback && (
               <Feedback
                 role={envFeedback.type === "error" ? "alert" : "status"}
@@ -3102,6 +3138,43 @@ const Pill = styled.span<{ $tone: "info" | "warning" }>`
   background: ${(p) => (p.$tone === "info" ? "rgba(59,130,246,0.08)" : "rgba(245,158,11,0.08)")};
   color: ${(p) => (p.$tone === "info" ? "#1d4ed8" : "#b45309")};
   border: 1px solid ${(p) => (p.$tone === "info" ? "rgba(59,130,246,0.35)" : "rgba(245,158,11,0.35)")};
+`;
+
+const EnvStatusRow = styled.div`
+  display: grid;
+  grid-template-columns: repeat(1, minmax(0, 1fr));
+  gap: 10px;
+  margin-bottom: 18px;
+
+  @media (min-width: 900px) {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+`;
+
+const EnvStatusCard = styled.div`
+  border-radius: 999px;
+  padding: 8px 14px;
+  background: #f8fafc;
+  border: 1px solid rgba(148, 163, 184, 0.4);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+`;
+
+const EnvStatusLabel = styled.span`
+  font-size: 0.8rem;
+  color: #64748b;
+  font-weight: 600;
+`;
+
+const EnvStatusValue = styled.span<{ $active: boolean }>`
+  font-size: 0.8rem;
+  font-weight: 700;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: ${(p) => (p.$active ? "rgba(22,163,74,0.12)" : "rgba(148,163,184,0.15)")};
+  color: ${(p) => (p.$active ? "#166534" : "#475569")};
 `;
 
 const Skeleton = styled.div`
