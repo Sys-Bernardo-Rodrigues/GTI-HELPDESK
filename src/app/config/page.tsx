@@ -85,6 +85,7 @@ export default function ConfigPage() {
     LOCAL_AI_URL?: string;
     LOCAL_AI_MODEL?: string;
     LOCAL_AI_TIMEOUT_MS?: string;
+    LOCAL_AI_PORT?: string;
     DATABASE_URL?: string;
     SHADOW_DATABASE_URL?: string;
     DB_HOST?: string;
@@ -97,6 +98,8 @@ export default function ConfigPage() {
     DEFAULT_USER_EMAIL?: string;
     DEFAULT_USER_PASSWORD?: string;
     DEFAULT_USER_NAME?: string;
+    USE_DOCKER_DB?: string;
+    USE_DOCKER_OLLAMA?: string;
     ALLOW_GIT_UPDATE?: string;
     ALLOWED_REPO_URL?: string;
     ALLOW_ENV_EDIT?: string;
@@ -1467,6 +1470,64 @@ export default function ConfigPage() {
                         <li>Evite colocar senhas sensíveis aqui em ambientes de desenvolvimento compartilhados.</li>
                       </HelpList>
                     </EnvHintBox>
+
+                    <EnvGroup>
+                      <EnvGroupTitle>Configuração Docker</EnvGroupTitle>
+                      <Field>
+                        <Label>USE_DOCKER_DB</Label>
+                        <Input
+                          type="text"
+                          placeholder="true/false"
+                          value={envSettings.USE_DOCKER_DB ?? ""}
+                          onChange={(e) =>
+                            setEnvSettings((prev) => ({
+                              ...prev,
+                              USE_DOCKER_DB: (e.currentTarget as any).value ?? "",
+                            }))
+                          }
+                        />
+                        <SmallMuted>
+                          Define se o banco de dados será gerenciado via Docker. Use <InlineCode>true</InlineCode> para usar o{" "}
+                          <InlineCode>docker-compose.yml</InlineCode> ou <InlineCode>false</InlineCode> para conectar-se a um banco já instalado no sistema.
+                        </SmallMuted>
+                      </Field>
+                      <Field>
+                        <Label>USE_DOCKER_OLLAMA</Label>
+                        <Input
+                          type="text"
+                          placeholder="true/false"
+                          value={envSettings.USE_DOCKER_OLLAMA ?? ""}
+                          onChange={(e) =>
+                            setEnvSettings((prev) => ({
+                              ...prev,
+                              USE_DOCKER_OLLAMA: (e.currentTarget as any).value ?? "",
+                            }))
+                          }
+                        />
+                        <SmallMuted>
+                          Define se o Ollama será gerenciado via Docker. Use <InlineCode>true</InlineCode> para usar o{" "}
+                          <InlineCode>docker-compose.yml</InlineCode> ou <InlineCode>false</InlineCode> para conectar-se a uma instalação nativa do Ollama.
+                        </SmallMuted>
+                      </Field>
+                      <Field>
+                        <Label>LOCAL_AI_PORT</Label>
+                        <Input
+                          type="text"
+                          placeholder="11434"
+                          value={envSettings.LOCAL_AI_PORT ?? ""}
+                          onChange={(e) =>
+                            setEnvSettings((prev) => ({
+                              ...prev,
+                              LOCAL_AI_PORT: (e.currentTarget as any).value ?? "",
+                            }))
+                          }
+                        />
+                        <SmallMuted>
+                          Porta do servidor Ollama (usado pelo docker-compose.yml quando USE_DOCKER_OLLAMA=true). Se mudar, atualize também{" "}
+                          <InlineCode>LOCAL_AI_URL</InlineCode>.
+                        </SmallMuted>
+                      </Field>
+                    </EnvGroup>
 
                     <EnvGroup>
                       <EnvGroupTitle>Operações avançadas</EnvGroupTitle>
