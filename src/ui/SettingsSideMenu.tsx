@@ -4,7 +4,7 @@ import { useEffect, useRef } from "react";
 import styled from "styled-components";
 import { useRouter, useSearchParams } from "next/navigation";
 
-type SectionKey = "general" | "appearance" | "notifications" | "security" | "integrations" | "forms";
+type SectionKey = "general" | "appearance" | "notifications" | "security" | "integrations" | "forms" | "update" | "env";
 
 type Props = {
   open: boolean;
@@ -94,6 +94,26 @@ export default function SettingsSideMenu({ open, setOpen, activeKey, onSelect }:
               <path d="M3.9 12c0-1.71 1.39-3.1 3.1-3.1h4V7H7c-2.76 0-5 2.24-5 5s2.24 5 5 5h4v-1.9H7c-1.71 0-3.1-1.39-3.1-3.1zM8 13h8v-2H8v2zm9-6h-4v1.9h4c1.71 0 3.1 1.39 3.1 3.1s-1.39 3.1-3.1 3.1h-4V17h4c2.76 0 5-2.24 5-5s-2.24-5-5-5z"/>
             </svg>
             Integrações
+          </NavItem>
+          <NavItem
+            onClick={() => navigate("update")}
+            aria-label="Atualizar"
+            aria-current={activeKey === "update" ? "page" : undefined}
+          >
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M12 4V1L8 5l4 4V6c3.31 0 6 2.69 6 6 0 .34-.03.67-.08 1h2.02c.04-.33.06-.66.06-1 0-4.42-3.58-8-8-8zm-6 5c-.04.33-.06.66-.06 1 0 4.42 3.58 8 8 8v3l4-4-4-4v3c-2.76 0-5-2.24-5-5 0-.34.03-.67.08-1H6z"/>
+            </svg>
+            Atualizar
+          </NavItem>
+          <NavItem
+            onClick={() => navigate("env")}
+            aria-label="Configurar ambiente"
+            aria-current={activeKey === "env" ? "page" : undefined}
+          >
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M3 5v14h18V5H3zm8 12H5v-2h6v2zm8-4H5v-2h14v2zm0-4H5V7h14v2z"/>
+            </svg>
+            Configurar .env
           </NavItem>
           <NavItem
             onClick={() => navigate("forms")}
