@@ -1,6 +1,6 @@
-# 📚 Documentação do WitchDesk
+# 📚 Documentação do RootDesk
 
-Bem-vindo à documentação completa do sistema WitchDesk. Este diretório contém toda a documentação técnica, guias e análises do projeto.
+Bem-vindo à documentação completa do sistema RootDesk. Este diretório contém toda a documentação técnica, guias e análises do projeto.
 
 ---
 
@@ -64,7 +64,7 @@ Bem-vindo à documentação completa do sistema WitchDesk. Este diretório cont�
 8. **[Audio Transcription](./AUDIO_TRANSCRIPTION.md)**
    - Sistema de transcrição de áudio
    - Web Speech API
-   - Integração com Dobby
+   - Integração com Dobby assistente virtual (Beta)
 
 ---
 
@@ -106,7 +106,7 @@ Bem-vindo à documentação completa do sistema WitchDesk. Este diretório cont�
 ## 🔄 Atualizações Recentes
 
 ### 2024 - Sprint 1-2 Concluído ✅
-- ✅ **Sprint 1-2: Melhorias no Dobby - 100% CONCLUÍDO**
+- ✅ **Sprint 1-2: Melhorias no Dobby assistente virtual (Beta) - 100% CONCLUÍDO**
 - ✅ IA local reintroduzida com fallback inteligente
 - ✅ Sistema de sinônimos expandidos (8 grupos)
 - ✅ Detecção de entidades nomeadas

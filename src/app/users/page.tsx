@@ -396,7 +396,7 @@ export default function UsersPage() {
               </HeaderIcon>
               <div>
                 <CardTitle>Usuários</CardTitle>
-                <Muted>Visualize todos os usuários do WitchDesk e gerencie seus dados.</Muted>
+                <Muted>Visualize todos os usuários do RootDesk e gerencie seus dados.</Muted>
               </div>
               <HeaderActions>
                 <ActionButton type="button" onClick={() => loadUsers()} disabled={listLoading}>

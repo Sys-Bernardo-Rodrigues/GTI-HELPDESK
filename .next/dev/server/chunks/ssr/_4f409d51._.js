@@ -87,8 +87,8 @@ var __TURBOPACK__imported__module__$5b$project$5d2f$src$2f$ui$2f$GlobalStyles$2e
 ;
 ;
 const metadata = {
-    title: "WitchDesk",
-    description: "Sistema de Helpdesk WitchDesk",
+    title: "RootDesk",
+    description: "Sistema de Helpdesk RootDesk",
     icons: {
         icon: [
             {

@@ -1,4 +1,4 @@
-# 🗺️ Roadmap de Implementação - GTI Helpdesk
+# 🗺️ Roadmap de Implementação - RootDesk
 
 ## 📊 Visão Geral
 
@@ -8,7 +8,7 @@ Este documento detalha o plano de implementação das melhorias identificadas na
 
 ## 🎯 FASE 1: FUNDAÇÕES (Semanas 1-8)
 
-### Sprint 1-2: Melhorias no Dobby ✅ **CONCLUÍDO**
+### Sprint 1-2: Melhorias no Dobby assistente virtual (Beta) ✅ **CONCLUÍDO**
 **Objetivo**: Reintroduzir e melhorar a IA local
 
 #### Tarefas:
@@ -27,7 +27,7 @@ Este documento detalha o plano de implementação das melhorias identificadas na
   - **Status**: Concluído
   - **Data de conclusão**: 2024
 
-- [x] **1.3** Adicionar ações diretas no Dobby ✅
+- [x] **1.3** Adicionar ações diretas no Dobby assistente virtual (Beta) ✅
   - ✅ Criar endpoint `/api/chat/actions` para executar ações
   - ✅ Implementar parser de comandos ("Fechar ticket #123", "Criar documento sobre X")
   - ✅ Suporte a: fechar ticket, atualizar status, criar documento
@@ -48,7 +48,7 @@ Este documento detalha o plano de implementação das melhorias identificadas na
 **Total Sprint 1-2**: ✅ **CONCLUÍDO** (~11 dias úteis estimados)
 
 #### Melhorias Adicionais Implementadas:
-- ✅ **Sugestões contextuais**: Após cada resposta, o Dobby sugere perguntas relacionadas
+- ✅ **Sugestões contextuais**: Após cada resposta, o Dobby assistente virtual (Beta) sugere perguntas relacionadas
 - ✅ **Cache inteligente**: Cache em memória com TTL de 5 minutos, limpeza automática
 - ✅ **Fallback inteligente**: Se IA local falhar, usa resposta baseada em regras
 - ✅ **Melhorias na UI**: Tags de fonte (IA Local, Cache, Ação executada), feedback visual
@@ -394,14 +394,14 @@ Este documento detalha o plano de implementação das melhorias identificadas na
 
 | Fase | Duração | Principais Entregas | Status |
 |------|---------|---------------------|--------|
-| **Fase 1** | 9 semanas | Dobby melhorado, Permissões, Notificações, Busca | 🟡 Em andamento |
+| **Fase 1** | 9 semanas | Dobby assistente virtual (Beta) melhorado, Permissões, Notificações, Busca | 🟡 Em andamento |
 | **Fase 2** | 10 semanas | Dashboard, Automação, Integrações, Backup | ⚪ Não iniciado |
 | **Fase 3** | 8 semanas | PWA, UI melhorada, Colaboração, Analytics | ⚪ Não iniciado |
 | **TOTAL** | **27 semanas** (~6 meses) | Sistema completo e robusto | 🟡 12% concluído |
 
 ### 📊 Progresso Detalhado
 
-#### ✅ Sprint 1-2: Melhorias no Dobby - **100% CONCLUÍDO**
+#### ✅ Sprint 1-2: Melhorias no Dobby assistente virtual (Beta) - **100% CONCLUÍDO**
 - ✅ Integração com IA local (Ollama)
 - ✅ Sistema de sinônimos expandidos
 - ✅ Detecção de entidades nomeadas
@@ -422,7 +422,7 @@ Este documento detalha o plano de implementação das melhorias identificadas na
 
 Se precisar de um MVP mais rápido, focar em:
 
-1. **Sprint 1-2**: Dobby melhorado (sem ações diretas)
+1. **Sprint 1-2**: Dobby assistente virtual (Beta) melhorado (sem ações diretas)
 2. **Sprint 3**: Permissões básicas (UI simples)
 3. **Sprint 4**: Notificações por email
 4. **Sprint 5**: Busca full-text

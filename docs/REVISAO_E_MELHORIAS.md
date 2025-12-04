@@ -1,9 +1,9 @@
-# 📋 Revisão Completa do Sistema GTI Helpdesk
+# 📋 Revisão Completa do Sistema RootDesk
 ## Análise de Melhorias e Novas Funcionalidades
 
 ---
 
-## 🎯 1. MELHORIAS NO DOBBY (Assistente Virtual)
+## 🎯 1. MELHORIAS NO Dobby assistente virtual (Beta)
 
 ### 1.1. Inteligência e Processamento de Linguagem Natural
 - ✅ **Status Atual**: Sistema básico de detecção de intenção e busca por palavras-chave
@@ -25,7 +25,7 @@
     - Suporte a múltiplos modelos (escolha por tipo de pergunta)
     - Fine-tuning com dados do sistema para respostas mais precisas
 
-### 1.3. Funcionalidades Avançadas do Dobby
+### 1.3. Funcionalidades Avançadas do Dobby assistente virtual (Beta)
 - 🆕 **Novas Funcionalidades**:
   - **Ações diretas**: "Fechar ticket #123", "Criar documento sobre X", "Agendar reunião amanhã"
   - **Resumo automático**: "Resumir meus tickets da semana"
@@ -196,7 +196,7 @@
   - **Compartilhamento de documentos** com links temporários
   - **Colaboração em documentos** (edição simultânea)
   - **Chat interno** entre usuários
-  - **@mentions no Dobby**: "Notificar @joão sobre ticket #123"
+  - **@mentions no Dobby assistente virtual (Beta)**: "Notificar @joão sobre ticket #123"
 
 ### 7.2. Automação
 - 🆕 **Funcionalidades**:
@@ -419,7 +419,7 @@
 
 ## ✅ MELHORIAS IMPLEMENTADAS (2024)
 
-### Sprint 1-2: Melhorias no Dobby - **100% CONCLUÍDO**
+### Sprint 1-2: Melhorias no Dobby assistente virtual (Beta) - **100% CONCLUÍDO**
 
 #### 1.1. Inteligência e Processamento de Linguagem Natural ✅
 - ✅ Sistema de sinônimos expandidos (8 grupos)
@@ -437,7 +437,7 @@
 - ⏳ Suporte a múltiplos modelos (pendente)
 - ⏳ Fine-tuning (pendente - requer dados históricos)
 
-#### 1.3. Funcionalidades Avançadas do Dobby ✅
+#### 1.3. Funcionalidades Avançadas do Dobby assistente virtual (Beta) ✅
 - ✅ Ações diretas: "Fechar ticket #123", "Criar documento sobre X"
 - ⏳ Resumo automático (pendente)
 - ⏳ Análise preditiva (pendente)

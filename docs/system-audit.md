@@ -1,4 +1,4 @@
-# Auditoria do Sistema – GTI Helpdesk
+# Auditoria do Sistema – RootDesk
 
 Este documento registra o mapeamento completo, classificação de arquivos, ações de limpeza e métricas de otimização realizadas.
 

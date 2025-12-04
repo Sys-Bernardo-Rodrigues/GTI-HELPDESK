@@ -72,7 +72,7 @@ export async function POST(req: NextRequest) {
           data: {
             ticketId,
             userId: user.id,
-            content: `Status alterado para ${newStatus} via Dobby`,
+            content: `Status alterado para ${newStatus} via Dobby assistente virtual (Beta)`,
           },
         });
 
@@ -121,4 +121,6 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Erro ao executar ação" }, { status: 500 });
   }
 }
+
+
 

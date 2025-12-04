@@ -717,7 +717,7 @@ export default function ConfigPage() {
             <Muted>Defina preferências do sistema e informações básicas.</Muted>
             <Field>
               <Label htmlFor="site-name">Nome do sistema</Label>
-              <Input id="site-name" type="text" placeholder="WitchDesk" />
+              <Input id="site-name" type="text" placeholder="RootDesk" />
             </Field>
             <Field>
               <Label htmlFor="timezone">Timezone</Label>
@@ -1808,7 +1808,7 @@ export default function ConfigPage() {
               <HelpSection>
                 <HelpSectionTitle>O que é um Webhook?</HelpSectionTitle>
                 <HelpText>
-                  Um webhook é uma URL especial que permite que outros sistemas enviem notificações para o seu WitchDesk. 
+                  Um webhook é uma URL especial que permite que outros sistemas enviem notificações para o seu RootDesk. 
                   Quando um evento ocorre no sistema externo (como Zabbix, por exemplo), ele envia uma requisição HTTP POST 
                   para a URL do webhook, e automaticamente um ticket é criado no sistema.
                 </HelpText>

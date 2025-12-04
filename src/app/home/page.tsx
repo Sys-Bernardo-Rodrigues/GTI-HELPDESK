@@ -1416,7 +1416,7 @@ export default function HomePage() {
                     </g>
                   </g>
                 </svg>
-                <span>Dobby</span>
+                <span>Dobby assistente virtual (Beta)</span>
               </ChatHeaderTitle>
               <ChatHeaderActions>
                 <ChatClearButton onClick={handleClearChat} aria-label="Limpar conversa" title="Limpar conversa">
@@ -1434,14 +1434,14 @@ export default function HomePage() {
                       <MessageHeaderLeft>
                         <MessageAvatar $isUser={false}>D</MessageAvatar>
                         <MessageHeaderInfo>
-                          <MessageAuthor>Dobby</MessageAuthor>
+                          <MessageAuthor>Dobby assistente virtual (Beta)</MessageAuthor>
                           <MessageTimestamp>{formatTimestamp(Date.now())}</MessageTimestamp>
                         </MessageHeaderInfo>
                       </MessageHeaderLeft>
                     </MessageHeader>
                     <MessageBody>
-                      {renderMessageContent(
-                        "Olá! Sou o Dobby, seu assistente virtual. Posso apoiar com:\n\n- 📚 Base de conhecimento (documentos e arquivos)\n- 🎫 Tickets, históricos e status\n- 📅 Agenda, compromissos e lembretes\n- 🔐 Cofre de senhas e acessos\n- 📊 Estatísticas e relatórios operacionais\n\nFaça uma pergunta ou selecione um dos atalhos abaixo para começarmos!"
+                        {renderMessageContent(
+                        "Olá! Sou o Dobby assistente virtual (Beta), seu assistente virtual. Posso apoiar com:\n\n- 📚 Base de conhecimento (documentos e arquivos)\n- 🎫 Tickets, históricos e status\n- 📅 Agenda, compromissos e lembretes\n- 🔐 Cofre de senhas e acessos\n- 📊 Estatísticas e relatórios operacionais\n\nFaça uma pergunta ou selecione um dos atalhos abaixo para começarmos!"
                       )}
                     </MessageBody>
                   </MessageBubble>
@@ -1452,7 +1452,7 @@ export default function HomePage() {
                 const avatarInitial = isUser
                   ? (user?.name?.[0] || user?.email?.[0] || "U").toUpperCase()
                   : "D";
-                const authorLabel = isUser ? (user?.name || user?.email || "Você") : "Dobby";
+                const authorLabel = isUser ? (user?.name || user?.email || "Você") : "Dobby assistente virtual (Beta)";
                 const intentLabel = msg.role === "assistant" ? getIntentLabel(msg.intent) : null;
                 const sourceMeta = msg.role === "assistant" ? getSourceMeta(msg.source) : null;
 

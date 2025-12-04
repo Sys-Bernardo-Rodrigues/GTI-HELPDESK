@@ -1,8 +1,8 @@
-# Análise Completa do Sistema GTI Helpdesk
+# Análise Completa do Sistema RootDesk
 
 ## 📋 Sumário Executivo
 
-O **GTI Helpdesk** é um sistema completo de gerenciamento de suporte técnico e projetos desenvolvido em **Next.js 16** com **TypeScript**, utilizando **MariaDB** como banco de dados e **Prisma** como ORM. O sistema oferece funcionalidades abrangentes para gestão de tickets, projetos, formulários, base de conhecimento, agenda, e muito mais.
+O **RootDesk** é um sistema completo de gerenciamento de suporte técnico e projetos desenvolvido em **Next.js 16** com **TypeScript**, utilizando **MariaDB** como banco de dados e **Prisma** como ORM. O sistema oferece funcionalidades abrangentes para gestão de tickets, projetos, formulários, base de conhecimento, agenda, e muito mais.
 
 ---
 
@@ -392,7 +392,7 @@ O **GTI Helpdesk** é um sistema completo de gerenciamento de suporte técnico e
 ## 📁 Estrutura de Arquivos
 
 ```
-GTI-HELPDESK/
+ROOTDESK/
 ├── src/
 │   ├── app/                    # Next.js App Router
 │   │   ├── page.tsx           # Página de login
@@ -623,7 +623,7 @@ npm run lint             # Linter
 
 ## 🎯 Conclusão
 
-O **GTI Helpdesk** é um sistema completo e robusto, com funcionalidades abrangentes para gestão de suporte técnico, projetos, formulários e muito mais. A arquitetura é escalável, o código é bem organizado e o sistema está pronto para uso em produção.
+O **RootDesk** é um sistema completo e robusto, com funcionalidades abrangentes para gestão de suporte técnico, projetos, formulários e muito mais. A arquitetura é escalável, o código é bem organizado e o sistema está pronto para uso em produção.
 
 **Pontos fortes:**
 - ✅ Arquitetura moderna (Next.js App Router)

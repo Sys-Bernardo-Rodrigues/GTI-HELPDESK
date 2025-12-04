@@ -604,7 +604,7 @@ export default function StandardLayout({ children }: StandardLayoutProps) {
               </g>
             </svg>
           </BrandIcon>
-          WitchDesk
+          RootDesk
         </Brand>
         <TopBarActions>
           <NotificationBell />

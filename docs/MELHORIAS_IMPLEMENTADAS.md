@@ -1,16 +1,16 @@
-# ✅ Melhorias Implementadas - GTI Helpdesk
+# ✅ Melhorias Implementadas - RootDesk
 
 ## 📊 Resumo Executivo
 
 **Data de Implementação**: 2024  
-**Sprint**: 1-2 (Melhorias no Dobby)  
+**Sprint**: 1-2 (Melhorias no Dobby assistente virtual (Beta))  
 **Status**: ✅ **100% CONCLUÍDO**
 
 ---
 
 ## 🎯 Objetivo do Sprint
 
-Reintroduzir e melhorar significativamente o assistente virtual Dobby, tornando-o mais inteligente, eficiente e útil para os usuários.
+Reintroduzir e melhorar significativamente o Dobby assistente virtual (Beta), tornando-o mais inteligente, eficiente e útil para os usuários.
 
 ---
 
@@ -94,7 +94,7 @@ Reintroduzir e melhorar significativamente o assistente virtual Dobby, tornando-
 
 #### Benefícios:
 - Usuários podem fazer perguntas de follow-up
-- Dobby entende contexto da conversa
+- Dobby assistente virtual (Beta) entende contexto da conversa
 - Experiência mais natural e conversacional
 
 ---
@@ -231,7 +231,7 @@ Reintroduzir e melhorar significativamente o assistente virtual Dobby, tornando-
 
 ## 🎉 Conclusão
 
-O Sprint 1-2 foi **100% concluído** com sucesso! O Dobby agora é significativamente mais inteligente, útil e eficiente. Todas as melhorias planejadas foram implementadas, além de funcionalidades bônus (sugestões contextuais).
+O Sprint 1-2 foi **100% concluído** com sucesso! O Dobby assistente virtual (Beta) agora é significativamente mais inteligente, útil e eficiente. Todas as melhorias planejadas foram implementadas, além de funcionalidades bônus (sugestões contextuais).
 
 **Progresso Geral do Projeto**: 12% (Sprint 1-2 de 24 sprints planejados)
 
@@ -239,4 +239,6 @@ O Sprint 1-2 foi **100% concluído** com sucesso! O Dobby agora é significativa
 
 **Última atualização**: 2024  
 **Próxima revisão**: Após conclusão do Sprint 3-4
+
+
 

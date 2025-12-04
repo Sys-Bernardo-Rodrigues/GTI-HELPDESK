@@ -1,4 +1,4 @@
-# GTI Helpdesk – Next.js + MariaDB (Docker) + Prisma
+# RootDesk – Next.js + MariaDB (Docker) + Prisma
 
 Projeto Next.js com TypeScript, banco MariaDB em Docker e ORM Prisma. Inclui modelos básicos (User, Category, Ticket), sincronização de schema, healthcheck de banco e scripts de automação para desenvolvimento.
 
@@ -23,8 +23,8 @@ SMTP_PORT=587
 SMTP_SECURE=false
 SMTP_USER=seu-email@gmail.com
 SMTP_PASSWORD=sua-senha-de-app
-EMAIL_FROM=noreply@witchdesk.com
-EMAIL_FROM_NAME=WitchDesk
+EMAIL_FROM=noreply@rootdesk.com
+EMAIL_FROM_NAME=RootDesk
 APP_URL=http://localhost:3000
 ```
 
@@ -101,7 +101,7 @@ Definidos em `prisma/schema.prisma`:
 - `db:generate`: gera cliente Prisma
 - `db:studio`: abre Prisma Studio
 
-## Inteligência Artificial Local (Dobby)
+## Inteligência Artificial Local (Dobby assistente virtual (Beta))
 - O assistente virtual pode usar um modelo de linguagem rodando localmente (Ollama/LocalAI), garantindo que nenhum dado saia do servidor interno.
 - Configure no `.env`:
   - `LOCAL_AI_ENABLED=true`
@@ -111,7 +111,7 @@ Definidos em `prisma/schema.prisma`:
 - Para subir o serviço via Docker:
   ```bash
   docker compose up -d ollama
-  docker exec -it gti-helpdesk-ollama ollama pull llama3
+  docker exec -it rootdesk-ollama ollama pull llama3
   ```
 - O endpoint `/api/chat` tenta usar o modelo local primeiro e recorre ao fallback determinístico se o serviço estiver indisponível.
 

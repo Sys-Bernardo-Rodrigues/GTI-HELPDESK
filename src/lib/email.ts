@@ -36,8 +36,8 @@ export async function sendEmail(options: {
   }
 
   try {
-    const from = process.env.EMAIL_FROM || process.env.SMTP_USER || "noreply@witchdesk.com";
-    const fromName = process.env.EMAIL_FROM_NAME || "WitchDesk";
+    const from = process.env.EMAIL_FROM || process.env.SMTP_USER || "noreply@rootdesk.com";
+    const fromName = process.env.EMAIL_FROM_NAME || "RootDesk";
 
     await transporter.sendMail({
       from: `"${fromName}" <${from}>`,
@@ -79,12 +79,12 @@ export async function sendPasswordResetEmail(email: string, token: string, userN
     <body>
       <div class="container">
         <div class="header">
-          <h1>WitchDesk</h1>
+          <h1>RootDesk</h1>
         </div>
         <div class="content">
           <h2>Recuperação de Senha</h2>
           <p>Olá${userName ? `, ${userName}` : ""},</p>
-          <p>Recebemos uma solicitação para redefinir a senha da sua conta no WitchDesk.</p>
+          <p>Recebemos uma solicitação para redefinir a senha da sua conta no RootDesk.</p>
           <p>Clique no botão abaixo para criar uma nova senha:</p>
           <p style="text-align: center;">
             <a href="${resetUrl}" class="button">Redefinir Senha</a>
@@ -104,7 +104,7 @@ export async function sendPasswordResetEmail(email: string, token: string, userN
 
   return sendEmail({
     to: email,
-    subject: "Recuperação de Senha - WitchDesk",
+    subject: "Recuperação de Senha - RootDesk",
     html,
   });
 }
@@ -130,12 +130,12 @@ export async function sendEmailVerificationEmail(email: string, token: string, u
     <body>
       <div class="container">
         <div class="header">
-          <h1>WitchDesk</h1>
+          <h1>RootDesk</h1>
         </div>
         <div class="content">
           <h2>Verificação de E-mail</h2>
           <p>Olá${userName ? `, ${userName}` : ""},</p>
-          <p>Você solicitou a alteração do seu endereço de e-mail no WitchDesk.</p>
+          <p>Você solicitou a alteração do seu endereço de e-mail no RootDesk.</p>
           <p>Clique no botão abaixo para confirmar o novo e-mail:</p>
           <p style="text-align: center;">
             <a href="${verifyUrl}" class="button">Confirmar E-mail</a>
@@ -155,7 +155,7 @@ export async function sendEmailVerificationEmail(email: string, token: string, u
 
   return sendEmail({
     to: email,
-    subject: "Verificação de E-mail - WitchDesk",
+    subject: "Verificação de E-mail - RootDesk",
     html,
   });
 }
@@ -178,12 +178,12 @@ export async function sendTwoFactorCodeEmail(email: string, code: string, userNa
     <body>
       <div class="container">
         <div class="header">
-          <h1>WitchDesk</h1>
+          <h1>RootDesk</h1>
         </div>
         <div class="content">
           <h2>Código de Verificação</h2>
           <p>Olá${userName ? `, ${userName}` : ""},</p>
-          <p>Você está tentando fazer login no WitchDesk. Use o código abaixo para completar a autenticação:</p>
+          <p>Você está tentando fazer login no RootDesk. Use o código abaixo para completar a autenticação:</p>
           <div class="code">${code}</div>
           <p><strong>Este código expira em 10 minutos.</strong></p>
           <p>Se você não tentou fazer login, ignore este email e considere alterar sua senha.</p>
@@ -198,7 +198,7 @@ export async function sendTwoFactorCodeEmail(email: string, code: string, userNa
 
   return sendEmail({
     to: email,
-    subject: "Código de Verificação - WitchDesk",
+    subject: "Código de Verificação - RootDesk",
     html,
   });
 }
@@ -238,7 +238,7 @@ export async function sendNotificationEmail(
     <body>
       <div class="container">
         <div class="header">
-          <h1>${icons[type]} WitchDesk</h1>
+          <h1>${icons[type]} RootDesk</h1>
         </div>
         <div class="content">
           <h2>${title}</h2>
@@ -262,7 +262,7 @@ export async function sendNotificationEmail(
 
   return sendEmail({
     to: email,
-    subject: `${title} - WitchDesk`,
+    subject: `${title} - RootDesk`,
     html,
   });
 }

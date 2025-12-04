@@ -493,7 +493,7 @@ export default function LoginPage() {
               </g>
             </svg>
           </Logo>
-          <BrandTitle>WitchDesk</BrandTitle>
+          <BrandTitle>RootDesk</BrandTitle>
           <BrandSubtitle>
             Sistema completo de gestão de tickets e atendimento ao cliente
           </BrandSubtitle>

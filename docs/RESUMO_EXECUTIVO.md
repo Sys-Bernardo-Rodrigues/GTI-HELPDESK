@@ -1,8 +1,8 @@
-# 📊 Resumo Executivo - Revisão do Sistema GTI Helpdesk
+# 📊 Resumo Executivo - Revisão do Sistema RootDesk
 
 ## 🎯 Objetivo da Revisão
 
-Analisar o sistema completo, identificar pontos de melhoria e propor novas funcionalidades para tornar o GTI Helpdesk mais robusto, eficiente e completo.
+Analisar o sistema completo, identificar pontos de melhoria e propor novas funcionalidades para tornar o RootDesk mais robusto, eficiente e completo.
 
 ---
 
@@ -14,7 +14,7 @@ Analisar o sistema completo, identificar pontos de melhoria e propor novas funci
 - ✅ Criptografia para dados sensíveis
 - ✅ Schema bem estruturado (tickets, documentos, senhas, projetos)
 - ✅ Sistema de notificações web básico
-- ✅ Assistente virtual Dobby funcional
+- ✅ Dobby assistente virtual (Beta) funcional
 - ✅ Docker Compose para desenvolvimento
 
 ### ⚠️ Oportunidades de Melhoria
@@ -30,7 +30,7 @@ Analisar o sistema completo, identificar pontos de melhoria e propor novas funci
 
 ## 🚀 Principais Melhorias Propostas
 
-### 1. 🧠 Dobby (Assistente Virtual) ✅ **CONCLUÍDO**
+### 1. 🧠 Dobby assistente virtual (Beta) ✅ **CONCLUÍDO**
 **Prioridade**: 🔴 ALTA
 
 | Melhoria | Impacto | Complexidade | Status |
@@ -179,7 +179,7 @@ Analisar o sistema completo, identificar pontos de melhoria e propor novas funci
 ```
 IMPACTO ALTO
     │
-    │  [Dobby]  [Permissões]
+    │  [Dobby assistente virtual (Beta)]  [Permissões]
     │
     │  [Notificações]  [Busca]
     │
@@ -200,14 +200,14 @@ IMPACTO ALTO
 ## ⏱️ Timeline Sugerido
 
 ### 🚀 MVP Rápido (6 semanas)
-1. Dobby melhorado
+1. Dobby assistente virtual (Beta) melhorado
 2. Permissões básicas
 3. Notificações por email
 4. Busca full-text
 5. Dashboard básico
 
 ### 📈 Fase 1 - Fundações (9 semanas)
-- Dobby completo
+- Dobby assistente virtual (Beta) completo
 - Permissões completas
 - Notificações e alertas
 - Busca e performance
@@ -265,7 +265,7 @@ IMPACTO ALTO
 ## 📈 Métricas de Sucesso
 
 ### KPIs a Acompanhar
-- ⏱️ **Tempo médio de resposta do Dobby**: < 2s
+- ⏱️ **Tempo médio de resposta do Dobby assistente virtual (Beta)**: < 2s
 - 🔍 **Precisão da busca**: > 85%
 - 📧 **Taxa de entrega de emails**: > 95%
 - ⚡ **Tempo de carregamento de páginas**: < 1s

@@ -200,7 +200,7 @@ async function processMessageWithDobby(
   history: HistoryEntry[]
 ): Promise<{ message: string; source?: string; intent?: string }> {
   // Chamar a API do chat normal para processar a mensagem
-  // Isso garante que o Dobby entenda o áudio da mesma forma que entende texto
+  // Isso garante que o Dobby assistente virtual (Beta) entenda o áudio da mesma forma que entende texto
   try {
     const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000";
     const headers: Record<string, string> = {
@@ -266,7 +266,7 @@ async function processAudioIntent(
     }
   }
   
-  // Se temos transcrição (do cliente ou da API), usar ela para entender a intenção através do sistema do Dobby
+  // Se temos transcrição (do cliente ou da API), usar ela para entender a intenção através do sistema do Dobby assistente virtual (Beta)
   if (finalTranscript && finalTranscript.trim().length > 0) {
     return await processMessageWithDobby(finalTranscript.trim(), userId, authCookie, history);
   }

@@ -1375,7 +1375,7 @@ function generateResponse(
       return agendaResponse;
     
     case "help":
-      return `Olá! Sou o Dobby, assistente virtual do sistema. Posso ajudá-lo com:\n\n` +
+      return `Olá! Sou o Dobby assistente virtual (Beta), assistente virtual do sistema RootDesk. Posso ajudá-lo com:\n\n` +
         `📚 **Base de Conhecimento**: Busque documentos e artigos (descriptografados)\n` +
         `📁 **Arquivos**: Encontre arquivos da base de conhecimento\n` +
         `🎫 **Tickets**: Consulte informações sobre chamados\n` +
@@ -1483,7 +1483,7 @@ function buildAiMessages(payload: AiPayload): LocalAiMessage[] {
     {
       role: "system",
       content:
-        "Você é Dobby, assistente virtual interno do GTI Helpdesk. Responda sempre em português, com tom cordial, proativo e objetivo. Seja empático, cite apenas dados presentes no contexto e encerre oferecendo ajuda adicional. Use formatação markdown quando apropriado (listas, negrito, etc).",
+        "Você é Dobby assistente virtual (Beta), assistente virtual interno do RootDesk. Responda sempre em português, com tom cordial, proativo e objetivo. Seja empático, cite apenas dados presentes no contexto e encerre oferecendo ajuda adicional. Use formatação markdown quando apropriado (listas, negrito, etc).",
     },
     ...historyMessages,
     {
@@ -1504,11 +1504,11 @@ function buildAiContext(payload: AiPayload): string {
     }`
   );
 
-  if (payload.conversationHistory?.length) {
-    const convoPreview = payload.conversationHistory
-      .slice(-5)
-      .map((entry) => `${entry.role === "assistant" ? "Dobby" : "Usuário"}: ${entry.content}`)
-      .join("\n");
+    if (payload.conversationHistory?.length) {
+      const convoPreview = payload.conversationHistory
+        .slice(-5)
+        .map((entry) => `${entry.role === "assistant" ? "Dobby assistente virtual (Beta)" : "Usuário"}: ${entry.content}`)
+        .join("\n");
     sections.push(`Histórico recente da conversa:\n${convoPreview}`);
   }
 

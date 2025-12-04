@@ -3,8 +3,8 @@ import StyledComponentsRegistry from "@/lib/styled-registry";
 import GlobalStyles from "@/ui/GlobalStyles";
 
 export const metadata: Metadata = {
-  title: "WitchDesk",
-  description: "Sistema de Helpdesk WitchDesk",
+  title: "RootDesk",
+  description: "Sistema de Helpdesk RootDesk",
   icons: {
     icon: [
       { url: "/icon.svg", type: "image/svg+xml" },
