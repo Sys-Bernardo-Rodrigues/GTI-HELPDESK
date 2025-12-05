@@ -76,6 +76,20 @@ export default function ConfigPage() {
   const [updateRepoUrl, setUpdateRepoUrl] = useState<string>("");
   const [updateLoading, setUpdateLoading] = useState<boolean>(false);
   const [updateFeedback, setUpdateFeedback] = useState<{ type: "success" | "error"; text: string } | null>(null);
+  
+  // Estado da versão do sistema
+  const [systemVersion, setSystemVersion] = useState<{
+    name?: string;
+    version?: string;
+    git?: {
+      branch?: string;
+      commit?: string;
+      commitShort?: string;
+      commitDate?: string;
+      tag?: string;
+    };
+  } | null>(null);
+  const [versionLoading, setVersionLoading] = useState<boolean>(false);
 
   useEffect(() => {
     if (!formsFeedback) return;
@@ -99,6 +113,13 @@ export default function ConfigPage() {
   useEffect(() => {
     if (section === "env" || section === "update") {
       loadEnvConfig();
+    }
+  }, [section]);
+
+  // Carregar versão do sistema quando a seção de update for acessada
+  useEffect(() => {
+    if (section === "update") {
+      loadSystemVersion();
     }
   }, [section]);
   
@@ -147,6 +168,21 @@ export default function ConfigPage() {
       setEnvError(err?.message || "Erro ao salvar configurações");
     } finally {
       setEnvSaving(false);
+    }
+  }
+
+  async function loadSystemVersion() {
+    setVersionLoading(true);
+    try {
+      const res = await fetch("/api/system/version");
+      if (res.ok) {
+        const data = await res.json();
+        setSystemVersion(data);
+      }
+    } catch (err: any) {
+      console.warn("Erro ao carregar versão do sistema:", err);
+    } finally {
+      setVersionLoading(false);
     }
   }
 
@@ -881,6 +917,21 @@ export default function ConfigPage() {
     }
   }
 
+  async function loadSystemVersion() {
+    setVersionLoading(true);
+    try {
+      const res = await fetch("/api/system/version");
+      if (res.ok) {
+        const data = await res.json();
+        setSystemVersion(data);
+      }
+    } catch (err: any) {
+      console.warn("Erro ao carregar versão do sistema:", err);
+    } finally {
+      setVersionLoading(false);
+    }
+  }
+
   const content = useMemo(() => {
     if (error) return <Muted role="alert">{error}</Muted>;
     if (loading) return <Skeleton aria-hidden />;
@@ -965,6 +1016,55 @@ export default function ConfigPage() {
             <SectionSubtitle>
               Dispare uma atualização do código diretamente do servidor, usando o repositório GitHub configurado.
             </SectionSubtitle>
+
+            {/* Informações da versão atual */}
+            <VersionCard>
+              <VersionHeader>
+                <VersionTitle>Versão atual do sistema</VersionTitle>
+                {versionLoading && <VersionLoading>Carregando...</VersionLoading>}
+              </VersionHeader>
+              {systemVersion && (
+                <VersionInfo>
+                  <VersionRow>
+                    <VersionLabel>Nome:</VersionLabel>
+                    <VersionValue>{systemVersion.name || "RootDesk"}</VersionValue>
+                  </VersionRow>
+                  <VersionRow>
+                    <VersionLabel>Versão:</VersionLabel>
+                    <VersionBadge>{systemVersion.version || "Desconhecida"}</VersionBadge>
+                  </VersionRow>
+                  {systemVersion.git?.tag && (
+                    <VersionRow>
+                      <VersionLabel>Tag:</VersionLabel>
+                      <VersionBadge $variant="tag">{systemVersion.git.tag}</VersionBadge>
+                    </VersionRow>
+                  )}
+                  {systemVersion.git?.branch && (
+                    <VersionRow>
+                      <VersionLabel>Branch:</VersionLabel>
+                      <VersionValue>{systemVersion.git.branch}</VersionValue>
+                    </VersionRow>
+                  )}
+                  {systemVersion.git?.commitShort && (
+                    <VersionRow>
+                      <VersionLabel>Commit:</VersionLabel>
+                      <VersionCode>{systemVersion.git.commitShort}</VersionCode>
+                      {systemVersion.git.commitDate && (
+                        <VersionDate>
+                          ({new Date(systemVersion.git.commitDate).toLocaleDateString("pt-BR", {
+                            day: "2-digit",
+                            month: "2-digit",
+                            year: "numeric",
+                            hour: "2-digit",
+                            minute: "2-digit",
+                          })})
+                        </VersionDate>
+                      )}
+                    </VersionRow>
+                  )}
+                </VersionInfo>
+              )}
+            </VersionCard>
 
             {updateFeedback && (
               <Feedback
@@ -1187,7 +1287,7 @@ export default function ConfigPage() {
           </div>
         );
     }
-  }, [section, loading, error, updateFeedback, updateLoading, updateRepoUrl, envLoading, envSaving, envError, envSuccess, envConfig, envSearchQuery]);
+  }, [section, loading, error, updateFeedback, updateLoading, updateRepoUrl, envLoading, envSaving, envError, envSuccess, envConfig, envSearchQuery, systemVersion, versionLoading]);
 
   const activeForm = manageFormId ? formsList.find((f) => f.id === manageFormId || f.numericId === manageFormId) ?? null : null;
   const activeWebhook = manageWebhookId ? webhooksList.find((w) => w.id === manageWebhookId) ?? null : null;
@@ -2892,6 +2992,89 @@ const Skeleton = styled.div`
     0% { background-position: 200% 0; }
     100% { background-position: -200% 0; }
   }
+`;
+
+// Estilos para exibição da versão do sistema
+const VersionCard = styled.div`
+  background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
+  border: 1px solid rgba(59, 130, 246, 0.2);
+  border-radius: 12px;
+  padding: 20px;
+  margin-bottom: 24px;
+  box-shadow: 0 2px 8px rgba(59, 130, 246, 0.1);
+`;
+
+const VersionHeader = styled.div`
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+`;
+
+const VersionTitle = styled.h3`
+  margin: 0;
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: #0f172a;
+`;
+
+const VersionLoading = styled.span`
+  font-size: 0.875rem;
+  color: #64748b;
+  font-style: italic;
+`;
+
+const VersionInfo = styled.div`
+  display: grid;
+  gap: 12px;
+`;
+
+const VersionRow = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+`;
+
+const VersionLabel = styled.span`
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: #475569;
+  min-width: 80px;
+`;
+
+const VersionValue = styled.span`
+  font-size: 0.9rem;
+  color: #0f172a;
+  font-weight: 500;
+`;
+
+const VersionBadge = styled.span<{ $variant?: "tag" }>`
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 12px;
+  border-radius: 6px;
+  font-size: 0.875rem;
+  font-weight: 700;
+  background: ${(p) => (p.$variant === "tag" ? "rgba(139, 92, 246, 0.15)" : "rgba(59, 130, 246, 0.15)")};
+  color: ${(p) => (p.$variant === "tag" ? "#7c3aed" : "#1d4ed8")};
+  border: 1px solid ${(p) => (p.$variant === "tag" ? "rgba(139, 92, 246, 0.3)" : "rgba(59, 130, 246, 0.3)")};
+`;
+
+const VersionCode = styled.code`
+  font-family: "Monaco", "Menlo", "Ubuntu Mono", monospace;
+  font-size: 0.85rem;
+  padding: 4px 8px;
+  border-radius: 6px;
+  background: rgba(15, 23, 42, 0.08);
+  color: #1e293b;
+  border: 1px solid rgba(15, 23, 42, 0.15);
+`;
+
+const VersionDate = styled.span`
+  font-size: 0.8rem;
+  color: #64748b;
+  margin-left: 4px;
 `;
 
 // Estilos do modal de criação/gestão de formulário

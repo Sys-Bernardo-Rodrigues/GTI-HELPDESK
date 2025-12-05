@@ -243,7 +243,7 @@ function createGetBrowserOrigin(appBaseUrl: string | null): () => string {
     }
     
     // Tentar variável de ambiente diretamente
-    if (typeof window !== "undefined") {
+  if (typeof window !== "undefined") {
       const envUrl = 
         (process.env.NEXT_PUBLIC_APP_URL) ||
         ((process.env as any).NEXT_PUBLIC_APP_URL) ||
@@ -252,15 +252,15 @@ function createGetBrowserOrigin(appBaseUrl: string | null): () => string {
       
       if (envUrl && typeof envUrl === "string" && envUrl.trim()) {
         return envUrl.trim().replace(/\/$/, "");
-      }
+  }
     }
     
     // Fallback para window.location.origin apenas se a variável de ambiente não estiver disponível
-    const win = getBrowserWindow();
-    if (win?.location?.origin) return String(win.location.origin);
-    const loc = typeof globalThis !== "undefined" ? (globalThis as any).location : undefined;
-    if (loc?.origin) return String(loc.origin);
-    return "";
+  const win = getBrowserWindow();
+  if (win?.location?.origin) return String(win.location.origin);
+  const loc = typeof globalThis !== "undefined" ? (globalThis as any).location : undefined;
+  if (loc?.origin) return String(loc.origin);
+  return "";
   };
 }
 
