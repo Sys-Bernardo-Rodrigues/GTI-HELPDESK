@@ -63,25 +63,19 @@ export default function ConfigPage() {
   const [testingWebhook, setTestingWebhook] = useState<boolean>(false);
   const [testResult, setTestResult] = useState<{ success: boolean; message: string; ticketId?: number } | null>(null);
 
-  // Estado da atualização via GitHub
-  const [updateRepoUrl, setUpdateRepoUrl] = useState<string>("");
-  const [updateLoading, setUpdateLoading] = useState<boolean>(false);
-  const [updateFeedback, setUpdateFeedback] = useState<{ type: "success" | "error"; text: string } | null>(null);
-  
-  // Carrega ALLOWED_REPO_URL do .env quando a seção de atualização é acessada
-  useEffect(() => {
-    if (section === "update" && envConfig.ALLOWED_REPO_URL) {
-      setUpdateRepoUrl(envConfig.ALLOWED_REPO_URL);
-    }
-  }, [section, envConfig.ALLOWED_REPO_URL]);
-
   // Estado de configuração de ambiente (.env) - Nova implementação
+  // IMPORTANTE: Declarar antes dos useEffects que o utilizam
   const [envConfig, setEnvConfig] = useState<Record<string, string>>({});
   const [envLoading, setEnvLoading] = useState(false);
   const [envSaving, setEnvSaving] = useState(false);
   const [envError, setEnvError] = useState<string | null>(null);
   const [envSuccess, setEnvSuccess] = useState<string | null>(null);
   const [envSearchQuery, setEnvSearchQuery] = useState("");
+
+  // Estado da atualização via GitHub
+  const [updateRepoUrl, setUpdateRepoUrl] = useState<string>("");
+  const [updateLoading, setUpdateLoading] = useState<boolean>(false);
+  const [updateFeedback, setUpdateFeedback] = useState<{ type: "success" | "error"; text: string } | null>(null);
 
   useEffect(() => {
     if (!formsFeedback) return;
