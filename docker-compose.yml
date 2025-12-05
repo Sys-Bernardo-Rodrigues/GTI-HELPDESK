@@ -1,0 +1,63 @@
+services:
+  # PostgreSQL 17 - Banco de dados principal
+  postgres:
+    image: postgres:17
+    container_name: rootdesk-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${DB_USER:-helpdesk_user}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-helpdesk_password}
+      POSTGRES_DB: ${DB_NAME:-helpdesk}
+      POSTGRES_INITDB_ARGS: "-E UTF8 --locale=pt_BR.UTF-8"
+    ports:
+      - "${DB_PORT:-5433}:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-helpdesk_user} -d ${DB_NAME:-helpdesk}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - rootdesk-network
+
+  # Ollama - Servidor de IA Local (Opcional)
+  ollama:
+    image: ollama/ollama:latest
+    container_name: rootdesk-ollama
+    restart: unless-stopped
+    ports:
+      - "${LOCAL_AI_PORT:-11434}:11434"
+    volumes:
+      - ollama_data:/root/.ollama
+    environment:
+      - OLLAMA_HOST=0.0.0.0
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:11434/api/tags"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    networks:
+      - rootdesk-network
+    # Descomente a linha abaixo se quiser usar GPU (requer nvidia-docker)
+    # deploy:
+    #   resources:
+    #     reservations:
+    #       devices:
+    #         - driver: nvidia
+    #           count: 1
+    #           capabilities: [gpu]
+
+volumes:
+  postgres_data:
+    driver: local
+    name: rootdesk_postgres_data
+  ollama_data:
+    driver: local
+    name: rootdesk_ollama_data
+
+networks:
+  rootdesk-network:
+    driver: bridge
+    name: rootdesk-network

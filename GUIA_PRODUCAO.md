@@ -44,6 +44,7 @@ ALLOW_ENV_EDIT=false
 
 ```bash
 npm install
+npm run docker:up
 ```
 
 ### 3. Verifique o Ambiente (Recomendado)
