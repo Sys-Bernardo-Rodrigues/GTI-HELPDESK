@@ -77,9 +77,6 @@ model Ticket {
   project       Project?        @relation(fields: [projectId], references: [id])
   updates       TicketUpdate[]
 
-  @@index([assignedToId], map: "Ticket_assignedToId_fkey")
-  @@index([categoryId], map: "Ticket_categoryId_fkey")
-  @@index([userId], map: "Ticket_userId_fkey")
   @@index([projectId])
 }
 
@@ -92,9 +89,6 @@ model TicketUpdate {
 
   ticket Ticket @relation(fields: [ticketId], references: [id], onDelete: Cascade)
   user   User?  @relation(fields: [userId], references: [id])
-
-  @@index([ticketId])
-  @@index([userId])
 }
 
 model Form {
@@ -112,8 +106,6 @@ model Form {
   fields           FormField[]
   submissions      FormSubmission[]
   approvals        FormApproval[]
-
-  @@index([userId], map: "Form_userId_fkey")
 }
 
 model FormField {
@@ -124,8 +116,6 @@ model FormField {
   required Boolean   @default(true)
   formId   Int
   form     Form      @relation(fields: [formId], references: [id])
-
-  @@index([formId], map: "FormField_formId_fkey")
 }
 
 model FormSubmission {
@@ -136,8 +126,6 @@ model FormSubmission {
   form      Form          @relation(fields: [formId], references: [id])
   ticket    Ticket?
   approval  FormApproval?
-
-  @@index([formId], map: "FormSubmission_formId_fkey")
 }
 
 model FormApprover {
@@ -149,8 +137,6 @@ model FormApprover {
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([formId, userId])
-  @@index([formId])
-  @@index([userId])
 }
 
 model FormApproval {
@@ -166,9 +152,7 @@ model FormApproval {
   form         Form           @relation(fields: [formId], references: [id])
   reviewedBy   User?          @relation(fields: [reviewedById], references: [id])
 
-  @@index([formId])
   @@index([status])
-  @@index([reviewedById])
 }
 
 enum ApprovalStatus {
@@ -205,7 +189,6 @@ model Document {
   updatedAt   DateTime @updatedAt
   createdBy   User     @relation(fields: [createdById], references: [id])
 
-  @@index([createdById], map: "Document_createdById_fkey")
   @@index([category])
 }
 
@@ -224,7 +207,6 @@ model File {
   updatedAt    DateTime @updatedAt
   createdBy    User     @relation(fields: [createdById], references: [id])
 
-  @@index([createdById], map: "File_createdById_fkey")
   @@index([category])
   @@index([mimeType])
 }
@@ -243,7 +225,6 @@ model PasswordVault {
   updatedAt   DateTime @updatedAt
   createdBy   User     @relation(fields: [createdById], references: [id])
 
-  @@index([createdById], map: "PasswordVault_createdById_fkey")
   @@index([category])
 }
 
@@ -258,7 +239,6 @@ model Webhook {
   updatedAt   DateTime @updatedAt
   user        User     @relation(fields: [userId], references: [id])
 
-  @@index([userId], map: "Webhook_userId_fkey")
   @@index([token])
 }
 
@@ -276,7 +256,6 @@ model Event {
   updatedAt   DateTime @updatedAt
   user        User     @relation(fields: [userId], references: [id])
 
-  @@index([userId], map: "Event_userId_fkey")
   @@index([startDate])
   @@index([endDate])
 }
@@ -298,7 +277,6 @@ model Project {
   tickets     Ticket[]
   tasks       ProjectTask[]
 
-  @@index([createdById])
   @@index([status])
   @@index([startDate])
   @@index([endDate])
@@ -314,8 +292,6 @@ model ProjectMember {
   user      User     @relation("ProjectMember", fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([projectId, userId])
-  @@index([projectId])
-  @@index([userId])
 }
 
 model ProjectTask {
@@ -338,10 +314,6 @@ model ProjectTask {
   parentTask   ProjectTask?  @relation("TaskHierarchy", fields: [parentTaskId], references: [id], onDelete: Cascade)
   subtasks     ProjectTask[] @relation("TaskHierarchy")
 
-  @@index([projectId])
-  @@index([assignedToId])
-  @@index([createdById])
-  @@index([parentTaskId])
   @@index([status])
   @@index([priority])
   @@index([dueDate])
@@ -400,8 +372,6 @@ model UserAccessProfile {
   profile   AccessProfile @relation(fields: [profileId], references: [id], onDelete: Cascade)
 
   @@unique([userId, profileId])
-  @@index([userId])
-  @@index([profileId])
 }
 
 model ChatFeedback {
@@ -415,7 +385,6 @@ model ChatFeedback {
   createdAt DateTime @default(now())
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  @@index([userId])
   @@index([messageId])
   @@index([isHelpful])
   @@index([createdAt])
