@@ -4,9 +4,7 @@ generator client {
 }
 
 datasource db {
-  // Para usar PostgreSQL, altere "mysql" para "postgresql" abaixo
-  // IMPORTANTE: Após mudar, execute: npm run db:generate
-  provider          = "mysql"
+  provider          = "postgresql"
   url               = env("DATABASE_URL")
   shadowDatabaseUrl = env("SHADOW_DATABASE_URL")
 }
@@ -61,7 +59,7 @@ model Category {
 model Ticket {
   id            Int             @id @default(autoincrement())
   title         String
-  description   String?         @db.LongText
+  description   String?         @db.Text
   status        TicketStatus    @default(OPEN)
   userId        Int
   categoryId    Int?
@@ -132,7 +130,7 @@ model FormField {
 
 model FormSubmission {
   id        Int           @id @default(autoincrement())
-  data      String        @db.LongText
+  data      String        @db.Text
   formId    Int
   createdAt DateTime      @default(now())
   form      Form          @relation(fields: [formId], references: [id])
@@ -199,7 +197,7 @@ enum FieldType {
 model Document {
   id          Int      @id @default(autoincrement())
   title       String
-  content     String   @db.LongText
+  content     String   @db.Text
   category    String?
   tags        String?
   createdById Int

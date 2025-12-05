@@ -1030,7 +1030,7 @@ export default function ConfigPage() {
           },
           {
             title: "Banco de Dados",
-            keys: ["DATABASE_URL", "SHADOW_DATABASE_URL", "DB_HOST", "DB_PORT", "DB_USER", "DB_PASSWORD", "DB_NAME", "DB_ROOT_PASSWORD"],
+            keys: ["DATABASE_URL", "SHADOW_DATABASE_URL", "DB_HOST", "DB_PORT", "DB_USER", "DB_PASSWORD", "DB_NAME"],
           },
           {
             title: "URLs e Ambiente",

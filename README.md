@@ -101,7 +101,7 @@ O **RootDesk** é uma solução completa de helpdesk que oferece:
 - Docker Compose 2.0+
 
 #### Sem Docker
-- MariaDB 10.6+ ou PostgreSQL 12+
+- PostgreSQL 12+ (recomendado PostgreSQL 17+)
 - Node.js 18+ e npm
 
 ---
@@ -129,8 +129,7 @@ DB_HOST=localhost
 DB_USER=helpdesk_user
 DB_PASSWORD=helpdesk_password
 DB_NAME=helpdesk
-DB_PORT=3306
-DB_ROOT_PASSWORD=root
+DB_PORT=5432
 ```
 
 4. **Inicie os serviços Docker**
@@ -153,16 +152,21 @@ O sistema estará disponível em `http://localhost:3000`
 
 ### Opção 2: Instalação Nativa
 
-1. **Instale o banco de dados**
-   - MariaDB: `sudo apt install mariadb-server` (Linux)
-   - PostgreSQL: `sudo apt install postgresql` (Linux)
+1. **Instale o PostgreSQL**
+   - Linux: `sudo apt install postgresql postgresql-contrib`
+   - macOS: `brew install postgresql@17`
+   - Windows: Baixe de https://www.postgresql.org/download/
 
 2. **Crie o banco de dados**
 ```sql
+-- Conecte-se ao PostgreSQL como superusuário
+sudo -u postgres psql
+
+-- Execute os comandos:
 CREATE DATABASE helpdesk;
-CREATE USER helpdesk_user@localhost IDENTIFIED BY 'helpdesk_password';
-GRANT ALL PRIVILEGES ON helpdesk.* TO helpdesk_user@localhost;
-FLUSH PRIVILEGES;
+CREATE USER helpdesk_user WITH PASSWORD 'helpdesk_password';
+GRANT ALL PRIVILEGES ON DATABASE helpdesk TO helpdesk_user;
+\q
 ```
 
 3. **Configure o .env**
@@ -188,9 +192,7 @@ Copie `env.example` para `.env` e configure:
 
 #### Banco de Dados
 ```env
-DATABASE_URL="mysql://user:password@localhost:3306/helpdesk?schema=public"
-# ou para PostgreSQL:
-# DATABASE_URL="postgresql://user:password@localhost:5432/helpdesk?schema=public"
+DATABASE_URL="postgresql://user:password@localhost:5432/helpdesk?schema=public"
 ```
 
 #### Autenticação
@@ -506,7 +508,7 @@ npm run lint            # Verifica código
 ```bash
 npm run docker:logs
 # ou
-mysql -u helpdesk_user -p helpdesk
+psql -U helpdesk_user -d helpdesk -h localhost
 ```
 
 2. **Teste a conexão**

@@ -12,7 +12,7 @@
     "test": "vitest --run",
     "docker:up": "docker compose up -d",
     "docker:down": "docker compose down -v",
-    "docker:logs": "docker compose logs -f mariadb",
+    "docker:logs": "docker compose logs -f postgres",
     "db:migrate": "prisma migrate dev",
     "db:deploy": "prisma migrate deploy",
     "db:generate": "prisma generate",

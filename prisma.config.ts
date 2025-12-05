@@ -16,22 +16,13 @@ function getDatabaseUrl(): string {
 
   // Caso contrário, construir a partir de variáveis individuais
   const DB_HOST = env("DB_HOST") || "localhost";
-  const DB_PORT = env("DB_PORT") || "3306";
+  const DB_PORT = env("DB_PORT") || "5432";
   const DB_NAME = env("DB_NAME") || "helpdesk";
   const DB_USER = env("DB_USER") || "appuser";
   const DB_PASSWORD = env("DB_PASSWORD") || "apppassword";
 
-  // Detectar tipo de banco pela porta ou variável de ambiente
-  // Porta 5432 = PostgreSQL, outras = MySQL/MariaDB
-  const isPostgreSQL = DB_PORT === "5432" || process.env.DB_TYPE === "postgresql";
-
-  if (isPostgreSQL) {
-    // URL para PostgreSQL
-    return `postgresql://${DB_USER}:${DB_PASSWORD}@${DB_HOST}:${DB_PORT}/${DB_NAME}?schema=public&connection_limit=10&pool_timeout=30&connect_timeout=5`;
-  } else {
-    // URL para MySQL/MariaDB
-    return `mysql://${DB_USER}:${DB_PASSWORD}@${DB_HOST}:${DB_PORT}/${DB_NAME}?connection_limit=10&pool_timeout=30&socket_timeout=30&connect_timeout=5`;
-  }
+  // PostgreSQL é o padrão agora
+  return `postgresql://${DB_USER}:${DB_PASSWORD}@${DB_HOST}:${DB_PORT}/${DB_NAME}?schema=public&connection_limit=10&pool_timeout=30&connect_timeout=5`;
 }
 
 const DATABASE_URL = getDatabaseUrl();
