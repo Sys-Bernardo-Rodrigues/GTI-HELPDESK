@@ -4,11 +4,13 @@ services:
     image: postgres:17
     container_name: rootdesk-postgres
     restart: unless-stopped
+    env_file:
+      - .env
     environment:
       POSTGRES_USER: ${DB_USER:-helpdesk_user}
       POSTGRES_PASSWORD: ${DB_PASSWORD:-helpdesk_password}
       POSTGRES_DB: ${DB_NAME:-helpdesk}
-      POSTGRES_INITDB_ARGS: "-E UTF8 --locale=pt_BR.UTF-8"
+      POSTGRES_INITDB_ARGS: "-E UTF8"
     ports:
       - "${DB_PORT:-5433}:5432"
     volumes:
@@ -26,6 +28,8 @@ services:
     image: ollama/ollama:latest
     container_name: rootdesk-ollama
     restart: unless-stopped
+    env_file:
+      - .env
     ports:
       - "${LOCAL_AI_PORT:-11434}:11434"
     volumes:
