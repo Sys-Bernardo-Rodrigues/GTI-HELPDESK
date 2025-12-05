@@ -52,6 +52,28 @@ export async function POST(req: NextRequest) {
   try {
     const cwd = process.cwd();
 
+    // Primeiro, descarta mudanças em arquivos rastreados (reset hard)
+    try {
+      await execAsync("git reset --hard HEAD", {
+        cwd,
+        timeout: 30 * 1000, // 30 segundos
+      });
+    } catch (resetError: any) {
+      console.warn("[system/update] Aviso ao fazer reset:", resetError?.message);
+      // Continua mesmo se o reset falhar
+    }
+
+    // Limpa arquivos não rastreados que estão no .gitignore
+    try {
+      await execAsync("git clean -fd", {
+        cwd,
+        timeout: 30 * 1000, // 30 segundos
+      });
+    } catch (cleanError: any) {
+      console.warn("[system/update] Aviso ao limpar arquivos:", cleanError?.message);
+      // Continua mesmo se o clean falhar
+    }
+
     // Executa git pull no diretório atual
     const { stdout, stderr } = await execAsync("git pull", {
       cwd,
