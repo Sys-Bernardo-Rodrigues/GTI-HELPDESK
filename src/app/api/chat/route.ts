@@ -1126,16 +1126,27 @@ function generateResponse(
   switch (intent.type) {
     case "document":
       if (documents.length === 0) {
-        return "Não encontrei documentos relacionados à sua busca. Tente usar palavras-chave diferentes ou verifique a base de conhecimento.";
+        const variations = [
+          "Não encontrei documentos relacionados à sua busca. Tente usar palavras-chave diferentes ou verifique a base de conhecimento.",
+          "Hmm, não consegui encontrar documentos que correspondam à sua busca. Que tal tentar outras palavras-chave?",
+          "Não encontrei nada na base de conhecimento com esses termos. Pode reformular sua busca?",
+        ];
+        return variations[Math.floor(Math.random() * variations.length)];
       }
       
-      let docResponse = `Encontrei ${documents.length} documento(s) relacionado(s):\n\n`;
+      const docIntroVariations = [
+        `Encontrei ${documents.length} documento(s) relacionado(s) à sua busca`,
+        `Achei ${documents.length} documento(s) que podem te ajudar`,
+        `Encontrei ${documents.length} documento(s) relevantes na base de conhecimento`,
+        `Aqui estão ${documents.length} documento(s) que encontrei`,
+      ];
+      let docResponse = `${docIntroVariations[Math.floor(Math.random() * docIntroVariations.length)]}:\n\n`;
       documents.forEach((doc, idx) => {
         docResponse += `${idx + 1}. **${doc.title}**\n`;
-        if (doc.category) docResponse += `   Categoria: ${doc.category}\n`;
+        if (doc.category) docResponse += `   📁 Categoria: ${doc.category}\n`;
         if (doc.content) {
           const preview = doc.content.substring(0, 150);
-          docResponse += `   ${preview}${doc.content.length > 150 ? "..." : ""}\n`;
+          docResponse += `   📝 ${preview}${doc.content.length > 150 ? "..." : ""}\n`;
         }
         docResponse += "\n";
       });
@@ -1144,13 +1155,23 @@ function generateResponse(
     
     case "ticket":
       if (tickets.length === 0) {
-        return "Não encontrei tickets relacionados à sua busca. Tente usar palavras-chave diferentes ou verifique se há tickets com essas características.";
+        const variations = [
+          "Não encontrei tickets relacionados à sua busca. Tente usar palavras-chave diferentes ou verifique se há tickets com essas características.",
+          "Hmm, não consegui encontrar tickets que correspondam à sua busca. Que tal tentar outras palavras-chave?",
+          "Não encontrei nenhum ticket com essas características. Pode reformular sua busca?",
+        ];
+        return variations[Math.floor(Math.random() * variations.length)];
       }
       
       // Se há apenas um ticket (provavelmente busca por ID), mostrar detalhes completos
       if (tickets.length === 1 && tickets[0].updates) {
         const ticket = tickets[0];
-        let ticketResponse = `**Ticket #${ticket.id}**: ${ticket.title}\n\n`;
+        const introVariations = [
+          `Aqui estão os detalhes do **Ticket #${ticket.id}**: ${ticket.title}`,
+          `Encontrei o **Ticket #${ticket.id}**: ${ticket.title}`,
+          `Aqui está o **Ticket #${ticket.id}**: ${ticket.title}`,
+        ];
+        let ticketResponse = `${introVariations[Math.floor(Math.random() * introVariations.length)]}\n\n`;
         ticketResponse += `📊 **Status**: ${ticket.status}\n`;
         if (ticket.category) ticketResponse += `📁 **Categoria**: ${ticket.category.name}\n`;
         if (ticket.user) ticketResponse += `👤 **Solicitante**: ${ticket.user.name || ticket.user.email}\n`;
@@ -1169,7 +1190,13 @@ function generateResponse(
         return ticketResponse;
       }
       
-      let ticketResponse = `Encontrei ${tickets.length} ticket(s) relacionado(s):\n\n`;
+      const ticketIntroVariations = [
+        `Encontrei ${tickets.length} ticket(s) relacionado(s) à sua busca`,
+        `Achei ${tickets.length} ticket(s) que podem te interessar`,
+        `Aqui estão ${tickets.length} ticket(s) encontrados`,
+        `Encontrei ${tickets.length} ticket(s) relevantes`,
+      ];
+      let ticketResponse = `${ticketIntroVariations[Math.floor(Math.random() * ticketIntroVariations.length)]}:\n\n`;
       tickets.slice(0, 5).forEach((ticket, idx) => {
         ticketResponse += `${idx + 1}. **Ticket #${ticket.id}**: ${ticket.title}\n`;
         ticketResponse += `   📊 Status: ${ticket.status}\n`;
@@ -1194,10 +1221,20 @@ function generateResponse(
     
     case "password":
       if (passwords.length === 0) {
-        return "Não encontrei senhas relacionadas à sua busca. Verifique se há credenciais cadastradas no sistema.";
+        const pwdNotFoundVariations = [
+          "Não encontrei senhas relacionadas à sua busca. Verifique se há credenciais cadastradas no sistema.",
+          "Hmm, não consegui encontrar credenciais com esses termos. Pode tentar outras palavras-chave?",
+          "Não encontrei nenhuma credencial relacionada. Que tal reformular sua busca?",
+        ];
+        return pwdNotFoundVariations[Math.floor(Math.random() * pwdNotFoundVariations.length)];
       }
       
-      let passwordResponse = `Encontrei ${passwords.length} credencial(is) relacionada(s):\n\n`;
+      const pwdIntroVariations = [
+        `Encontrei ${passwords.length} credencial(is) relacionada(s) à sua busca`,
+        `Achei ${passwords.length} credencial(is) que podem te interessar`,
+        `Aqui estão ${passwords.length} credencial(is) encontradas`,
+      ];
+      let passwordResponse = `${pwdIntroVariations[Math.floor(Math.random() * pwdIntroVariations.length)]}:\n\n`;
       passwords.slice(0, 5).forEach((password, idx) => {
         passwordResponse += `${idx + 1}. **${password.title}**\n`;
         if (password.createdBy) {
@@ -1219,10 +1256,20 @@ function generateResponse(
     
     case "file":
       if (files.length === 0) {
-        return "Não encontrei arquivos relacionados à sua busca.";
+        const fileNotFoundVariations = [
+          "Não encontrei arquivos relacionados à sua busca.",
+          "Hmm, não consegui encontrar arquivos com esses termos.",
+          "Não encontrei nenhum arquivo relacionado. Pode reformular sua busca?",
+        ];
+        return fileNotFoundVariations[Math.floor(Math.random() * fileNotFoundVariations.length)];
       }
       
-      let fileResponse = `Encontrei ${files.length} arquivo(s) relacionado(s):\n\n`;
+      const fileIntroVariations = [
+        `Encontrei ${files.length} arquivo(s) relacionado(s) à sua busca`,
+        `Achei ${files.length} arquivo(s) que podem te interessar`,
+        `Aqui estão ${files.length} arquivo(s) encontrados`,
+      ];
+      let fileResponse = `${fileIntroVariations[Math.floor(Math.random() * fileIntroVariations.length)]}:\n\n`;
       files.slice(0, 5).forEach((file, idx) => {
         fileResponse += `${idx + 1}. **${file.originalName}**\n`;
         fileResponse += `   Tipo: ${file.mimeType}\n`;
@@ -1240,10 +1287,20 @@ function generateResponse(
     
     case "history":
       if (history.length === 0) {
-        return "Não encontrei histórico relacionado à sua busca.";
+        const historyNotFoundVariations = [
+          "Não encontrei histórico relacionado à sua busca.",
+          "Hmm, não consegui encontrar registros no histórico com esses termos.",
+          "Não encontrei nenhum registro no histórico. Pode reformular sua busca?",
+        ];
+        return historyNotFoundVariations[Math.floor(Math.random() * historyNotFoundVariations.length)];
       }
       
-      let historyResponse = `Encontrei ${history.length} registro(s) no histórico:\n\n`;
+      const historyIntroVariations = [
+        `Encontrei ${history.length} registro(s) no histórico`,
+        `Achei ${history.length} registro(s) relevantes no histórico`,
+        `Aqui estão ${history.length} registro(s) encontrados no histórico`,
+      ];
+      let historyResponse = `${historyIntroVariations[Math.floor(Math.random() * historyIntroVariations.length)]}:\n\n`;
       history.slice(0, 5).forEach((update, idx) => {
         historyResponse += `${idx + 1}. **Ticket #${update.ticket.id}**: ${update.ticket.title}\n`;
         historyResponse += `   Atualização: ${update.content.substring(0, 100)}${update.content.length > 100 ? "..." : ""}\n`;
@@ -1256,10 +1313,20 @@ function generateResponse(
     
     case "report":
       if (!reports) {
-        return "Não foi possível gerar o relatório no momento.";
+        const reportErrorVariations = [
+          "Não foi possível gerar o relatório no momento. Tente novamente em instantes.",
+          "Hmm, tive um problema ao gerar o relatório. Pode tentar novamente?",
+          "Desculpe, não consegui gerar o relatório agora. Tente mais tarde.",
+        ];
+        return reportErrorVariations[Math.floor(Math.random() * reportErrorVariations.length)];
       }
       
-      let reportResponse = `**Relatório Detalhado do Sistema:**\n\n`;
+      const reportIntroVariations = [
+        `**Relatório Detalhado do Sistema**`,
+        `**Aqui está o relatório completo do sistema**`,
+        `**Relatório Completo**`,
+      ];
+      let reportResponse = `${reportIntroVariations[Math.floor(Math.random() * reportIntroVariations.length)]}:\n\n`;
       
       reportResponse += `📊 **Tickets por Status:**\n`;
       reports.ticketsByStatus.forEach((item: any) => {
@@ -1297,34 +1364,55 @@ function generateResponse(
       return reportResponse;
     
     case "statistics":
-      return `**Estatísticas do Sistema:**\n\n` +
+      const statsIntros = [
+        "Aqui estão as estatísticas do sistema",
+        "Vou te mostrar um resumo das estatísticas",
+        "Aqui está um panorama geral do sistema",
+      ];
+      const totalOpen = statistics.openTickets + statistics.inProgressTickets + statistics.observationTickets;
+      const closedPercentage = statistics.totalTickets > 0 
+        ? Math.round((statistics.closedTickets / statistics.totalTickets) * 100) 
+        : 0;
+      
+      return `${statsIntros[Math.floor(Math.random() * statsIntros.length)]}:\n\n` +
         `📊 **Tickets:**\n` +
         `   • Total: ${statistics.totalTickets}\n` +
         `   • Abertos: ${statistics.openTickets}\n` +
         `   • Em andamento: ${statistics.inProgressTickets}\n` +
         `   • Em observação: ${statistics.observationTickets}\n` +
         `   • Resolvidos: ${statistics.resolvedTickets}\n` +
-        `   • Fechados: ${statistics.closedTickets}\n` +
-        `   • Criados nos últimos 7 dias: ${statistics.recentTickets}\n\n` +
-        `📚 **Base de Conhecimento:**\n` +
-        `   • Documentos: ${statistics.totalDocuments}\n\n` +
-        `🔐 **Credenciais do Sistema:**\n` +
-        `   • Total de senhas salvas: ${statistics.totalPasswords}\n\n` +
+        `   • Fechados: ${statistics.closedTickets} (${closedPercentage}% do total)\n` +
+        `   • Criados nos últimos 7 dias: ${statistics.recentTickets}\n` +
+        (totalOpen > 0 ? `   • Total em aberto: ${totalOpen} tickets precisando de atenção\n` : ``) +
+        `\n📚 **Base de Conhecimento:**\n` +
+        `   • Documentos cadastrados: ${statistics.totalDocuments}\n\n` +
+        `🔐 **Credenciais:**\n` +
+        `   • Senhas salvas: ${statistics.totalPasswords}\n\n` +
         `👥 **Usuários:**\n` +
-        `   • Total: ${statistics.totalUsers}\n\n` +
-        `📝 **Histórico:**\n` +
-        `   • Total de atualizações: ${statistics.totalUpdates}`;
+        `   • Total de usuários: ${statistics.totalUsers}\n\n` +
+        `📝 **Atividades:**\n` +
+        `   • Total de atualizações registradas: ${statistics.totalUpdates}`;
     
     case "agenda":
       if (!agenda || (!agenda.events?.length && !agenda.tickets?.length)) {
         const dateStr = agenda?.date ? new Date(agenda.date).toLocaleDateString("pt-BR") : "hoje";
         const userInfo = agenda?.userName ? ` do ${agenda.userName}` : "";
-        return `Não encontrei compromissos ou tickets agendados${userInfo} para ${dateStr}.`;
+        const notFoundVariations = [
+          `Não encontrei compromissos ou tickets agendados${userInfo} para ${dateStr}.`,
+          `Parece que não há nada agendado${userInfo} para ${dateStr}.`,
+          `Não há compromissos registrados${userInfo} para ${dateStr}.`,
+        ];
+        return notFoundVariations[Math.floor(Math.random() * notFoundVariations.length)];
       }
       
       const dateStr = new Date(agenda.date).toLocaleDateString("pt-BR");
       const userInfo = agenda?.userName ? ` de ${agenda.userName} ` : " ";
-      let agendaResponse = `📅 **Agenda${userInfo}para ${dateStr}**:\n\n`;
+      const agendaIntros = [
+        `📅 **Agenda${userInfo}para ${dateStr}**`,
+        `📅 **Compromissos${userInfo}para ${dateStr}**`,
+        `📅 **Aqui está a agenda${userInfo}para ${dateStr}**`,
+      ];
+      let agendaResponse = `${agendaIntros[Math.floor(Math.random() * agendaIntros.length)]}:\n\n`;
       
       const totalEvents = agenda.events?.length || 0;
       const totalTickets = agenda.tickets?.length || 0;
@@ -1375,26 +1463,33 @@ function generateResponse(
       return agendaResponse;
     
     case "help":
-      return `Olá! Sou o Dobby assistente virtual (Beta), assistente virtual do sistema RootDesk. Posso ajudá-lo com:\n\n` +
-        `📚 **Base de Conhecimento**: Busque documentos e artigos (descriptografados)\n` +
-        `📁 **Arquivos**: Encontre arquivos da base de conhecimento\n` +
-        `🎫 **Tickets**: Consulte informações sobre chamados\n` +
-        `📅 **Agenda**: Veja compromissos e tickets agendados\n` +
-        `🔐 **Senhas**: Encontre suas credenciais salvas (descriptografadas)\n` +
-        `📝 **Histórico**: Veja atualizações e comentários\n` +
-        `📊 **Estatísticas**: Veja métricas do sistema\n` +
-        `📈 **Relatórios**: Análises detalhadas\n\n` +
-        `Exemplos de perguntas:\n` +
+      const helpIntros = [
+        "Olá! Fico feliz em ajudar!",
+        "Oi! Estou aqui para te ajudar!",
+        "Olá! Como posso ajudar você hoje?",
+        "Oi! Vamos lá, como posso te auxiliar?",
+      ];
+      return `${helpIntros[Math.floor(Math.random() * helpIntros.length)]} Sou o Dobby, seu assistente virtual aqui no RootDesk. Posso te ajudar com várias coisas:\n\n` +
+        `📚 **Base de Conhecimento**: Busque documentos e artigos da base\n` +
+        `📁 **Arquivos**: Encontre arquivos armazenados no sistema\n` +
+        `🎫 **Tickets**: Consulte informações sobre chamados e seu status\n` +
+        `📅 **Agenda**: Veja seus compromissos e tickets agendados\n` +
+        `🔐 **Senhas**: Encontre credenciais salvas no cofre\n` +
+        `📝 **Histórico**: Veja atualizações e comentários de tickets\n` +
+        `📊 **Estatísticas**: Veja métricas e números do sistema\n` +
+        `📈 **Relatórios**: Análises detalhadas sobre tickets e atividades\n\n` +
+        `**Alguns exemplos do que você pode perguntar:**\n` +
         `• "Como fazer backup?"\n` +
         `• "Quantos tickets estão abertos?"\n` +
         `• "Mostre tickets sobre rede"\n` +
         `• "Agenda de hoje"\n` +
-        `• "Quantos tickets o Bernardo tem para hoje?"\n` +
+        `• "Quantos tickets o [nome] tem para hoje?"\n` +
         `• "Compromissos de amanhã"\n` +
         `• "Senhas do servidor"\n` +
         `• "Arquivos sobre rede"\n` +
         `• "Histórico do ticket 123"\n` +
-        `• "Relatório de tickets por categoria"`;
+        `• "Relatório de tickets por categoria"\n\n` +
+        `Fique à vontade para perguntar qualquer coisa! Estou aqui para ajudar. 😊`;
     
     default:
       // Busca combinada quando a intenção é geral
@@ -1429,26 +1524,37 @@ function generateResponse(
       }
       
       if (allResults.length > 0) {
-        return `Encontrei informações relacionadas à sua busca:\n\n` +
+        const foundIntros = [
+          "Encontrei algumas informações relacionadas à sua busca",
+          "Achei algumas coisas que podem te interessar",
+          "Encontrei informações relevantes para você",
+        ];
+        return `${foundIntros[Math.floor(Math.random() * foundIntros.length)]}:\n\n` +
           allResults.join("\n\n") +
-          `\n\n💡 **Dica**: Seja mais específico para obter resultados mais precisos. Por exemplo:\n` +
+          `\n\n💡 **Dica**: Seja mais específico na sua busca para obter resultados mais precisos. Por exemplo:\n` +
           `• "Documentos sobre backup"\n` +
           `• "Tickets abertos sobre rede"\n` +
           `• "Senhas do servidor"`;
       }
       
-      return `Desculpe, não encontrei informações relacionadas à sua busca. Tente ser mais específico ou use palavras-chave relacionadas a:\n\n` +
+      const notFoundVariations = [
+        "Hmm, não consegui encontrar informações relacionadas à sua busca. Que tal tentar ser mais específico?",
+        "Não encontrei nada com esses termos. Pode reformular sua pergunta?",
+        "Desculpe, não encontrei informações relacionadas. Tente usar palavras-chave diferentes.",
+      ];
+      return `${notFoundVariations[Math.floor(Math.random() * notFoundVariations.length)]}\n\n` +
+        `**Posso ajudar você a buscar:**\n` +
         `• Documentos da base de conhecimento\n` +
         `• Arquivos e downloads\n` +
         `• Tickets e chamados (ex: "tickets abertos", "meus tickets")\n` +
         `• Agenda e compromissos (ex: "agenda de hoje", "compromissos do João")\n` +
-        `• Senhas e credenciais (descriptografadas)\n` +
+        `• Senhas e credenciais\n` +
         `• Histórico e atualizações\n` +
         `• Estatísticas e relatórios\n\n` +
-        `**Exemplos de perguntas:**\n` +
+        `**Alguns exemplos de perguntas:**\n` +
         `• "Quantos tickets estão abertos?"\n` +
         `• "Agenda de hoje"\n` +
-        `• "Quantos tickets o Bernardo tem para hoje?"\n` +
+        `• "Quantos tickets o [nome] tem para hoje?"\n` +
         `• "Senhas do servidor"\n` +
         `• "Arquivos sobre rede"\n` +
         `• "Meus tickets em andamento"\n` +
@@ -1472,8 +1578,8 @@ type AiPayload = {
   conversationHistory: ConversationEntry[];
 };
 
-function buildAiMessages(payload: AiPayload): LocalAiMessage[] {
-  const context = buildAiContext(payload);
+function buildAiMessages(payload: AiPayload, userName?: string | null): LocalAiMessage[] {
+  const context = buildAiContext(payload, userName);
   const historyMessages: LocalAiMessage[] = (payload.conversationHistory || []).map((entry) => ({
     role: entry.role,
     content: entry.content,
@@ -1483,7 +1589,26 @@ function buildAiMessages(payload: AiPayload): LocalAiMessage[] {
     {
       role: "system",
       content:
-        "Você é Dobby assistente virtual (Beta), assistente virtual interno do RootDesk. Responda sempre em português, com tom cordial, proativo e objetivo. Seja empático, cite apenas dados presentes no contexto e encerre oferecendo ajuda adicional. Use formatação markdown quando apropriado (listas, negrito, etc).",
+        "Você é o Dobby, assistente virtual do sistema RootDesk. Você é amigável, prestativo e tem uma personalidade calorosa e empática.\n\n" +
+        "**Sua personalidade:**\n" +
+        "- Você se comunica de forma natural e conversacional, como um colega de trabalho prestativo\n" +
+        "- Você demonstra interesse genuíno em ajudar e resolver problemas\n" +
+        "- Você usa linguagem acessível, evitando jargões técnicos desnecessários\n" +
+        "- Você é proativo e oferece sugestões úteis mesmo quando não perguntado diretamente\n" +
+        "- Você celebra pequenas vitórias e reconhece quando as coisas estão indo bem\n" +
+        "- Você mostra preocupação quando há problemas ou pendências\n\n" +
+        "**Diretrizes de comunicação:**\n" +
+        "- Sempre responda em português brasileiro\n" +
+        "- Use um tom amigável e profissional, mas não excessivamente formal\n" +
+        "- Varie suas saudações e despedidas (ex: 'Olá!', 'Oi!', 'Tudo bem?', 'Como posso ajudar?', 'Estou aqui para ajudar!', 'Fico feliz em ajudar!', 'Precisando de mais alguma coisa?', 'Estou à disposição!')\n" +
+        "- Quando apresentar dados, contextualize-os de forma útil (ex: 'Isso representa X% do total', 'Isso é mais que ontem', 'Vamos precisar de atenção aqui')\n" +
+        "- Use emojis com moderação e apenas quando fizer sentido (📊 para dados, ✅ para sucessos, ⚠️ para alertas, 💡 para dicas)\n" +
+        "- Seja específico: cite números, nomes e detalhes relevantes do contexto\n" +
+        "- Quando não encontrar informações, seja honesto e sugira alternativas\n" +
+        "- Encerre sempre oferecendo ajuda adicional de forma natural\n" +
+        "- Use formatação markdown (negrito, listas, parágrafos) para melhorar a legibilidade\n" +
+        "- Evite repetir exatamente a mesma estrutura de resposta - varie sua abordagem\n\n" +
+        "**Importante:** Use APENAS as informações fornecidas no contexto. Não invente dados ou informações que não estejam presentes. Se algo não estiver no contexto, seja honesto sobre isso.",
     },
     ...historyMessages,
     {
@@ -1493,9 +1618,14 @@ function buildAiMessages(payload: AiPayload): LocalAiMessage[] {
   ];
 }
 
-function buildAiContext(payload: AiPayload): string {
+function buildAiContext(payload: AiPayload, userName?: string | null): string {
   const { question, intent, deterministicResponse } = payload;
   const sections: string[] = [];
+
+  // Adicionar contexto do usuário se disponível
+  if (userName) {
+    sections.push(`Você está conversando com: ${userName}`);
+  }
 
   sections.push(`Pergunta original do usuário:\n${question}`);
   sections.push(
@@ -1575,7 +1705,18 @@ function buildAiContext(payload: AiPayload): string {
 
   sections.push(`Resposta determinística sugerida (baseada em regras):\n${deterministicResponse}`);
   sections.push(
-    "Com base nesses dados, escreva uma resposta humanizada e natural, utilizando parágrafos curtos, bullet points quando fizer sentido e encerrando com uma oferta de ajuda adicional. Seja específico e cite os dados encontrados."
+    "**INSTRUÇÕES PARA SUA RESPOSTA:**\n\n" +
+    "Transforme a resposta determinística acima em uma conversa natural e humanizada. Siga estas diretrizes:\n\n" +
+    "1. **Comece de forma calorosa**: Use uma saudação variada e demonstre interesse genuíno\n" +
+    "2. **Contextualize os dados**: Não apenas liste informações, mas explique o que elas significam\n" +
+    "3. **Use linguagem natural**: Evite listas muito técnicas, prefira parágrafos conversacionais quando possível\n" +
+    "4. **Demonstre empatia**: Se houver problemas ou pendências, mostre preocupação. Se houver sucessos, celebre\n" +
+    "5. **Seja específico**: Cite números, nomes e detalhes do contexto de forma natural\n" +
+    "6. **Varie sua estrutura**: Não use sempre a mesma fórmula - seja criativo na apresentação\n" +
+    "7. **Use formatação inteligente**: Markdown para destacar informações importantes, mas não exagere\n" +
+    "8. **Encerre naturalmente**: Ofereça ajuda adicional de forma genuína, não robótica\n" +
+    "9. **Mantenha o tom positivo**: Mesmo ao reportar problemas, mantenha um tom construtivo e proativo\n\n" +
+    "**Lembre-se**: Você é o Dobby, um assistente prestativo e amigável. Suas respostas devem soar como se fossem de um colega de trabalho experiente e empático, não de um sistema automatizado."
   );
 
   return sections.join("\n\n");
@@ -1629,6 +1770,12 @@ export async function POST(req: NextRequest) {
     
     // Obter histórico de conversa (se fornecido)
     const conversationHistory = sanitizeHistory((body as any).history || []);
+    
+    // Buscar informações do usuário para contexto adicional
+    const userInfo = await prisma.user.findUnique({
+      where: { id: user.id },
+      select: { name: true, email: true },
+    });
     
     // Detectar intenção
     const intent = detectIntent(message);
@@ -1794,9 +1941,9 @@ export async function POST(req: NextRequest) {
           statistics,
           reports,
           conversationHistory,
-        });
+        }, userInfo?.name || userInfo?.email || null);
 
-        const aiReply = await callLocalAi(aiMessages, { temperature: 0.7 });
+        const aiReply = await callLocalAi(aiMessages, { temperature: 0.85 });
         if (aiReply && aiReply.trim().length > 0) {
           finalResponse = aiReply;
           responseSource = "local-ai";

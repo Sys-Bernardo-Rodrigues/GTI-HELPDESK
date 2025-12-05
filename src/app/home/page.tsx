@@ -1441,7 +1441,15 @@ export default function HomePage() {
                     </MessageHeader>
                     <MessageBody>
                         {renderMessageContent(
-                        "Olá! Sou o Dobby assistente virtual (Beta), seu assistente virtual. Posso apoiar com:\n\n- 📚 Base de conhecimento (documentos e arquivos)\n- 🎫 Tickets, históricos e status\n- 📅 Agenda, compromissos e lembretes\n- 🔐 Cofre de senhas e acessos\n- 📊 Estatísticas e relatórios operacionais\n\nFaça uma pergunta ou selecione um dos atalhos abaixo para começarmos!"
+                        "Olá! 👋 Sou o Dobby, seu assistente virtual aqui no RootDesk. Fico feliz em te ajudar!\n\n" +
+                        "Posso te apoiar com várias coisas:\n\n" +
+                        "📚 **Base de conhecimento** - Busque documentos e arquivos da base\n" +
+                        "🎫 **Tickets** - Consulte informações sobre chamados, status e históricos\n" +
+                        "📅 **Agenda** - Veja seus compromissos, eventos e tickets agendados\n" +
+                        "🔐 **Cofre de senhas** - Encontre credenciais e acessos salvos\n" +
+                        "📊 **Estatísticas** - Veja métricas e números do sistema\n" +
+                        "📈 **Relatórios** - Análises detalhadas sobre tickets e atividades\n\n" +
+                        "**Como posso ajudar?** Faça uma pergunta ou selecione um dos atalhos abaixo para começarmos! 😊"
                       )}
                     </MessageBody>
                   </MessageBubble>

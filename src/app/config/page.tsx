@@ -76,7 +76,7 @@ export default function ConfigPage() {
   const [updateRepoUrl, setUpdateRepoUrl] = useState<string>("");
   const [updateLoading, setUpdateLoading] = useState<boolean>(false);
   const [updateFeedback, setUpdateFeedback] = useState<{ type: "success" | "error"; text: string } | null>(null);
-  
+
   // Estado da versão do sistema
   const [systemVersion, setSystemVersion] = useState<{
     name?: string;
