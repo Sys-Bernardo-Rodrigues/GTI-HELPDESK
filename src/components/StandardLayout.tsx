@@ -532,11 +532,7 @@ export default function StandardLayout({ children }: StandardLayoutProps) {
   }, [menuOpen, configSubmenuOpen]);
 
   function toggleUserMenu() {
-    setMenuOpen((v) => {
-      const newValue = !v;
-      console.log("Menu toggle:", newValue); // Debug
-      return newValue;
-    });
+    setMenuOpen((v) => !v);
   }
 
   async function onLogout() {
@@ -702,7 +698,6 @@ export default function StandardLayout({ children }: StandardLayoutProps) {
             onClick={(e) => {
               e.preventDefault();
               e.stopPropagation();
-              console.log("UserFooter clicked, current menuOpen:", menuOpen); // Debug
               toggleUserMenu();
             }}
             onKeyDown={(e) => {

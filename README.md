@@ -1,581 +1,607 @@
-# RootDesk – Sistema de Helpdesk
+# RootDesk - Sistema de Helpdesk Profissional
 
-Sistema completo de helpdesk desenvolvido com Next.js, TypeScript, Prisma e suporte para MariaDB/PostgreSQL. Inclui assistente virtual (Dobby) com suporte a IA local via Ollama.
+[![Next.js](https://img.shields.io/badge/Next.js-16.0-black)](https://nextjs.org/)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5.0-blue)](https://www.typescriptlang.org/)
+[![Prisma](https://img.shields.io/badge/Prisma-6.18-2D3748)](https://www.prisma.io/)
+[![License](https://img.shields.io/badge/license-Private-red)]()
+
+Sistema completo de helpdesk desenvolvido com Next.js, TypeScript e Prisma. Inclui gestão de tickets, formulários personalizados, assistente virtual com IA local, vault de senhas criptografado, webhooks, projetos e muito mais.
 
 ## 📋 Índice
 
 - [Visão Geral](#visão-geral)
+- [Características](#características)
 - [Requisitos do Sistema](#requisitos-do-sistema)
-- [Instalação em Novo Servidor](#instalação-em-novo-servidor)
-  - [Opção 1: Instalação com Docker (Recomendado)](#opção-1-instalação-com-docker-recomendado)
-  - [Opção 2: Instalação Nativa](#opção-2-instalação-nativa)
-- [Configuração Inicial](#configuração-inicial)
-- [Execução](#execução)
-- [Configuração Adicional](#configuração-adicional)
-- [Scripts Disponíveis](#scripts-disponíveis)
+- [Instalação](#instalação)
+- [Configuração](#configuração)
+- [Uso](#uso)
+- [Estrutura do Projeto](#estrutura-do-projeto)
+- [API](#api)
+- [Desenvolvimento](#desenvolvimento)
 - [Troubleshooting](#troubleshooting)
-- [Documentação Adicional](#documentação-adicional)
+- [Segurança](#segurança)
+- [Licença](#licença)
 
 ---
 
-## Visão Geral
+## 🎯 Visão Geral
 
-O **RootDesk** é um sistema completo de helpdesk que oferece:
+O **RootDesk** é uma solução completa de helpdesk que oferece:
 
-- ✅ Gestão de tickets e categorias
-- ✅ Sistema de autenticação seguro (JWT)
-- ✅ Assistente virtual (Dobby) com IA local (Ollama)
-- ✅ Gestão de formulários personalizados
-- ✅ Sistema de webhooks
-- ✅ Vault de senhas criptografado
-- ✅ Gestão de documentos e arquivos
-- ✅ Sistema de notificações por email
-- ✅ Interface moderna e responsiva
+- ✅ **Gestão de Tickets**: Sistema completo de tickets com categorias, status, atribuições e atualizações
+- ✅ **Formulários Personalizados**: Crie formulários públicos com campos customizados e sistema de aprovação
+- ✅ **Assistente Virtual (Dobby)**: IA local integrada via Ollama para respostas inteligentes
+- ✅ **Vault de Senhas**: Armazenamento seguro e criptografado de credenciais
+- ✅ **Base de Conhecimento**: Documentos e arquivos criptografados
+- ✅ **Webhooks**: Integração com sistemas externos
+- ✅ **Projetos e Tarefas**: Gestão completa de projetos com tarefas e subtarefas
+- ✅ **Agenda e Eventos**: Sistema de calendário integrado
+- ✅ **Relatórios**: Análises e estatísticas detalhadas
+- ✅ **Autenticação Segura**: JWT com 2FA obrigatório
+- ✅ **Perfis de Acesso**: Controle granular de permissões
 
 ---
 
-## Requisitos do Sistema
+## ✨ Características
+
+### Gestão de Tickets
+- Criação, edição e exclusão de tickets
+- Categorização e filtros avançados
+- Atribuição de responsáveis
+- Agendamento de tickets
+- Histórico completo de atualizações
+- Notificações em tempo real
+
+### Formulários Personalizados
+- Criação de formulários públicos com slug único
+- Campos customizados (texto, número, data, seleção, etc.)
+- Sistema de aprovação multi-usuário
+- Submissões vinculadas a tickets automaticamente
+- Validação de campos obrigatórios
+
+### Assistente Virtual (Dobby)
+- Integração com Ollama para IA local
+- Respostas contextuais baseadas em regras
+- Ações automatizadas (criar tickets, buscar senhas, etc.)
+- Transcrição de áudio (AssemblyAI, Deepgram, Google Speech)
+- Feedback de qualidade das respostas
+
+### Segurança
+- Autenticação JWT com cookies seguros
+- 2FA obrigatório para todos os usuários
+- Criptografia AES-256-GCM para arquivos sensíveis
+- Vault de senhas com criptografia
+- Perfis de acesso granulares
+
+### Base de Conhecimento
+- Documentos e arquivos criptografados
+- Upload e download seguro
+- Preview de arquivos (PDF, imagens, etc.)
+- Organização por categorias
+
+---
+
+## 💻 Requisitos do Sistema
 
 ### Mínimos
-
-- **Sistema Operacional**: Linux (Ubuntu 20.04+, Debian 11+, ou similar) / Windows Server / macOS
+- **Sistema Operacional**: Linux (Ubuntu 20.04+, Debian 11+), Windows Server ou macOS
 - **Node.js**: 18.x ou superior (recomendado 20.x LTS)
 - **Memória RAM**: 2 GB (mínimo), 4 GB (recomendado)
 - **Espaço em Disco**: 10 GB livres
 - **Processador**: 2 cores (mínimo), 4 cores (recomendado)
 
-### Para IA Local (Ollama - Opcional)
-
+### Para IA Local (Opcional)
 - **RAM Adicional**: +8 GB (para modelos básicos como llama3:8b)
 - **Espaço Adicional**: +10 GB (para modelos de IA)
 
 ### Software Necessário
 
-#### Se usar Docker (Opção 1):
+#### Com Docker (Recomendado)
 - Docker Engine 20.10+
 - Docker Compose 2.0+
 
-#### Se usar instalação nativa (Opção 2):
-- MariaDB 10.6+ ou PostgreSQL 13+ (ou MySQL 8.0+)
-- Servidor de banco de dados configurado e acessível
+#### Sem Docker
+- MariaDB 10.6+ ou PostgreSQL 12+
+- Node.js 18+ e npm
 
 ---
 
-## Instalação em Novo Servidor
-
-Escolha uma das opções abaixo conforme sua preferência:
+## 🚀 Instalação
 
 ### Opção 1: Instalação com Docker (Recomendado)
 
-Esta opção é mais simples e recomendada para a maioria dos casos, pois gerencia automaticamente o banco de dados e o Ollama via containers Docker.
-
-#### 1.1. Preparar o Servidor
-
+1. **Clone o repositório**
 ```bash
-# Atualizar o sistema (Ubuntu/Debian)
-sudo apt update && sudo apt upgrade -y
-
-# Instalar dependências básicas
-sudo apt install -y curl git build-essential
-
-# Instalar Node.js 20.x LTS
-curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash -
-sudo apt install -y nodejs
-
-# Verificar instalação
-node --version  # Deve mostrar v20.x ou superior
-npm --version   # Deve mostrar 10.x ou superior
+git clone <repository-url>
+cd GTI-HELPDESK
 ```
 
-#### 1.2. Instalar Docker e Docker Compose
-
+2. **Configure as variáveis de ambiente**
 ```bash
-# Instalar Docker
-curl -fsSL https://get.docker.com -o get-docker.sh
-sudo sh get-docker.sh
-
-# Adicionar seu usuário ao grupo docker (para não precisar usar sudo)
-sudo usermod -aG docker $USER
-
-# Instalar Docker Compose
-sudo curl -L "https://github.com/docker/compose/releases/latest/download/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
-sudo chmod +x /usr/local/bin/docker-compose
-
-# Verificar instalação
-docker --version
-docker compose version
-
-# IMPORTANTE: Faça logout e login novamente para o grupo docker ter efeito
-# Ou execute: newgrp docker
-```
-
-#### 1.3. Clonar o Repositório
-
-```bash
-# Criar diretório para aplicações
-sudo mkdir -p /opt/rootdesk
-sudo chown $USER:$USER /opt/rootdesk
-
-# Clonar o repositório (ou baixar e extrair o código)
-cd /opt/rootdesk
-git clone https://github.com/seu-usuario/rootdesk.git .
-# OU, se você já tem o código localmente:
-# scp -r /caminho/local/rootdesk user@servidor:/opt/rootdesk
-```
-
-#### 1.4. Instalar Dependências do Node.js
-
-```bash
-cd /opt/rootdesk
-
-# Instalar dependências
-npm install
-```
-
-#### 1.5. Configurar Variáveis de Ambiente
-
-```bash
-# Copiar arquivo de exemplo
 cp env.example .env
-
-# Editar o arquivo .env
-nano .env  # ou use seu editor preferido (vim, code, etc.)
+# Edite o .env com suas configurações
 ```
 
-Configure pelo menos estas variáveis essenciais:
-
+3. **Configure o banco de dados no .env**
 ```env
-# Configuração Docker
 USE_DOCKER_DB=true
-USE_DOCKER_OLLAMA=true
-
-# Banco de Dados (será usado pelo Docker)
 DB_HOST=localhost
-DB_USER=rootdesk_user
-DB_PASSWORD=senha_forte_aqui
-DB_NAME=rootdesk
-DB_ROOT_PASSWORD=senha_root_forte_aqui
+DB_USER=helpdesk_user
+DB_PASSWORD=helpdesk_password
+DB_NAME=helpdesk
 DB_PORT=3306
-
-# Autenticação (GERAR UMA CHAVE FORTE!)
-AUTH_SECRET=gerar-chave-aleatoria-com-openssl-rand-base64-32-minimo-32-chars
-
-# Usuário Administrador Padrão
-DEFAULT_USER_EMAIL=admin@seudominio.com
-DEFAULT_USER_PASSWORD=senha_admin_forte
-DEFAULT_USER_NAME=Administrador
-
-# URLs do Sistema
-APP_URL=http://seu-servidor.com
-NEXT_PUBLIC_APP_URL=http://seu-servidor.com
-PUBLIC_APP_URL=http://seu-servidor.com
-NODE_ENV=production
-
-# Criptografia (GERAR UMA CHAVE!)
-ENCRYPTION_KEY=gerar-chave-hex-64-chars-node-scripts-generate-encryption-key-js
+DB_ROOT_PASSWORD=root
 ```
 
-**Gerar chaves seguras:**
-
+4. **Inicie os serviços Docker**
 ```bash
-# Gerar AUTH_SECRET
-openssl rand -base64 32
-
-# Gerar ENCRYPTION_KEY
-node scripts/generate-encryption-key.js
-```
-
-#### 1.6. Iniciar Serviços Docker
-
-```bash
-# Subir banco de dados MariaDB e Ollama
 npm run docker:up
-
-# Verificar se os containers estão rodando
-docker ps
-
-# Ver logs (se necessário)
-npm run docker:logs
 ```
 
-#### 1.7. Configurar Banco de Dados
-
+5. **Instale as dependências e configure o banco**
 ```bash
-# Gerar cliente Prisma
-npm run db:generate
-
-# Aplicar schema do banco de dados
-npm run db:push
-
-# Ou, para usar migrações versionadas:
-# npm run db:migrate
+npm install
+npm run predev
 ```
 
-#### 1.8. Baixar Modelo de IA (Opcional)
-
-Se você habilitou o Ollama via Docker:
-
-```bash
-# Baixar modelo de IA (llama3:8b é recomendado)
-docker exec -it rootdesk-ollama ollama pull llama3:8b
-
-# Configurar no .env
-# LOCAL_AI_ENABLED=true
-# LOCAL_AI_URL=http://localhost:11434
-# LOCAL_AI_MODEL=llama3:8b
-```
-
-#### 1.9. Build da Aplicação
-
-```bash
-# Fazer build para produção
-npm run build
-```
-
-#### 1.10. Iniciar o Servidor
-
-```bash
-# Iniciar em produção
-npm start
-```
-
-O servidor estará disponível em `http://seu-servidor:3000` (ou a porta configurada).
-
----
-
-### Opção 2: Instalação Nativa
-
-Use esta opção se preferir instalar o banco de dados diretamente no sistema operacional.
-
-#### 2.1. Preparar o Servidor
-
-Siga os passos [1.1](#11-preparar-o-servidor) e [1.2](#12-instalar-docker-e-docker-compose) da Opção 1 (ou pule o Docker se não for usar).
-
-#### 2.2. Instalar MariaDB/PostgreSQL
-
-**Para MariaDB (Ubuntu/Debian):**
-
-```bash
-# Instalar MariaDB
-sudo apt install -y mariadb-server
-
-# Configurar MariaDB
-sudo mysql_secure_installation
-
-# Criar banco de dados e usuário
-sudo mysql -u root -p
-
-# No prompt do MySQL, execute:
-CREATE DATABASE rootdesk CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
-CREATE USER 'rootdesk_user'@'localhost' IDENTIFIED BY 'senha_forte_aqui';
-GRANT ALL PRIVILEGES ON rootdesk.* TO 'rootdesk_user'@'localhost';
-FLUSH PRIVILEGES;
-EXIT;
-```
-
-**Para PostgreSQL:**
-
-```bash
-# Instalar PostgreSQL
-sudo apt install -y postgresql postgresql-contrib
-
-# Criar banco e usuário
-sudo -u postgres psql
-
-# No prompt do PostgreSQL, execute:
-CREATE DATABASE rootdesk;
-CREATE USER rootdesk_user WITH PASSWORD 'senha_forte_aqui';
-GRANT ALL PRIVILEGES ON DATABASE rootdesk TO rootdesk_user;
-\q
-```
-
-#### 2.3. Clonar e Configurar
-
-Siga os passos [1.3](#13-clonar-o-repositório) e [1.4](#14-instalar-dependências-do-nodejs) da Opção 1.
-
-#### 2.4. Configurar Variáveis de Ambiente
-
-No arquivo `.env`, configure:
-
-```env
-# Configuração Docker
-USE_DOCKER_DB=false
-USE_DOCKER_OLLAMA=false  # ou true se quiser Ollama via Docker
-
-# Banco de Dados (conexão nativa)
-DB_HOST=localhost
-DB_USER=rootdesk_user
-DB_PASSWORD=senha_forte_aqui
-DB_NAME=rootdesk
-DB_PORT=3306  # ou 5432 para PostgreSQL
-
-# Para MariaDB/MySQL:
-DATABASE_URL="mysql://rootdesk_user:senha_forte_aqui@localhost:3306/rootdesk?schema=public"
-
-# Para PostgreSQL:
-# DATABASE_URL="postgresql://rootdesk_user:senha_forte_aqui@localhost:5432/rootdesk?schema=public"
-
-# ... outras configurações como na Opção 1 ...
-```
-
-#### 2.5. Configurar Banco de Dados
-
-```bash
-# Gerar cliente Prisma
-npm run db:generate
-
-# Aplicar schema
-npm run db:push
-```
-
-#### 2.6. Instalar Ollama (Opcional - Nativo)
-
-Se você não usar Docker para o Ollama, siga o guia completo em [`docs/INSTALACAO_OLLAMA.md`](docs/INSTALACAO_OLLAMA.md).
-
-#### 2.7. Build e Iniciar
-
-Siga os passos [1.9](#19-build-da-aplicação) e [1.10](#110-iniciar-o-servidor) da Opção 1.
-
----
-
-## Configuração Inicial
-
-### 1. Configurar Email (SMTP)
-
-Edite o arquivo `.env` e configure:
-
-```env
-EMAIL_ENABLED=true
-SMTP_HOST=smtp.gmail.com  # ou seu servidor SMTP
-SMTP_PORT=587
-SMTP_SECURE=false
-SMTP_USER=seu-email@exemplo.com
-SMTP_PASSWORD=sua-senha-ou-app-password
-EMAIL_FROM=noreply@seudominio.com
-EMAIL_FROM_NAME=RootDesk
-```
-
-**Para Gmail:**
-1. Ative verificação em duas etapas
-2. Crie uma "Senha de App": https://myaccount.google.com/apppasswords
-3. Use a senha de app no `SMTP_PASSWORD`
-
-### 2. Acessar o Sistema
-
-1. Acesse `http://seu-servidor:3000`
-2. Faça login com as credenciais configuradas em `DEFAULT_USER_EMAIL` e `DEFAULT_USER_PASSWORD`
-3. Altere a senha padrão imediatamente após o primeiro acesso
-
-### 3. Configurar Proxy Reverso (Recomendado para Produção)
-
-Use Nginx ou Apache para servir o sistema em uma porta padrão (80/443) com SSL:
-
-**Exemplo Nginx:**
-
-```nginx
-server {
-    listen 80;
-    server_name seu-servidor.com;
-    
-    location / {
-        proxy_pass http://localhost:3000;
-        proxy_http_version 1.1;
-        proxy_set_header Upgrade $http_upgrade;
-        proxy_set_header Connection 'upgrade';
-        proxy_set_header Host $host;
-        proxy_cache_bypass $http_upgrade;
-        proxy_set_header X-Real-IP $remote_addr;
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto $scheme;
-    }
-}
-```
-
-Para SSL com Let's Encrypt:
-
-```bash
-sudo apt install -y certbot python3-certbot-nginx
-sudo certbot --nginx -d seu-servidor.com
-```
-
----
-
-## Execução
-
-### Desenvolvimento
-
+6. **Inicie o servidor de desenvolvimento**
 ```bash
 npm run dev
 ```
 
-Acesse `http://localhost:3000`
+O sistema estará disponível em `http://localhost:3000`
 
-### Produção
+### Opção 2: Instalação Nativa
 
-```bash
-# Build
-npm run build
+1. **Instale o banco de dados**
+   - MariaDB: `sudo apt install mariadb-server` (Linux)
+   - PostgreSQL: `sudo apt install postgresql` (Linux)
 
-# Iniciar
-npm start
+2. **Crie o banco de dados**
+```sql
+CREATE DATABASE helpdesk;
+CREATE USER helpdesk_user@localhost IDENTIFIED BY 'helpdesk_password';
+GRANT ALL PRIVILEGES ON helpdesk.* TO helpdesk_user@localhost;
+FLUSH PRIVILEGES;
 ```
 
-### Com PM2 (Recomendado para Produção)
-
+3. **Configure o .env**
 ```bash
-# Instalar PM2 globalmente
-sudo npm install -g pm2
+cp env.example .env
+# Configure USE_DOCKER_DB=false e as credenciais do banco
+```
 
-# Iniciar aplicação
-pm2 start npm --name "rootdesk" -- start
-
-# Salvar configuração para iniciar no boot
-pm2 save
-pm2 startup
-
-# Ver logs
-pm2 logs rootdesk
-
-# Ver status
-pm2 status
-
-# Reiniciar
-pm2 restart rootdesk
-
-# Parar
-pm2 stop rootdesk
+4. **Instale e configure**
+```bash
+npm install
+npm run predev
+npm run dev
 ```
 
 ---
 
-## Configuração Adicional
+## ⚙️ Configuração
 
-### Configurar IA Local (Ollama)
+### Variáveis de Ambiente Essenciais
 
-Veja o guia completo: [`docs/INSTALACAO_OLLAMA.md`](docs/INSTALACAO_OLLAMA.md)
+Copie `env.example` para `.env` e configure:
 
-Resumo rápido:
+#### Banco de Dados
+```env
+DATABASE_URL="mysql://user:password@localhost:3306/helpdesk?schema=public"
+# ou para PostgreSQL:
+# DATABASE_URL="postgresql://user:password@localhost:5432/helpdesk?schema=public"
+```
 
+#### Autenticação
+```env
+AUTH_SECRET="sua-chave-secreta-minimo-32-caracteres"
+# Gere com: openssl rand -base64 32
+```
+
+#### Usuário Padrão
+```env
+DEFAULT_USER_EMAIL=admin@example.com
+DEFAULT_USER_PASSWORD=admin123
+DEFAULT_USER_NAME=Administrador
+```
+
+#### Email (Opcional)
+```env
+EMAIL_ENABLED=true
+SMTP_HOST=smtp.gmail.com
+SMTP_PORT=587
+SMTP_SECURE=false
+SMTP_USER=seu-email@gmail.com
+SMTP_PASSWORD=sua-senha-de-app
+EMAIL_FROM=noreply@rootdesk.com
+```
+
+#### IA Local - Ollama (Opcional)
 ```env
 LOCAL_AI_ENABLED=true
 LOCAL_AI_URL=http://localhost:11434
 LOCAL_AI_MODEL=llama3:8b
 ```
 
-### Configurar Atualização Automática
-
+#### Criptografia
 ```env
-ALLOW_GIT_UPDATE=true
-ALLOWED_REPO_URL=https://github.com/seu-usuario/rootdesk.git
+ENCRYPTION_KEY="sua-chave-de-64-caracteres-hexadecimais"
+# Gere com: node scripts/generate-encryption-key.js
+# ou: openssl rand -hex 32
 ```
 
-### Permitir Edição de .env pela Interface
+### Configuração do Ollama
 
-```env
-ALLOW_ENV_EDIT=true
+Se desejar usar IA local:
+
+1. **Instale o Ollama** (se não usar Docker)
+   - Linux: `curl -fsSL https://ollama.com/install.sh | sh`
+   - Windows: Baixe de https://ollama.com
+   - macOS: `brew install ollama`
+
+2. **Baixe um modelo**
+```bash
+ollama pull llama3:8b
 ```
 
-⚠️ **Atenção**: Use essas opções apenas em ambientes controlados!
+3. **Configure no .env**
+```env
+USE_DOCKER_OLLAMA=false  # se instalado nativamente
+LOCAL_AI_ENABLED=true
+LOCAL_AI_URL=http://localhost:11434
+LOCAL_AI_MODEL=llama3:8b
+```
 
 ---
 
-## Scripts Disponíveis
+## 📖 Uso
 
-| Script | Descrição |
-|--------|-----------|
-| `npm run dev` | Inicia servidor de desenvolvimento com hot-reload |
-| `npm run build` | Faz build da aplicação para produção |
-| `npm run start` | Inicia servidor de produção |
-| `npm run docker:up` | Sobe containers Docker (MariaDB + Ollama) |
-| `npm run docker:down` | Para e remove containers Docker |
-| `npm run docker:logs` | Mostra logs dos containers |
-| `npm run db:generate` | Gera cliente Prisma |
-| `npm run db:push` | Aplica schema no banco (desenvolvimento) |
-| `npm run db:migrate` | Cria/aplica migrações versionadas |
-| `npm run db:deploy` | Aplica migrações pendentes (produção) |
-| `npm run db:studio` | Abre Prisma Studio (interface visual do banco) |
+### Primeiro Acesso
+
+1. Acesse `http://localhost:3000`
+2. Faça login com as credenciais do usuário padrão configurado no `.env`
+3. O sistema solicitará código 2FA (enviado por email se configurado)
+
+### Principais Funcionalidades
+
+#### Gestão de Tickets
+- Acesse **Tickets** no menu lateral
+- Crie novos tickets ou visualize existentes
+- Filtre por status, categoria, responsável
+- Atribua tickets a usuários
+- Agende tickets para data futura
+
+#### Formulários
+- Acesse **Configurações > Formulários**
+- Crie formulários personalizados
+- Configure campos e aprovadores
+- Compartilhe o link público (slug)
+- Aprove ou rejeite submissões
+
+#### Base de Conhecimento
+- Acesse **Base de Conhecimento**
+- Adicione documentos e arquivos
+- Organize por categorias
+- Busque conteúdo criptografado
+
+#### Assistente Virtual
+- Acesse o chat na página inicial
+- Faça perguntas ao Dobby
+- Use comandos de voz (se configurado)
+- Receba respostas inteligentes
 
 ---
 
-## Troubleshooting
+## 📁 Estrutura do Projeto
 
-### Problema: Porta 3000 já está em uso
+```
+GTI-HELPDESK/
+├── src/
+│   ├── app/                    # Next.js App Router
+│   │   ├── api/                # Rotas da API
+│   │   ├── home/               # Dashboard principal
+│   │   ├── tickets/            # Gestão de tickets
+│   │   ├── forms/              # Formulários públicos
+│   │   ├── base/               # Base de conhecimento
+│   │   ├── projetos/           # Gestão de projetos
+│   │   ├── agenda/             # Calendário e eventos
+│   │   ├── relatorios/         # Relatórios e estatísticas
+│   │   ├── config/             # Configurações do sistema
+│   │   ├── profile/            # Perfil do usuário
+│   │   └── users/              # Gestão de usuários
+│   ├── components/             # Componentes React reutilizáveis
+│   ├── lib/                    # Bibliotecas e utilitários
+│   │   ├── auth.ts             # Autenticação JWT
+│   │   ├── prisma.ts           # Cliente Prisma
+│   │   ├── encryption.ts      # Criptografia
+│   │   ├── email.ts            # Envio de emails
+│   │   └── localAi.ts          # Integração Ollama
+│   ├── ui/                     # Componentes de UI
+│   └── generated/              # Código gerado (Prisma)
+├── prisma/
+│   └── schema.prisma           # Schema do banco de dados
+├── scripts/                     # Scripts utilitários
+├── public/                     # Arquivos estáticos
+├── docker-compose.yml           # Configuração Docker
+├── package.json                # Dependências
+└── .env                        # Variáveis de ambiente (não versionado)
+```
+
+---
+
+## 🔌 API
+
+### Autenticação
+
+#### Login
+```http
+POST /api/login
+Content-Type: application/json
+
+{
+  "email": "user@example.com",
+  "password": "password",
+  "twoFactorCode": "123456"
+}
+```
+
+#### Verificar Sessão
+```http
+GET /api/session
+```
+
+### Tickets
+
+#### Listar Tickets
+```http
+GET /api/tickets
+```
+
+#### Criar Ticket
+```http
+POST /api/tickets
+Content-Type: application/json
+
+{
+  "title": "Novo Ticket",
+  "description": "Descrição do problema",
+  "categoryId": 1
+}
+```
+
+#### Atualizar Ticket
+```http
+PUT /api/tickets/[id]
+Content-Type: application/json
+
+{
+  "status": "IN_PROGRESS",
+  "assignedToId": 2
+}
+```
+
+### Formulários
+
+#### Listar Formulários
+```http
+GET /api/forms
+```
+
+#### Criar Formulário
+```http
+POST /api/forms
+Content-Type: application/json
+
+{
+  "title": "Formulário de Contato",
+  "description": "Descrição",
+  "isPublic": true,
+  "fields": [
+    {
+      "label": "Nome",
+      "type": "TEXT",
+      "required": true
+    }
+  ]
+}
+```
+
+#### Submeter Formulário (Público)
+```http
+POST /api/forms/[id]/submit
+Content-Type: application/json
+
+{
+  "data": {
+    "campo1": "valor1"
+  }
+}
+```
+
+### Webhooks
+
+#### Criar Webhook
+```http
+POST /api/webhooks
+Content-Type: application/json
+
+{
+  "name": "Meu Webhook",
+  "description": "Descrição",
+  "link": "https://exemplo.com/webhook"
+}
+```
+
+#### Receber Webhook
+```http
+POST /api/webhooks/receive/[token]
+Content-Type: application/json
+
+{
+  "title": "Título do Ticket",
+  "description": "Descrição"
+}
+```
+
+---
+
+## 🛠️ Desenvolvimento
+
+### Scripts Disponíveis
 
 ```bash
-# Verificar qual processo está usando a porta
-sudo lsof -i :3000
+# Desenvolvimento
+npm run dev              # Inicia servidor de desenvolvimento
+npm run dev:watch       # Inicia com logs do Docker
 
-# Matar o processo ou mudar a porta
-# No Next.js, você pode definir: PORT=3001 npm start
+# Build e Produção
+npm run build           # Build de produção
+npm run start           # Inicia servidor de produção
+
+# Banco de Dados
+npm run db:migrate      # Cria migração
+npm run db:deploy       # Aplica migrações (produção)
+npm run db:generate     # Gera cliente Prisma
+npm run db:push         # Sincroniza schema (desenvolvimento)
+npm run db:studio       # Abre Prisma Studio
+
+# Docker
+npm run docker:up       # Inicia containers
+npm run docker:down     # Para containers
+npm run docker:logs     # Visualiza logs
+
+# Testes
+npm run test            # Executa testes
+npm run lint            # Verifica código
 ```
 
-### Problema: Erro de conexão com banco de dados
+### Estrutura de Desenvolvimento
 
-1. Verifique se o banco está rodando:
-   - Docker: `docker ps | grep mariadb`
-   - Nativo: `sudo systemctl status mariadb` ou `sudo systemctl status postgresql`
+1. **Banco de Dados**: Use `prisma db push` para desenvolvimento rápido
+2. **Migrações**: Use `prisma migrate dev` para criar migrações formais
+3. **Tipos**: O Prisma gera tipos TypeScript automaticamente em `src/generated/prisma`
 
-2. Verifique as credenciais no `.env`
+### Adicionando Novas Funcionalidades
 
-3. Teste a conexão:
-   ```bash
-   npm run db:generate
-   tsx scripts/check-db.ts
-   ```
+1. **Criar Modelo no Prisma**
+   - Edite `prisma/schema.prisma`
+   - Execute `npm run db:generate`
 
-### Problema: Erro ao fazer build
+2. **Criar Rotas da API**
+   - Adicione arquivos em `src/app/api/[rota]/route.ts`
+   - Use `getAuthenticatedUser()` para autenticação
 
+3. **Criar Páginas**
+   - Adicione em `src/app/[rota]/page.tsx`
+   - Use `StandardLayout` para layout consistente
+
+---
+
+## 🔧 Troubleshooting
+
+### Problemas de Conexão com Banco
+
+1. **Verifique se o banco está rodando**
 ```bash
-# Limpar cache e node_modules
-rm -rf .next node_modules package-lock.json
-npm install
-npm run build
+npm run docker:logs
+# ou
+mysql -u helpdesk_user -p helpdesk
 ```
 
-### Problema: Ollama não responde
+2. **Teste a conexão**
+```bash
+npm run db:generate
+tsx scripts/check-db.ts
+```
 
-1. Verifique se está rodando:
-   ```bash
-   docker ps | grep ollama
-   # ou, se nativo:
-   curl http://localhost:11434/api/tags
-   ```
+3. **Verifique as variáveis de ambiente**
+```bash
+cat .env | grep DATABASE
+```
 
-2. Verifique `LOCAL_AI_URL` no `.env`
+### Problemas com Prisma
 
-3. Veja logs: `docker logs rootdesk-ollama` (se Docker)
+1. **Regenere o cliente**
+```bash
+npm run db:generate
+```
 
-### Verificar Saúde do Sistema
+2. **Sincronize o schema**
+```bash
+npm run db:push
+```
 
-Acesse: `http://seu-servidor:3000/api/health`
+### Problemas com IA Local
 
-Deve retornar: `{"ok":true,"db":true,"durationMs":<tempo>}`
+1. **Verifique se o Ollama está rodando**
+```bash
+curl http://localhost:11434/api/tags
+```
+
+2. **Verifique se o modelo está instalado**
+```bash
+ollama list
+```
+
+3. **Teste o modelo**
+```bash
+ollama run llama3:8b "Olá"
+```
+
+### Erros de Criptografia
+
+1. **Gere uma nova chave**
+```bash
+node scripts/generate-encryption-key.js
+```
+
+2. **Atualize o .env**
+```env
+ENCRYPTION_KEY="nova-chave-gerada"
+```
 
 ---
 
-## Documentação Adicional
+## 🔒 Segurança
 
-- 📖 [Guia de Instalação do Ollama](docs/INSTALACAO_OLLAMA.md) - Instalação e configuração do Ollama
-- 📖 [Documentação do Sistema](docs/README.md) - Documentação técnica completa
-- 📖 [Configurações](docs/settings.md) - Detalhes sobre configurações do sistema
-- 📖 [Criptografia](docs/ENCRYPTION.md) - Sistema de criptografia de arquivos
-- 📖 [Transcrição de Áudio](docs/AUDIO_TRANSCRIPTION.md) - Configuração de APIs de transcrição
+### Boas Práticas
+
+1. **Produção**
+   - Use `AUTH_SECRET` forte (mínimo 32 caracteres)
+   - Use `ENCRYPTION_KEY` gerada aleatoriamente
+   - Configure HTTPS
+   - Desabilite `ALLOW_GIT_UPDATE` e `ALLOW_ENV_EDIT`
+   - Use senhas fortes para o banco de dados
+
+2. **Autenticação**
+   - 2FA é obrigatório para todos os usuários
+   - Tokens JWT expiram automaticamente
+   - Cookies são httpOnly e secure em produção
+
+3. **Criptografia**
+   - Arquivos sensíveis são criptografados com AES-256-GCM
+   - Chave de criptografia deve ser guardada com segurança
+   - Perda da chave = perda permanente dos dados
+
+4. **Banco de Dados**
+   - Use usuário com privilégios mínimos necessários
+   - Configure firewall adequadamente
+   - Faça backups regulares
 
 ---
 
-## Suporte
+## 📝 Licença
 
-Para mais informações, consulte:
-- Issues no GitHub
-- Documentação em `docs/`
-- Logs do sistema
+Este projeto é privado e proprietário. Todos os direitos reservados.
 
 ---
 
-## Licença
+## 🤝 Suporte
 
-[Especificar licença do projeto]
+Para suporte, entre em contato com a equipe de desenvolvimento.
 
 ---
 
-**Última atualização**: Janeiro 2025
+**Desenvolvido com ❤️ usando Next.js, TypeScript e Prisma**
+

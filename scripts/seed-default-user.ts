@@ -6,6 +6,7 @@ async function main() {
   const email = process.env.DEFAULT_USER_EMAIL;
   const password = process.env.DEFAULT_USER_PASSWORD;
   const name = process.env.DEFAULT_USER_NAME || "Admin";
+  const twoFactor = process.env.DEFAULT_USER_TWO_FACTOR === "true" || process.env.DEFAULT_USER_TWO_FACTOR === undefined;
 
   if (!email || !password) {
     console.warn("Seed: DEFAULT_USER_EMAIL/PASSWORD não definidos, pulando seed.");
@@ -16,11 +17,11 @@ async function main() {
 
   await prisma.user.upsert({
     where: { email },
-    update: { name, passwordHash },
-    create: { email, name, passwordHash },
+    update: { name, passwordHash, twoFactor },
+    create: { email, name, passwordHash, twoFactor },
   });
 
-  console.log(`Seed: usuário padrão garantido (${email}).`);
+  console.log(`Seed: usuário padrão garantido (${email}). 2FA: ${twoFactor ? "Habilitado" : "Desabilitado"}`);
 }
 
 main()

@@ -5,6 +5,7 @@ import styled from "styled-components";
 import { useRouter, useSearchParams } from "next/navigation";
 import StandardLayout from "@/components/StandardLayout";
 
+
 type SectionKey = "general" | "appearance" | "notifications" | "security" | "integrations" | "forms" | "webhooks" | "update" | "env";
 
 export default function ConfigPage() {
@@ -67,46 +68,13 @@ export default function ConfigPage() {
   const [updateLoading, setUpdateLoading] = useState<boolean>(false);
   const [updateFeedback, setUpdateFeedback] = useState<{ type: "success" | "error"; text: string } | null>(null);
 
-  // Estado de configuração de ambiente (.env)
-  const [envLoading, setEnvLoading] = useState<boolean>(false);
-  const [envSaving, setEnvSaving] = useState<boolean>(false);
-  const [envFeedback, setEnvFeedback] = useState<{ type: "success" | "error"; text: string } | null>(null);
-  const [envSettings, setEnvSettings] = useState<{
-    EMAIL_ENABLED?: string;
-    SMTP_HOST?: string;
-    SMTP_PORT?: string;
-    SMTP_SECURE?: string;
-    SMTP_USER?: string;
-    SMTP_PASSWORD?: string;
-    EMAIL_FROM?: string;
-    EMAIL_FROM_NAME?: string;
-    APP_URL?: string;
-    LOCAL_AI_ENABLED?: string;
-    LOCAL_AI_URL?: string;
-    LOCAL_AI_MODEL?: string;
-    LOCAL_AI_TIMEOUT_MS?: string;
-    LOCAL_AI_PORT?: string;
-    DATABASE_URL?: string;
-    SHADOW_DATABASE_URL?: string;
-    DB_HOST?: string;
-    DB_PORT?: string;
-    DB_USER?: string;
-    DB_PASSWORD?: string;
-    DB_NAME?: string;
-    DB_ROOT_PASSWORD?: string;
-    AUTH_SECRET?: string;
-    DEFAULT_USER_EMAIL?: string;
-    DEFAULT_USER_PASSWORD?: string;
-    DEFAULT_USER_NAME?: string;
-    USE_DOCKER_DB?: string;
-    USE_DOCKER_OLLAMA?: string;
-    ALLOW_GIT_UPDATE?: string;
-    ALLOWED_REPO_URL?: string;
-    ALLOW_ENV_EDIT?: string;
-    NEXT_PUBLIC_APP_URL?: string;
-    PUBLIC_APP_URL?: string;
-    NODE_ENV?: string;
-  }>({});
+  // Estado de configuração de ambiente (.env) - Nova implementação
+  const [envConfig, setEnvConfig] = useState<Record<string, string>>({});
+  const [envLoading, setEnvLoading] = useState(false);
+  const [envSaving, setEnvSaving] = useState(false);
+  const [envError, setEnvError] = useState<string | null>(null);
+  const [envSuccess, setEnvSuccess] = useState<string | null>(null);
+  const [envSearchQuery, setEnvSearchQuery] = useState("");
 
   useEffect(() => {
     if (!formsFeedback) return;
@@ -126,11 +94,53 @@ export default function ConfigPage() {
     return () => clearTimeout(timer);
   }, [updateFeedback]);
 
+  // Carregar configurações de ambiente quando a seção for acessada
   useEffect(() => {
-    if (!envFeedback) return;
-    const timer = setTimeout(() => setEnvFeedback(null), 4000);
-    return () => clearTimeout(timer);
-  }, [envFeedback]);
+    if (section === "env") {
+      loadEnvConfig();
+    }
+  }, [section]);
+
+  async function loadEnvConfig() {
+    setEnvLoading(true);
+    setEnvError(null);
+    try {
+      const res = await fetch("/api/system/env");
+      if (!res.ok) throw new Error("Falha ao carregar configurações");
+      const data = await res.json();
+      setEnvConfig(data || {});
+    } catch (err: any) {
+      setEnvError(err?.message || "Erro ao carregar configurações");
+    } finally {
+      setEnvLoading(false);
+    }
+  }
+
+  async function saveEnvConfig() {
+    if (process.env.ALLOW_ENV_EDIT !== "true") {
+      setEnvError("Edição de .env desabilitada (ALLOW_ENV_EDIT != true)");
+      return;
+    }
+
+    setEnvSaving(true);
+    setEnvError(null);
+    setEnvSuccess(null);
+    try {
+      const res = await fetch("/api/system/env", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(envConfig),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data?.error || "Falha ao salvar");
+      setEnvSuccess(data?.message || "Configurações salvas. Reinicie o servidor para aplicar.");
+      setTimeout(() => setEnvSuccess(null), 5000);
+    } catch (err: any) {
+      setEnvError(err?.message || "Erro ao salvar configurações");
+    } finally {
+      setEnvSaving(false);
+    }
+  }
 
 
   // Fechar modal com ESC e gerenciar foco básico
@@ -813,28 +823,49 @@ export default function ConfigPage() {
     }
   }
 
-  async function handleSaveEnvSettings() {
+  // Carregar configurações de ambiente
+  useEffect(() => {
+    if (section === "env") {
+      loadEnvConfig();
+    }
+  }, [section]);
+
+  async function loadEnvConfig() {
+    setEnvLoading(true);
+    setEnvError(null);
+    try {
+      const res = await fetch("/api/system/env");
+      if (!res.ok) throw new Error("Falha ao carregar configurações");
+      const data = await res.json();
+      setEnvConfig(data || {});
+    } catch (err: any) {
+      setEnvError(err?.message || "Erro ao carregar configurações");
+    } finally {
+      setEnvLoading(false);
+    }
+  }
+
+  async function saveEnvConfig() {
+    if (process.env.ALLOW_ENV_EDIT !== "true") {
+      setEnvError("Edição de .env desabilitada (ALLOW_ENV_EDIT != true)");
+      return;
+    }
+
     setEnvSaving(true);
-    setEnvFeedback(null);
+    setEnvError(null);
+    setEnvSuccess(null);
     try {
       const res = await fetch("/api/system/env", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(envSettings),
+        body: JSON.stringify(envConfig),
       });
-      const data = (await res.json().catch(() => null)) as any;
-      if (!res.ok) {
-        throw new Error(data?.error || "Falha ao salvar configurações de ambiente.");
-      }
-      setEnvFeedback({
-        type: "success",
-        text: data?.message || "Configurações salvas. Reinicie o servidor para aplicar as mudanças do .env.",
-      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data?.error || "Falha ao salvar");
+      setEnvSuccess(data?.message || "Configurações salvas. Reinicie o servidor para aplicar.");
+      setTimeout(() => setEnvSuccess(null), 5000);
     } catch (err: any) {
-      setEnvFeedback({
-        type: "error",
-        text: err?.message || "Erro ao salvar configurações de ambiente.",
-      });
+      setEnvError(err?.message || "Erro ao salvar configurações");
     } finally {
       setEnvSaving(false);
     }
@@ -844,18 +875,6 @@ export default function ConfigPage() {
     if (error) return <Muted role="alert">{error}</Muted>;
     if (loading) return <Skeleton aria-hidden />;
 
-    const emailEnabled =
-      String(envSettings.EMAIL_ENABLED ?? "").trim().toLowerCase() === "true";
-    const aiEnabled =
-      String(envSettings.LOCAL_AI_ENABLED ?? "").trim().toLowerCase() === "true";
-    const dbUrl = String(envSettings.DATABASE_URL ?? "").trim();
-    const dbEngine = dbUrl.startsWith("postgresql")
-      ? "PostgreSQL"
-      : dbUrl.startsWith("mysql")
-      ? "MariaDB/MySQL"
-      : dbUrl
-      ? "Detectado via URL"
-      : "Não configurado";
 
     switch (section) {
       case "general":
@@ -999,6 +1018,54 @@ export default function ConfigPage() {
           </div>
         );
       case "env":
+        // Lista de todas as variáveis permitidas, organizadas por categoria
+        const envCategories = [
+          {
+            title: "E-mail (SMTP)",
+            keys: ["EMAIL_ENABLED", "SMTP_HOST", "SMTP_PORT", "SMTP_SECURE", "SMTP_USER", "SMTP_PASSWORD", "EMAIL_FROM", "EMAIL_FROM_NAME"],
+          },
+          {
+            title: "Inteligência Artificial",
+            keys: ["LOCAL_AI_ENABLED", "LOCAL_AI_URL", "LOCAL_AI_MODEL", "LOCAL_AI_TIMEOUT_MS", "LOCAL_AI_PORT"],
+          },
+          {
+            title: "Banco de Dados",
+            keys: ["DATABASE_URL", "SHADOW_DATABASE_URL", "DB_HOST", "DB_PORT", "DB_USER", "DB_PASSWORD", "DB_NAME", "DB_ROOT_PASSWORD"],
+          },
+          {
+            title: "URLs e Ambiente",
+            keys: ["APP_URL", "NEXT_PUBLIC_APP_URL", "PUBLIC_APP_URL", "NODE_ENV"],
+          },
+          {
+            title: "Segurança e Usuários",
+            keys: ["AUTH_SECRET", "DEFAULT_USER_EMAIL", "DEFAULT_USER_PASSWORD", "DEFAULT_USER_NAME", "DEFAULT_USER_TWO_FACTOR"],
+          },
+          {
+            title: "Docker",
+            keys: ["USE_DOCKER_DB", "USE_DOCKER_OLLAMA"],
+          },
+          {
+            title: "Operações Avançadas",
+            keys: ["ALLOW_GIT_UPDATE", "ALLOWED_REPO_URL", "ALLOW_ENV_EDIT"],
+          },
+        ];
+
+        // Filtrar variáveis baseado na busca
+        const filteredCategories = envCategories.map((cat) => ({
+          ...cat,
+          keys: cat.keys.filter((key) =>
+            envSearchQuery.trim() === "" || key.toLowerCase().includes(envSearchQuery.toLowerCase())
+          ),
+        })).filter((cat) => cat.keys.length > 0);
+
+        // Determinar tipo de input baseado na chave
+        const getInputType = (key: string): string => {
+          if (key.includes("PASSWORD") || key.includes("SECRET")) return "password";
+          if (key.includes("EMAIL")) return "email";
+          if (key.includes("URL")) return "url";
+          return "text";
+        };
+
         return (
           <div>
             <SectionHeaderRow>
@@ -1006,598 +1073,79 @@ export default function ConfigPage() {
               <Pill $tone="warning">Avançado</Pill>
             </SectionHeaderRow>
             <SectionSubtitle>
-              Ajuste com segurança as principais variáveis de ambiente utilizadas pelo RootDesk. Algumas mudanças exigem
-              reinício do servidor.
+              Gerencie as variáveis de ambiente do sistema. Algumas mudanças exigem reinício do servidor.
             </SectionSubtitle>
 
-            <EnvStatusRow>
-              <EnvStatusCard>
-                <EnvStatusLabel>E-mail (SMTP)</EnvStatusLabel>
-                <EnvStatusValue $active={emailEnabled}>
-                  {emailEnabled ? "Ativo" : "Inativo"}
-                </EnvStatusValue>
-              </EnvStatusCard>
-              <EnvStatusCard>
-                <EnvStatusLabel>IA Local</EnvStatusLabel>
-                <EnvStatusValue $active={aiEnabled}>
-                  {aiEnabled ? "Ativa" : "Inativa"}
-                </EnvStatusValue>
-              </EnvStatusCard>
-              <EnvStatusCard>
-                <EnvStatusLabel>Banco de dados</EnvStatusLabel>
-                <EnvStatusValue $active={Boolean(dbUrl)}>
-                  {dbEngine}
-                </EnvStatusValue>
-              </EnvStatusCard>
-            </EnvStatusRow>
-
-            {envFeedback && (
-              <Feedback
-                role={envFeedback.type === "error" ? "alert" : "status"}
-                $variant={envFeedback.type}
-              >
-                {envFeedback.text}
+            {envError && (
+              <Feedback role="alert" $variant="error">
+                {envError}
               </Feedback>
             )}
+
+            {envSuccess && (
+              <Feedback role="status" $variant="success">
+                {envSuccess}
+              </Feedback>
+            )}
+
             {envLoading ? (
               <Skeleton aria-hidden />
             ) : (
               <>
-                <TwoColumnGrid>
-                  <div>
-                    <EnvGroup>
-                      <EnvGroupTitle>Configurações de e-mail (SMTP)</EnvGroupTitle>
-                      <Field>
-                        <Label>EMAIL_ENABLED</Label>
-                        <Input
-                          type="text"
-                          placeholder="true/false"
-                          value={envSettings.EMAIL_ENABLED ?? ""}
-                          onChange={(e) =>
-                            setEnvSettings((prev) => ({ ...prev, EMAIL_ENABLED: (e.currentTarget as any).value ?? "" }))
-                          }
-                        />
-                        <SmallMuted>
-                          Ativa ou desativa totalmente o envio de e-mails. Use <InlineCode>true</InlineCode> em produção.
-                        </SmallMuted>
-                      </Field>
-                      <Field>
-                        <Label>SMTP_HOST</Label>
-                        <Input
-                          type="text"
-                          value={envSettings.SMTP_HOST ?? ""}
-                          onChange={(e) =>
-                            setEnvSettings((prev) => ({ ...prev, SMTP_HOST: (e.currentTarget as any).value ?? "" }))
-                          }
-                        />
-                        <SmallMuted>Endereço do servidor SMTP (ex.: <InlineCode>smtp.gmail.com</InlineCode>).</SmallMuted>
-                      </Field>
-                      <Field>
-                        <Label>SMTP_PORT</Label>
-                        <Input
-                          type="text"
-                          value={envSettings.SMTP_PORT ?? ""}
-                          onChange={(e) =>
-                            setEnvSettings((prev) => ({ ...prev, SMTP_PORT: (e.currentTarget as any).value ?? "" }))
-                          }
-                        />
-                        <SmallMuted>Porta do servidor SMTP (465 para SSL/TLS, 587 para STARTTLS).</SmallMuted>
-                      </Field>
-                      <Field>
-                        <Label>SMTP_SECURE</Label>
-                        <Input
-                          type="text"
-                          placeholder="true/false"
-                          value={envSettings.SMTP_SECURE ?? ""}
-                          onChange={(e) =>
-                            setEnvSettings((prev) => ({ ...prev, SMTP_SECURE: (e.currentTarget as any).value ?? "" }))
-                          }
-                        />
-                        <SmallMuted>
-                          Define se a conexão é segura. Use <InlineCode>true</InlineCode> para porta 465 (SSL/TLS) ou{" "}
-                          <InlineCode>false</InlineCode> para porta 587 (STARTTLS).
-                        </SmallMuted>
-                      </Field>
-                      <Field>
-                        <Label>SMTP_USER</Label>
-                        <Input
-                          type="text"
-                          value={envSettings.SMTP_USER ?? ""}
-                          onChange={(e) =>
-                            setEnvSettings((prev) => ({ ...prev, SMTP_USER: (e.currentTarget as any).value ?? "" }))
-                          }
-                        />
-                        <SmallMuted>Usuário/autenticação do servidor SMTP (normalmente o e-mail completo).</SmallMuted>
-                      </Field>
-                      <Field>
-                        <Label>SMTP_PASSWORD</Label>
-                        <Input
-                          type="password"
-                          value={envSettings.SMTP_PASSWORD ?? ""}
-                          onChange={(e) =>
-                            setEnvSettings((prev) => ({ ...prev, SMTP_PASSWORD: (e.currentTarget as any).value ?? "" }))
-                          }
-                        />
-                        <SmallMuted>
-                          Senha do SMTP. Prefira senhas de app ou tokens dedicados em vez da senha principal da conta.
-                        </SmallMuted>
-                      </Field>
-                      <Field>
-                        <Label>EMAIL_FROM</Label>
-                        <Input
-                          type="email"
-                          value={envSettings.EMAIL_FROM ?? ""}
-                          onChange={(e) =>
-                            setEnvSettings((prev) => ({ ...prev, EMAIL_FROM: (e.currentTarget as any).value ?? "" }))
-                          }
-                        />
-                        <SmallMuted>
-                          E-mail que aparecerá como remetente das mensagens enviadas pelo sistema.
-                        </SmallMuted>
-                      </Field>
-                      <Field>
-                        <Label>EMAIL_FROM_NAME</Label>
-                        <Input
-                          type="text"
-                          value={envSettings.EMAIL_FROM_NAME ?? ""}
-                          onChange={(e) =>
-                            setEnvSettings((prev) => ({
-                              ...prev,
-                              EMAIL_FROM_NAME: (e.currentTarget as any).value ?? "",
-                            }))
-                          }
-                        />
-                        <SmallMuted>Nome amigável exibido como remetente (ex.: <InlineCode>RootDesk</InlineCode>).</SmallMuted>
-                      </Field>
-                    </EnvGroup>
+                <Field style={{ marginBottom: 20 }}>
+                  <Label htmlFor="env-search">Buscar variável</Label>
+                  <Input
+                    id="env-search"
+                    type="text"
+                    placeholder="Digite o nome da variável..."
+                    value={envSearchQuery}
+                    onChange={(e) => setEnvSearchQuery((e.currentTarget as any).value ?? "")}
+                  />
+                </Field>
 
-                    <EnvGroup>
-                      <EnvGroupTitle>Configurações gerais</EnvGroupTitle>
-                      <Field>
-                        <Label>APP_URL</Label>
+                {filteredCategories.map((category) => (
+                  <EnvGroup key={category.title} style={{ marginBottom: 20 }}>
+                    <EnvGroupTitle>{category.title}</EnvGroupTitle>
+                    {category.keys.map((key) => (
+                      <Field key={key}>
+                        <Label htmlFor={`env-${key}`}>{key}</Label>
                         <Input
-                          type="url"
-                          value={envSettings.APP_URL ?? ""}
+                          id={`env-${key}`}
+                          type={getInputType(key)}
+                          value={envConfig[key] ?? ""}
                           onChange={(e) =>
-                            setEnvSettings((prev) => ({ ...prev, APP_URL: (e.currentTarget as any).value ?? "" }))
-                          }
-                        />
-                        <SmallMuted>
-                          URL pública principal do sistema, usada em links absolutos (ex.:{" "}
-                          <InlineCode>https://suporte.suaempresa.com</InlineCode>).
-                        </SmallMuted>
-                      </Field>
-                      <Field>
-                        <Label>NEXT_PUBLIC_APP_URL</Label>
-                        <Input
-                          type="url"
-                          value={envSettings.NEXT_PUBLIC_APP_URL ?? ""}
-                          onChange={(e) =>
-                            setEnvSettings((prev) => ({
+                            setEnvConfig((prev) => ({
                               ...prev,
-                              NEXT_PUBLIC_APP_URL: (e.currentTarget as any).value ?? "",
+                              [key]: (e.currentTarget as any).value ?? "",
                             }))
                           }
                         />
-                        <SmallMuted>
-                          URL que o front-end usa como base para montar links. Normalmente igual à{" "}
-                          <InlineCode>APP_URL</InlineCode>.
-                        </SmallMuted>
                       </Field>
-                      <Field>
-                        <Label>PUBLIC_APP_URL</Label>
-                        <Input
-                          type="url"
-                          value={envSettings.PUBLIC_APP_URL ?? ""}
-                          onChange={(e) =>
-                            setEnvSettings((prev) => ({
-                              ...prev,
-                              PUBLIC_APP_URL: (e.currentTarget as any).value ?? "",
-                            }))
-                          }
-                        />
-                        <SmallMuted>
-                          URL alternativa para uso em integrações externas ou documentação. Opcional.
-                        </SmallMuted>
-                      </Field>
+                    ))}
+                  </EnvGroup>
+                ))}
 
-                      <EnvGroupTitle style={{ marginTop: 12 }}>Ambiente</EnvGroupTitle>
-                      <Field>
-                        <Label>NODE_ENV</Label>
-                        <Input
-                          type="text"
-                          placeholder="development/production"
-                          value={envSettings.NODE_ENV ?? ""}
-                          onChange={(e) =>
-                            setEnvSettings((prev) => ({ ...prev, NODE_ENV: (e.currentTarget as any).value ?? "" }))
-                          }
-                        />
-                        <SmallMuted>
-                          Ambiente de execução. Use <InlineCode>development</InlineCode> em dev e{" "}
-                          <InlineCode>production</InlineCode> em produção.
-                        </SmallMuted>
-                      </Field>
-                    </EnvGroup>
-                  </div>
+                {filteredCategories.length === 0 && envSearchQuery.trim() !== "" && (
+                  <Muted>Nenhuma variável encontrada para "{envSearchQuery}".</Muted>
+                )}
 
-                  <EnvSidePanel>
-                    <EnvGroup>
-                      <EnvGroupTitle>Inteligência Artificial Local</EnvGroupTitle>
-                      <Field>
-                        <Label>LOCAL_AI_ENABLED</Label>
-                        <Input
-                          type="text"
-                          placeholder="true/false"
-                          value={envSettings.LOCAL_AI_ENABLED ?? ""}
-                          onChange={(e) =>
-                            setEnvSettings((prev) => ({
-                              ...prev,
-                              LOCAL_AI_ENABLED: (e.currentTarget as any).value ?? "",
-                            }))
-                          }
-                        />
-                        <SmallMuted>
-                          Ativa o uso do modelo de IA local para o Dobby assistente virtual (Beta).
-                        </SmallMuted>
-                      </Field>
-                      <Field>
-                        <Label>LOCAL_AI_URL</Label>
-                        <Input
-                          type="url"
-                          value={envSettings.LOCAL_AI_URL ?? ""}
-                          onChange={(e) =>
-                            setEnvSettings((prev) => ({ ...prev, LOCAL_AI_URL: (e.currentTarget as any).value ?? "" }))
-                          }
-                        />
-                        <SmallMuted>
-                          URL do servidor Ollama/LocalAI (ex.:{" "}
-                          <InlineCode>http://localhost:11434</InlineCode>).
-                        </SmallMuted>
-                      </Field>
-                      <Field>
-                        <Label>LOCAL_AI_MODEL</Label>
-                        <Input
-                          type="text"
-                          value={envSettings.LOCAL_AI_MODEL ?? ""}
-                          onChange={(e) =>
-                            setEnvSettings((prev) => ({
-                              ...prev,
-                              LOCAL_AI_MODEL: (e.currentTarget as any).value ?? "",
-                            }))
-                          }
-                        />
-                        <SmallMuted>
-                          Nome do modelo carregado no servidor de IA (ex.: <InlineCode>llama3</InlineCode>).
-                        </SmallMuted>
-                      </Field>
-                      <Field>
-                        <Label>LOCAL_AI_TIMEOUT_MS</Label>
-                        <Input
-                          type="text"
-                          value={envSettings.LOCAL_AI_TIMEOUT_MS ?? ""}
-                          onChange={(e) =>
-                            setEnvSettings((prev) => ({
-                              ...prev,
-                              LOCAL_AI_TIMEOUT_MS: (e.currentTarget as any).value ?? "",
-                            }))
-                          }
-                        />
-                        <SmallMuted>
-                          Tempo máximo (em milissegundos) para aguardar resposta da IA local antes do fallback.
-                        </SmallMuted>
-                      </Field>
-                    </EnvGroup>
-
-                    <EnvGroup>
-                      <EnvGroupTitle>Banco de dados</EnvGroupTitle>
-                      <Field>
-                        <Label>DATABASE_URL</Label>
-                        <Input
-                          type="text"
-                          value={envSettings.DATABASE_URL ?? ""}
-                          onChange={(e) =>
-                            setEnvSettings((prev) => ({
-                              ...prev,
-                              DATABASE_URL: (e.currentTarget as any).value ?? "",
-                            }))
-                          }
-                        />
-                        <SmallMuted>
-                          Conexão completa do Prisma. Exemplos:{" "}
-                          <InlineCode>mysql://user:senha@host:3306/nome_banco?schema=public</InlineCode> (MariaDB/MySQL){" "}
-                          ou{" "}
-                          <InlineCode>postgresql://user:senha@host:5432/nome_banco?schema=public</InlineCode> (PostgreSQL).
-                        </SmallMuted>
-                      </Field>
-                      <Field>
-                        <Label>SHADOW_DATABASE_URL</Label>
-                        <Input
-                          type="text"
-                          value={envSettings.SHADOW_DATABASE_URL ?? ""}
-                          onChange={(e) =>
-                            setEnvSettings((prev) => ({
-                              ...prev,
-                              SHADOW_DATABASE_URL: (e.currentTarget as any).value ?? "",
-                            }))
-                          }
-                        />
-                        <SmallMuted>
-                          Conexão usada pelo Prisma Migrate como banco{" "}
-                          <InlineCode>shadow</InlineCode> durante migrações (normalmente root).
-                        </SmallMuted>
-                      </Field>
-                      <Field>
-                        <Label>DB_HOST</Label>
-                        <Input
-                          type="text"
-                          value={envSettings.DB_HOST ?? ""}
-                          onChange={(e) =>
-                            setEnvSettings((prev) => ({ ...prev, DB_HOST: (e.currentTarget as any).value ?? "" }))
-                          }
-                        />
-                        <SmallMuted>Host do MariaDB usado pelos containers (ex.: <InlineCode>localhost</InlineCode>).</SmallMuted>
-                      </Field>
-                      <Field>
-                        <Label>DB_PORT</Label>
-                        <Input
-                          type="text"
-                          value={envSettings.DB_PORT ?? ""}
-                          onChange={(e) =>
-                            setEnvSettings((prev) => ({ ...prev, DB_PORT: (e.currentTarget as any).value ?? "" }))
-                          }
-                        />
-                        <SmallMuted>Porta TCP do MariaDB (padrão 3306).</SmallMuted>
-                      </Field>
-                      <Field>
-                        <Label>DB_USER</Label>
-                        <Input
-                          type="text"
-                          value={envSettings.DB_USER ?? ""}
-                          onChange={(e) =>
-                            setEnvSettings((prev) => ({ ...prev, DB_USER: (e.currentTarget as any).value ?? "" }))
-                          }
-                        />
-                        <SmallMuted>Usuário de aplicação que acessa o banco principal.</SmallMuted>
-                      </Field>
-                      <Field>
-                        <Label>DB_PASSWORD</Label>
-                        <Input
-                          type="password"
-                          value={envSettings.DB_PASSWORD ?? ""}
-                          onChange={(e) =>
-                            setEnvSettings((prev) => ({
-                              ...prev,
-                              DB_PASSWORD: (e.currentTarget as any).value ?? "",
-                            }))
-                          }
-                        />
-                        <SmallMuted>Senha do usuário de aplicação do banco.</SmallMuted>
-                      </Field>
-                      <Field>
-                        <Label>DB_NAME</Label>
-                        <Input
-                          type="text"
-                          value={envSettings.DB_NAME ?? ""}
-                          onChange={(e) =>
-                            setEnvSettings((prev) => ({ ...prev, DB_NAME: (e.currentTarget as any).value ?? "" }))
-                          }
-                        />
-                        <SmallMuted>Nome do banco de dados principal (schema lógico do sistema).</SmallMuted>
-                      </Field>
-                      <Field>
-                        <Label>DB_ROOT_PASSWORD</Label>
-                        <Input
-                          type="password"
-                          value={envSettings.DB_ROOT_PASSWORD ?? ""}
-                          onChange={(e) =>
-                            setEnvSettings((prev) => ({
-                              ...prev,
-                              DB_ROOT_PASSWORD: (e.currentTarget as any).value ?? "",
-                            }))
-                          }
-                        />
-                        <SmallMuted>
-                          Senha do usuário root do MariaDB (usada apenas para migrações e manutenção).
-                        </SmallMuted>
-                      </Field>
-                    </EnvGroup>
-
-                    <EnvGroup>
-                      <EnvGroupTitle>Segurança e usuários padrão</EnvGroupTitle>
-                      <Field>
-                        <Label>AUTH_SECRET</Label>
-                        <Input
-                          type="password"
-                          value={envSettings.AUTH_SECRET ?? ""}
-                          onChange={(e) =>
-                            setEnvSettings((prev) => ({ ...prev, AUTH_SECRET: (e.currentTarget as any).value ?? "" }))
-                          }
-                        />
-                        <SmallMuted>
-                          Chave secreta usada para assinar tokens JWT. Use pelo menos 32 caracteres aleatórios.
-                        </SmallMuted>
-                      </Field>
-                      <Field>
-                        <Label>DEFAULT_USER_EMAIL</Label>
-                        <Input
-                          type="email"
-                          value={envSettings.DEFAULT_USER_EMAIL ?? ""}
-                          onChange={(e) =>
-                            setEnvSettings((prev) => ({
-                              ...prev,
-                              DEFAULT_USER_EMAIL: (e.currentTarget as any).value ?? "",
-                            }))
-                          }
-                        />
-                        <SmallMuted>
-                          E-mail do usuário administrador criado automaticamente no primeiro seed.
-                        </SmallMuted>
-                      </Field>
-                      <Field>
-                        <Label>DEFAULT_USER_PASSWORD</Label>
-                        <Input
-                          type="password"
-                          value={envSettings.DEFAULT_USER_PASSWORD ?? ""}
-                          onChange={(e) =>
-                            setEnvSettings((prev) => ({
-                              ...prev,
-                              DEFAULT_USER_PASSWORD: (e.currentTarget as any).value ?? "",
-                            }))
-                          }
-                        />
-                        <SmallMuted>Senha inicial do usuário administrador padrão.</SmallMuted>
-                      </Field>
-                      <Field>
-                        <Label>DEFAULT_USER_NAME</Label>
-                        <Input
-                          type="text"
-                          value={envSettings.DEFAULT_USER_NAME ?? ""}
-                          onChange={(e) =>
-                            setEnvSettings((prev) => ({
-                              ...prev,
-                              DEFAULT_USER_NAME: (e.currentTarget as any).value ?? "",
-                            }))
-                          }
-                        />
-                        <SmallMuted>Nome exibido para o usuário administrador padrão.</SmallMuted>
-                      </Field>
-                    </EnvGroup>
-
-                    <EnvHintBox>
-                      <InfoTitle>Dica</InfoTitle>
-                      <HelpList>
-                        <li>Após salvar, reinicie o processo do servidor para carregar o novo .env.</li>
-                        <li>Evite colocar senhas sensíveis aqui em ambientes de desenvolvimento compartilhados.</li>
-                      </HelpList>
-                    </EnvHintBox>
-
-                    <EnvGroup>
-                      <EnvGroupTitle>Configuração Docker</EnvGroupTitle>
-                      <Field>
-                        <Label>USE_DOCKER_DB</Label>
-                        <Input
-                          type="text"
-                          placeholder="true/false"
-                          value={envSettings.USE_DOCKER_DB ?? ""}
-                          onChange={(e) =>
-                            setEnvSettings((prev) => ({
-                              ...prev,
-                              USE_DOCKER_DB: (e.currentTarget as any).value ?? "",
-                            }))
-                          }
-                        />
-                        <SmallMuted>
-                          Define se o banco de dados será gerenciado via Docker. Use <InlineCode>true</InlineCode> para usar o{" "}
-                          <InlineCode>docker-compose.yml</InlineCode> ou <InlineCode>false</InlineCode> para conectar-se a um banco já instalado no sistema.
-                        </SmallMuted>
-                      </Field>
-                      <Field>
-                        <Label>USE_DOCKER_OLLAMA</Label>
-                        <Input
-                          type="text"
-                          placeholder="true/false"
-                          value={envSettings.USE_DOCKER_OLLAMA ?? ""}
-                          onChange={(e) =>
-                            setEnvSettings((prev) => ({
-                              ...prev,
-                              USE_DOCKER_OLLAMA: (e.currentTarget as any).value ?? "",
-                            }))
-                          }
-                        />
-                        <SmallMuted>
-                          Define se o Ollama será gerenciado via Docker. Use <InlineCode>true</InlineCode> para usar o{" "}
-                          <InlineCode>docker-compose.yml</InlineCode> ou <InlineCode>false</InlineCode> para conectar-se a uma instalação nativa do Ollama.
-                        </SmallMuted>
-                      </Field>
-                      <Field>
-                        <Label>LOCAL_AI_PORT</Label>
-                        <Input
-                          type="text"
-                          placeholder="11434"
-                          value={envSettings.LOCAL_AI_PORT ?? ""}
-                          onChange={(e) =>
-                            setEnvSettings((prev) => ({
-                              ...prev,
-                              LOCAL_AI_PORT: (e.currentTarget as any).value ?? "",
-                            }))
-                          }
-                        />
-                        <SmallMuted>
-                          Porta do servidor Ollama (usado pelo docker-compose.yml quando USE_DOCKER_OLLAMA=true). Se mudar, atualize também{" "}
-                          <InlineCode>LOCAL_AI_URL</InlineCode>.
-                        </SmallMuted>
-                      </Field>
-                    </EnvGroup>
-
-                    <EnvGroup>
-                      <EnvGroupTitle>Operações avançadas</EnvGroupTitle>
-                      <Field>
-                        <Label>ALLOW_GIT_UPDATE</Label>
-                        <Input
-                          type="text"
-                          placeholder="true/false"
-                          value={envSettings.ALLOW_GIT_UPDATE ?? ""}
-                          onChange={(e) =>
-                            setEnvSettings((prev) => ({
-                              ...prev,
-                              ALLOW_GIT_UPDATE: (e.currentTarget as any).value ?? "",
-                            }))
-                          }
-                        />
-                        <SmallMuted>
-                          Permite que a página de atualização dispare <InlineCode>git pull</InlineCode> no servidor
-                          quando definido como <InlineCode>true</InlineCode>.
-                        </SmallMuted>
-                      </Field>
-                      <Field>
-                        <Label>ALLOWED_REPO_URL</Label>
-                        <Input
-                          type="url"
-                          value={envSettings.ALLOWED_REPO_URL ?? ""}
-                          onChange={(e) =>
-                            setEnvSettings((prev) => ({
-                              ...prev,
-                              ALLOWED_REPO_URL: (e.currentTarget as any).value ?? "",
-                            }))
-                          }
-                        />
-                        <SmallMuted>
-                          Opcional: restringe as atualizações a este repositório Git específico por segurança.
-                        </SmallMuted>
-                      </Field>
-                      <Field>
-                        <Label>ALLOW_ENV_EDIT</Label>
-                        <Input
-                          type="text"
-                          placeholder="true/false"
-                          value={envSettings.ALLOW_ENV_EDIT ?? ""}
-                          onChange={(e) =>
-                            setEnvSettings((prev) => ({
-                              ...prev,
-                              ALLOW_ENV_EDIT: (e.currentTarget as any).value ?? "",
-                            }))
-                          }
-                        />
-                        <SmallMuted>
-                          Controla se a própria tela de configuração pode escrever no arquivo{" "}
-                          <InlineCode>.env</InlineCode>. Use <InlineCode>true</InlineCode> apenas em ambientes
-                          controlados.
-                        </SmallMuted>
-                      </Field>
-                    </EnvGroup>
-                  </EnvSidePanel>
-                </TwoColumnGrid>
-
-                <Actions>
-                  <PrimaryButton
-                    type="button"
-                    onClick={handleSaveEnvSettings}
-                    disabled={envSaving}
-                    aria-label="Salvar configurações de ambiente"
-                  >
+                <Actions style={{ marginTop: 24 }}>
+                  <ActionButton type="button" onClick={loadEnvConfig} disabled={envLoading}>
+                    Recarregar
+                  </ActionButton>
+                  <PrimaryButton type="button" onClick={saveEnvConfig} disabled={envSaving}>
                     {envSaving ? "Salvando..." : "Salvar configurações"}
                   </PrimaryButton>
                 </Actions>
+
+                <InfoPanel style={{ marginTop: 24 }}>
+                  <InfoTitle>Informações importantes</InfoTitle>
+                  <HelpList>
+                    <li>Após salvar, reinicie o servidor para aplicar as mudanças.</li>
+                    <li>Senhas e chaves secretas são mascaradas por segurança.</li>
+                    <li>Certifique-se de que <InlineCode>ALLOW_ENV_EDIT=true</InlineCode> para permitir edição.</li>
+                  </HelpList>
+                </InfoPanel>
               </>
             )}
           </div>
@@ -1619,7 +1167,7 @@ export default function ConfigPage() {
           </div>
         );
     }
-  }, [section, loading, error, updateFeedback, updateLoading, updateRepoUrl, envLoading, envSaving, envFeedback, envSettings]);
+  }, [section, loading, error, updateFeedback, updateLoading, updateRepoUrl, envLoading, envSaving, envError, envSuccess, envConfig, envSearchQuery]);
 
   const activeForm = manageFormId ? formsList.find((f) => f.id === manageFormId || f.numericId === manageFormId) ?? null : null;
   const activeWebhook = manageWebhookId ? webhooksList.find((w) => w.id === manageWebhookId) ?? null : null;
@@ -1633,14 +1181,16 @@ export default function ConfigPage() {
           {section !== "forms" && section !== "webhooks" && (
             <Card aria-labelledby="config-title">
               <CardHeader>
-                <HeaderIcon aria-hidden>
-                  <svg viewBox="0 0 24 24" fill="currentColor">
-                    <path d="M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58c.47-.35.61-.98.33-1.5l-1.92-3.32c-.28-.52-.9-.73-1.42-.5l-2.4.96c-.65-.49-1.35-.9-2.1-1.22l-.36-2.54c-.05-.55-.5-.98-1.05-.98h-3.84c-.55 0-1 .43-1.05.98l-.36 2.54c-.75.32-1.45.73-2.1 1.22l-2.4-.96c-.52-.23-1.14-.02-1.42.5L2.44 8.98c-.28.52-.14 1.15.33 1.5l2.03 1.58c-.05.3-.07.62-.07.94s.02.64.07.94l-2.03 1.58c-.47.35-.61.98-.33 1.5l1.92 3.32c.28.52.9.73 1.42.5l2.4-.96c.65.49 1.35.9 2.1 1.22l.36 2.54c.05.55.5.98 1.05.98h3.84c.55 0 1-.43 1.05-.98l.36-2.54c.75-.32 1.45-.73 2.1-1.22l2.4.96c.52.23 1.14.02 1.42-.5l1.92-3.32c.28-.52.14-1.15-.33-1.5l-2.03-1.58zM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6z"/>
-                  </svg>
-                </HeaderIcon>
-                <div>
-                  <CardTitle id="config-title">Configurações</CardTitle>
-                  <Muted>Gerencie as opções do sistema por seções.</Muted>
+                <div style={{ display: "flex", alignItems: "center", gap: "12px", flex: 1 }}>
+                  <HeaderIcon aria-hidden>
+                    <svg viewBox="0 0 24 24" fill="currentColor">
+                      <path d="M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58c.47-.35.61-.98.33-1.5l-1.92-3.32c-.28-.52-.9-.73-1.42-.5l-2.4.96c-.65-.49-1.35-.9-2.1-1.22l-.36-2.54c-.05-.55-.5-.98-1.05-.98h-3.84c-.55 0-1 .43-1.05.98l-.36 2.54c-.75.32-1.45.73-2.1 1.22l-2.4-.96c-.52-.23-1.14-.02-1.42.5L2.44 8.98c-.28.52-.14 1.15.33 1.5l2.03 1.58c-.05.3-.07.62-.07.94s.02.64.07.94l-2.03 1.58c-.47.35-.61.98-.33 1.5l1.92 3.32c.28.52.9.73 1.42.5l2.4-.96c.65.49 1.35.9 2.1 1.22l.36 2.54c.05.55.5.98 1.05.98h3.84c.55 0 1-.43 1.05-.98l.36-2.54c.75-.32 1.45-.73 2.1-1.22l2.4.96c.52.23 1.14.02 1.42-.5l1.92-3.32c.28-.52.14-1.15-.33-1.5l-2.03-1.58zM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6z"/>
+                    </svg>
+                  </HeaderIcon>
+                  <div>
+                    <CardTitle id="config-title">Configurações</CardTitle>
+                    <Muted>Gerencie as opções do sistema por seções.</Muted>
+                  </div>
                 </div>
               </CardHeader>
               {content}
@@ -1650,14 +1200,16 @@ export default function ConfigPage() {
             <FormsWrapper>
               <Card aria-labelledby="forms-card-title">
                 <CardHeader>
-                  <HeaderIcon aria-hidden>
-                    <svg viewBox="0 0 24 24" fill="currentColor">
-                      <path d="M10 4H4c-1.11 0-2 .89-2 2v12c0 1.11.89 2 2 2h16c1.11 0 2-.89 2-2V8c0-1.11-.89-2-2-2h-8l-2-2z"/>
-                    </svg>
-                  </HeaderIcon>
-                  <div>
-                    <CardTitle id="forms-card-title">Formulários públicos</CardTitle>
-                    <Muted>Gerencie as estruturas e links compartilhados com os usuários.</Muted>
+                  <div style={{ display: "flex", alignItems: "center", gap: "12px", flex: 1 }}>
+                    <HeaderIcon aria-hidden>
+                      <svg viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M10 4H4c-1.11 0-2 .89-2 2v12c0 1.11.89 2 2 2h16c1.11 0 2-.89 2-2V8c0-1.11-.89-2-2-2h-8l-2-2z"/>
+                      </svg>
+                    </HeaderIcon>
+                    <div>
+                      <CardTitle id="forms-card-title">Formulários públicos</CardTitle>
+                      <Muted>Gerencie as estruturas e links compartilhados com os usuários.</Muted>
+                    </div>
                   </div>
                   <HeaderActions>
                     <ActionButton type="button" onClick={() => loadForms()} disabled={formsLoading}>
@@ -2795,41 +2347,32 @@ const FormsWrapper = styled.div`
   flex-direction: column;
 `;
 
-const Card = styled.div`
-  --card-radius: 18px;
+const Card = styled.section`
   grid-column: span 12;
-  position: relative;
-  border-radius: var(--card-radius);
-  padding: 20px;
-  background: linear-gradient(180deg, #ffffff, #fcfcff);
-  border: 1px solid transparent;
-  background-clip: padding-box;
-  box-shadow: 0 18px 40px rgba(20, 93, 191, 0.08), 0 6px 18px rgba(0,0,0,0.06);
-  &::before {
-    content: "";
-    position: absolute;
-    inset: 0;
-    border-radius: var(--card-radius);
-    padding: 1px;
-    background: conic-gradient(from 180deg, #c9d7ff, #e6edff, #cfe0ff, #c9d7ff);
-    -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
-    -webkit-mask-composite: xor;
-    mask-composite: exclude;
-    pointer-events: none;
-  }
-  @media (min-width: 960px) { 
-    grid-column: span 8; 
+  background: #fff;
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 24px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+  transition: box-shadow 0.2s ease;
+
+  @media (min-width: 960px) {
+    grid-column: span 8;
     margin-left: auto;
     margin-right: auto;
+  }
+
+  &:hover {
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
   }
 `;
 
 const CardHeader = styled.div`
-  display: grid;
-  grid-template-columns: auto 1fr;
-  gap: 12px;
+  display: flex;
   align-items: center;
-  margin-bottom: 12px;
+  justify-content: space-between;
+  margin-bottom: 20px;
+  gap: 12px;
 `;
 
 const HeaderIcon = styled.div`
@@ -2849,9 +2392,14 @@ const HeaderIcon = styled.div`
   }
 `;
 
-const CardTitle = styled.h1`
-  font-size: 1.5rem;
+const CardTitle = styled.h2`
+  font-size: 1.25rem;
+  font-weight: 700;
   margin: 0;
+  color: #0f172a;
+  display: flex;
+  align-items: center;
+  gap: 10px;
 `;
 
 const Feedback = styled.p<{ $variant: "success" | "error" }>`
@@ -2865,8 +2413,9 @@ const Feedback = styled.p<{ $variant: "success" | "error" }>`
 `;
 
 const Muted = styled.p`
-  color: var(--muted);
-  margin: 0 0 12px;
+  color: #64748b;
+  margin: 0;
+  font-size: 0.875rem;
 `;
 
 const Meta = styled.div`
@@ -3090,8 +2639,10 @@ const DangerButton = styled.button`
 `;
 
 const SectionTitle = styled.h2`
-  font-size: 1.2rem;
-  margin: 0 0 8px;
+  font-size: 1.25rem;
+  font-weight: 700;
+  margin: 0 0 12px;
+  color: #0f172a;
 `;
 
 const SectionHeaderRow = styled.div`
@@ -3104,9 +2655,9 @@ const SectionHeaderRow = styled.div`
 `;
 
 const SectionSubtitle = styled.p`
-  margin: 0 0 16px;
+  margin: 0 0 20px;
   color: #64748b;
-  font-size: 0.95rem;
+  font-size: 0.875rem;
 `;
 
 const SmallMuted = styled.p`
@@ -3238,6 +2789,79 @@ const EnvStatusValue = styled.span<{ $active: boolean }>`
   color: ${(p) => (p.$active ? "#166534" : "#475569")};
 `;
 
+const EnvSectionsGrid = styled.div`
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+  gap: 16px;
+  margin-bottom: 24px;
+
+  @media (min-width: 768px) {
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  }
+`;
+
+const EnvSectionButton = styled.button`
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 20px;
+  border-radius: 12px;
+  border: 2px solid rgba(148, 163, 184, 0.3);
+  background: linear-gradient(135deg, #ffffff, #f8fafc);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  text-align: left;
+  width: 100%;
+
+  &:hover {
+    border-color: #3b82f6;
+    background: linear-gradient(135deg, #f0f9ff, #e0f2fe);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(59, 130, 246, 0.15);
+  }
+
+  &:active {
+    transform: translateY(0);
+  }
+`;
+
+const EnvSectionIcon = styled.div`
+  font-size: 2rem;
+  line-height: 1;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 48px;
+  height: 48px;
+  color: #3b82f6;
+  
+  svg {
+    width: 24px;
+    height: 24px;
+  }
+`;
+
+const EnvSectionButtonContent = styled.div`
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+`;
+
+const EnvSectionButtonTitle = styled.div`
+  font-size: 1rem;
+  font-weight: 700;
+  color: #0f172a;
+  margin: 0;
+`;
+
+const EnvSectionButtonStatus = styled.span<{ $active: boolean }>`
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: ${(p) => (p.$active ? "#22c55e" : "#64748b")};
+`;
+
 const Skeleton = styled.div`
   height: 160px;
   border-radius: 12px;
@@ -3267,6 +2891,7 @@ const ModalDialog = styled.div<{ $open: boolean }>`
   top: 50%;
   transform: translate(-50%, -50%) scale(${(p) => (p.$open ? 1 : 0.98)});
   opacity: ${(p) => (p.$open ? 1 : 0)};
+  pointer-events: ${(p) => (p.$open ? "auto" : "none")};
   background: #fff;
   border: 1px solid var(--border);
   border-radius: 12px;
@@ -3296,6 +2921,12 @@ const ModalIcon = styled.div`
   place-items: center;
   color: #fff;
   font-weight: 800;
+  
+  svg {
+    width: 20px;
+    height: 20px;
+    stroke: currentColor;
+  }
 `;
 
 const ModalTitle = styled.h2`

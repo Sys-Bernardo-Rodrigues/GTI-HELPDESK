@@ -4,6 +4,8 @@ generator client {
 }
 
 datasource db {
+  // Para usar PostgreSQL, altere "mysql" para "postgresql" abaixo
+  // IMPORTANTE: Após mudar, execute: npm run db:generate
   provider          = "mysql"
   url               = env("DATABASE_URL")
   shadowDatabaseUrl = env("SHADOW_DATABASE_URL")
