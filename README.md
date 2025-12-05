@@ -482,7 +482,7 @@ npm run lint            # Verifica código
 2. **Migrações**: Use `prisma migrate dev` para criar migrações formais
 3. **Tipos**: O Prisma gera tipos TypeScript automaticamente em `src/generated/prisma`
 
-### Adicionando Novas Funcionalidades
+### Adicionando Novas Funcionalidades.
 
 1. **Criar Modelo no Prisma**
    - Edite `prisma/schema.prisma`
