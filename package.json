@@ -1,6 +1,6 @@
 {
   "name": "rootdesk-web",
-  "version": "0.1.0",
+  "version": "0.1.9",
   "private": true,
   "scripts": {
     "predev": "prisma generate && tsx scripts/check-db.ts && prisma db push && tsx scripts/seed-default-user.ts",
