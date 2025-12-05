@@ -67,6 +67,13 @@ export default function ConfigPage() {
   const [updateRepoUrl, setUpdateRepoUrl] = useState<string>("");
   const [updateLoading, setUpdateLoading] = useState<boolean>(false);
   const [updateFeedback, setUpdateFeedback] = useState<{ type: "success" | "error"; text: string } | null>(null);
+  
+  // Carrega ALLOWED_REPO_URL do .env quando a seção de atualização é acessada
+  useEffect(() => {
+    if (section === "update" && envConfig.ALLOWED_REPO_URL) {
+      setUpdateRepoUrl(envConfig.ALLOWED_REPO_URL);
+    }
+  }, [section, envConfig.ALLOWED_REPO_URL]);
 
   // Estado de configuração de ambiente (.env) - Nova implementação
   const [envConfig, setEnvConfig] = useState<Record<string, string>>({});
@@ -96,10 +103,17 @@ export default function ConfigPage() {
 
   // Carregar configurações de ambiente quando a seção for acessada
   useEffect(() => {
-    if (section === "env") {
+    if (section === "env" || section === "update") {
       loadEnvConfig();
     }
   }, [section]);
+  
+  // Carrega ALLOWED_REPO_URL do .env quando a seção de atualização é acessada
+  useEffect(() => {
+    if (section === "update" && envConfig.ALLOWED_REPO_URL) {
+      setUpdateRepoUrl(envConfig.ALLOWED_REPO_URL);
+    }
+  }, [section, envConfig.ALLOWED_REPO_URL]);
 
   async function loadEnvConfig() {
     setEnvLoading(true);
@@ -793,26 +807,35 @@ export default function ConfigPage() {
   }
 
   async function handleSystemUpdate() {
-    if (!updateRepoUrl.trim()) {
-      setUpdateFeedback({ type: "error", text: "Informe a URL do repositório GitHub." });
-      return;
-    }
     setUpdateLoading(true);
     setUpdateFeedback(null);
     try {
+      // Envia repoUrl apenas se fornecido, caso contrário usa o do .env
+      const body: any = {};
+      if (updateRepoUrl.trim()) {
+        body.repoUrl = updateRepoUrl.trim();
+      }
+      
       const res = await fetch("/api/system/update", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ repoUrl: updateRepoUrl.trim() }),
+        body: JSON.stringify(body),
       });
       const data = (await res.json().catch(() => null)) as any;
       if (!res.ok) {
-        throw new Error(data?.error || "Falha ao iniciar atualização.");
+        throw new Error(data?.error || data?.detail || "Falha ao iniciar atualização.");
       }
       setUpdateFeedback({
         type: "success",
-        text: data?.message || "Atualização iniciada com sucesso. Verifique os logs do servidor.",
+        text: data?.message || "Atualização concluída com sucesso.",
       });
+      // Mostra stdout se disponível
+      if (data?.stdout) {
+        console.log("[system/update] Output:", data.stdout);
+      }
+      if (data?.stderr) {
+        console.warn("[system/update] Warnings:", data.stderr);
+      }
     } catch (err: any) {
       setUpdateFeedback({
         type: "error",
@@ -822,13 +845,6 @@ export default function ConfigPage() {
       setUpdateLoading(false);
     }
   }
-
-  // Carregar configurações de ambiente
-  useEffect(() => {
-    if (section === "env") {
-      loadEnvConfig();
-    }
-  }, [section]);
 
   async function loadEnvConfig() {
     setEnvLoading(true);
@@ -968,11 +984,18 @@ export default function ConfigPage() {
             <TwoColumnGrid>
               <div>
                 <Field>
-                  <Label htmlFor="repo-url">URL do repositório GitHub</Label>
+                  <Label htmlFor="repo-url">
+                    URL do repositório GitHub
+                    {envConfig.ALLOWED_REPO_URL && (
+                      <span style={{ marginLeft: "8px", fontSize: "0.875rem", fontWeight: "normal", color: "#10b981" }}>
+                        (já configurado no .env)
+                      </span>
+                    )}
+                  </Label>
                   <Input
                     id="repo-url"
                     type="url"
-                    placeholder="https://github.com/seu-usuario/rootdesk.git"
+                    placeholder={envConfig.ALLOWED_REPO_URL || "https://github.com/seu-usuario/rootdesk.git"}
                     value={updateRepoUrl}
                     onChange={(event) => {
                       const value = (event.currentTarget as unknown as { value?: string }).value ?? "";
@@ -980,7 +1003,10 @@ export default function ConfigPage() {
                     }}
                   />
                   <SmallMuted>
-                    Use a URL completa de clonagem HTTPS do projeto autorizado para este servidor.
+                    {envConfig.ALLOWED_REPO_URL 
+                      ? "Opcional: Se não preencher, será usado o valor de ALLOWED_REPO_URL do .env. Para usar outro repositório, informe a URL aqui."
+                      : "Configure ALLOWED_REPO_URL no .env ou informe a URL completa de clonagem HTTPS do projeto autorizado para este servidor."
+                    }
                   </SmallMuted>
                 </Field>
                 <Actions>
