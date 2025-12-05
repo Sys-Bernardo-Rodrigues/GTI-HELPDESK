@@ -234,6 +234,12 @@ function getBrowserDocument(): any {
 }
 
 function getBrowserOrigin(): string {
+  // Priorizar NEXT_PUBLIC_APP_URL para garantir que URLs funcionem em qualquer máquina
+  if (typeof window !== "undefined") {
+    const envUrl = process.env.NEXT_PUBLIC_APP_URL || process.env.PUBLIC_APP_URL;
+    if (envUrl) return String(envUrl);
+  }
+  
   const win = getBrowserWindow();
   if (win?.location?.origin) return String(win.location.origin);
   const loc = typeof globalThis !== "undefined" ? (globalThis as any).location : undefined;
@@ -1424,13 +1430,16 @@ function resolveAvatarUrl(u?: string): string {
   const val = String(u);
   if (val.startsWith("data:")) return val;
   if (/^https?:\/\//i.test(val)) return val;
-  const win = getBrowserWindow();
-  if (win?.location?.origin) {
-    const origin = win.location.origin as string;
-    if (val.startsWith("/")) return `${origin}${val}`;
-    return `${origin}/${val}`;
-  }
-  return val;
+  
+  // Usar NEXT_PUBLIC_APP_URL se disponível, senão usar window.location.origin
+  const baseUrl = typeof window !== "undefined" 
+    ? (process.env.NEXT_PUBLIC_APP_URL || process.env.PUBLIC_APP_URL || (getBrowserWindow()?.location?.origin || ""))
+    : (process.env.NEXT_PUBLIC_APP_URL || process.env.PUBLIC_APP_URL || "");
+  
+  if (!baseUrl) return val;
+  
+  if (val.startsWith("/")) return `${baseUrl}${val}`;
+  return `${baseUrl}/${val}`;
 }
 
 const Page = styled.div`

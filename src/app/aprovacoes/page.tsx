@@ -949,12 +949,16 @@ function resolveImageUrl(value: string): string {
   if (!trimmed) return value;
   if (trimmed.startsWith("data:")) return trimmed;
   if (/^https?:\/\//i.test(trimmed)) return trimmed;
-  if (typeof window !== "undefined") {
-    const origin = window.location.origin;
-    if (trimmed.startsWith("/")) return `${origin}${trimmed}`;
-    return `${origin}/${trimmed}`;
-  }
-  return trimmed;
+  
+  // Usar NEXT_PUBLIC_APP_URL se disponível, senão usar window.location.origin
+  const baseUrl = typeof window !== "undefined" 
+    ? (process.env.NEXT_PUBLIC_APP_URL || process.env.PUBLIC_APP_URL || window.location.origin)
+    : (process.env.NEXT_PUBLIC_APP_URL || process.env.PUBLIC_APP_URL || "");
+  
+  if (!baseUrl) return trimmed;
+  
+  if (trimmed.startsWith("/")) return `${baseUrl}${trimmed}`;
+  return `${baseUrl}/${trimmed}`;
 }
 
 function isImageUrl(value: any, fieldType?: string): boolean {

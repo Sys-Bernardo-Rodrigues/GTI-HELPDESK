@@ -5,6 +5,7 @@
   "scripts": {
     "predev": "prisma generate && tsx scripts/check-db.ts && prisma db push && tsx scripts/seed-default-user.ts",
     "dev": "next dev",
+    "dev:network": "next dev -H 0.0.0.0",
     "dev:watch": "concurrently \"npm run docker:logs\" \"npm run dev\"",
     "build": "next build",
     "start": "next start",
