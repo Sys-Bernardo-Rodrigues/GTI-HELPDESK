@@ -233,18 +233,35 @@ function getBrowserDocument(): any {
   return undefined;
 }
 
-function getBrowserOrigin(): string {
-  // Priorizar NEXT_PUBLIC_APP_URL para garantir que URLs funcionem em qualquer máquina
-  if (typeof window !== "undefined") {
-    const envUrl = process.env.NEXT_PUBLIC_APP_URL || process.env.PUBLIC_APP_URL;
-    if (envUrl) return String(envUrl);
-  }
-  
-  const win = getBrowserWindow();
-  if (win?.location?.origin) return String(win.location.origin);
-  const loc = typeof globalThis !== "undefined" ? (globalThis as any).location : undefined;
-  if (loc?.origin) return String(loc.origin);
-  return "";
+// Função para obter a URL base da aplicação
+// Esta função será usada dentro do componente para ter acesso ao estado appBaseUrl
+function createGetBrowserOrigin(appBaseUrl: string | null): () => string {
+  return () => {
+    // Priorizar appBaseUrl (carregado da API ou variável de ambiente)
+    if (appBaseUrl && appBaseUrl.trim()) {
+      return appBaseUrl.trim();
+    }
+    
+    // Tentar variável de ambiente diretamente
+    if (typeof window !== "undefined") {
+      const envUrl = 
+        (process.env.NEXT_PUBLIC_APP_URL) ||
+        ((process.env as any).NEXT_PUBLIC_APP_URL) ||
+        (process.env.PUBLIC_APP_URL) ||
+        ((process.env as any).PUBLIC_APP_URL);
+      
+      if (envUrl && typeof envUrl === "string" && envUrl.trim()) {
+        return envUrl.trim().replace(/\/$/, "");
+      }
+    }
+    
+    // Fallback para window.location.origin apenas se a variável de ambiente não estiver disponível
+    const win = getBrowserWindow();
+    if (win?.location?.origin) return String(win.location.origin);
+    const loc = typeof globalThis !== "undefined" ? (globalThis as any).location : undefined;
+    if (loc?.origin) return String(loc.origin);
+    return "";
+  };
 }
 
 function openWhatsapp(raw: string) {
@@ -325,6 +342,7 @@ export default function TicketsPage() {
   const [draggedTicketId, setDraggedTicketId] = useState<number | null>(null);
   const [dropTargetStatus, setDropTargetStatus] = useState<TicketStatus | null>(null);
   const [now, setNow] = useState<number>(() => Date.now());
+  const [appBaseUrl, setAppBaseUrl] = useState<string | null>(null);
 
   useEffect(() => {
     loadTickets();
@@ -440,6 +458,34 @@ export default function TicketsPage() {
           setSessionUser(json.user);
         }
       } catch {}
+    })();
+  }, []);
+
+  // Carregar URL base da aplicação da API
+  useEffect(() => {
+    (async () => {
+      try {
+        const res = await fetch("/api/system/env");
+        if (res.ok) {
+          const json: any = await res.json().catch(() => ({}));
+          const url = json?.NEXT_PUBLIC_APP_URL || json?.PUBLIC_APP_URL || json?.APP_URL;
+          if (url && typeof url === "string" && url.trim()) {
+            setAppBaseUrl(url.trim().replace(/\/$/, ""));
+            return;
+          }
+        }
+      } catch {}
+      // Se não conseguir da API, tentar da variável de ambiente
+      if (typeof window !== "undefined") {
+        const envUrl = 
+          (process.env.NEXT_PUBLIC_APP_URL) ||
+          ((process.env as any).NEXT_PUBLIC_APP_URL) ||
+          (process.env.PUBLIC_APP_URL) ||
+          ((process.env as any).PUBLIC_APP_URL);
+        if (envUrl && typeof envUrl === "string" && envUrl.trim()) {
+          setAppBaseUrl(envUrl.trim().replace(/\/$/, ""));
+        }
+      }
     })();
   }, []);
 
@@ -832,6 +878,7 @@ export default function TicketsPage() {
     mutateTicket(ticketId, { status }, "card");
   }
 
+  const getBrowserOrigin = useMemo(() => createGetBrowserOrigin(appBaseUrl), [appBaseUrl]);
   const drawerFormUrl = drawerTicket?.form ? `${getBrowserOrigin()}/forms/${drawerTicket.form.slug}` : null;
   const drawerUpdates = drawerTicket?.updates ?? [];
   const drawerScheduleDue = drawerTicket?.scheduledAt
