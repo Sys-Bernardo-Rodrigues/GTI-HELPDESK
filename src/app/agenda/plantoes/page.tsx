@@ -6,6 +6,7 @@ import styled from "styled-components";
 import StandardLayout from "@/components/StandardLayout";
 import { isHoliday, getHolidayName } from "@/lib/holidays";
 import { getUserColor } from "@/lib/userColors";
+import { resolveAvatarUrl } from "@/lib/assets";
 
 type ShiftItem = {
   id: number;
@@ -801,18 +802,6 @@ export default function PlantaoesPage() {
     loadUsers();
   }, [currentDate]);
 
-  function resolveAvatarUrl(u?: string | null): string {
-    if (!u) return "";
-    const val = String(u);
-    if (val.startsWith("data:")) return val;
-    if (/^https?:\/\//i.test(val)) return val;
-    if (typeof window !== "undefined") {
-      const origin = window.location.origin;
-      if (val.startsWith("/")) return `${origin}${val}`;
-      return `${origin}/${val}`;
-    }
-    return val;
-  }
 
   function loadShifts() {
     const year = currentDate.getFullYear();

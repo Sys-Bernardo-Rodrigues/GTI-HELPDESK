@@ -171,18 +171,6 @@ export default function BasePage() {
     return () => document.removeEventListener("visibilitychange", onVisibility);
   }, []);
 
-  function resolveAvatarUrl(u?: string): string {
-    if (!u) return "";
-    const val = String(u);
-    if (val.startsWith("data:")) return val;
-    if (/^https?:\/\//i.test(val)) return val;
-    if (typeof window !== "undefined") {
-      const origin = window.location.origin;
-      if (val.startsWith("/")) return `${origin}${val}`;
-      return `${origin}/${val}`;
-    }
-    return val;
-  }
 
   function mapDocument(item: any): DocumentItem {
     return {

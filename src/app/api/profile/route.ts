@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getAuthenticatedUser } from "@/lib/auth";
+import { getAuthenticatedUser, invalidateUserSession } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 
 function sanitize(input: unknown) {
@@ -57,6 +57,10 @@ export async function PUT(req: NextRequest) {
   try {
     // Email deve ser alterado via fluxo de confirmação em /api/profile/email
     const updated = await prisma.user.update({ where: { id: user.id }, data: { name, phone, jobTitle, company, avatarUrl, twoFactor: account.twoFactor, newsletter: account.newsletter } });
+    
+    // Invalidar cache da sessão para forçar atualização
+    await invalidateUserSession(user.id);
+    
     return NextResponse.json({
       name: updated.name,
       email: updated.email,

@@ -131,16 +131,4 @@ const MenuToggle = styled.button`
   }
 `;
 
-// Normaliza URLs do avatar (data URI, http(s), caminhos relativos)
-function resolveAvatarUrl(u?: string): string {
-  if (!u) return "";
-  const val = String(u);
-  if (val.startsWith("data:")) return val;
-  if (/^https?:\/\//i.test(val)) return val;
-  if (typeof window !== "undefined") {
-    const origin = window.location.origin;
-    if (val.startsWith("/")) return `${origin}${val}`;
-    return `${origin}/${val}`;
-  }
-  return val;
-}
+import { resolveAvatarUrl } from "@/lib/assets";

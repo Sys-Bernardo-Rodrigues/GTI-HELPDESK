@@ -5,7 +5,7 @@ declare global {
   var prisma: PrismaClient | undefined;
 }
 
-function getDatabaseUrl() {
+export function getDatabaseUrl() {
   // Se DATABASE_URL já estiver definida, use ela diretamente
   const directUrl = process.env.DATABASE_URL;
   if (directUrl && directUrl.trim().length > 0) {

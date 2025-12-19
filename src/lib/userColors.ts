@@ -48,3 +48,4 @@ export function getUserColorForUser(user: { id?: number; name: string }): string
   }
   return getUserColorByName(user.name);
 }
+

@@ -4,7 +4,7 @@ import { useEffect, useRef } from "react";
 import styled from "styled-components";
 import { useRouter, useSearchParams } from "next/navigation";
 
-type SectionKey = "general" | "appearance" | "notifications" | "security" | "integrations" | "forms" | "update" | "env";
+type SectionKey = "general" | "appearance" | "notifications" | "security" | "integrations" | "forms" | "update" | "env" | "backup";
 
 type Props = {
   open: boolean;
@@ -124,6 +124,16 @@ export default function SettingsSideMenu({ open, setOpen, activeKey, onSelect }:
               <path d="M14 2H6c-1.1 0-1.99.9-1.99 2L4 20c0 1.1.89 2 1.99 2H18c1.1 0 2-.9 2-2V8l-6-6zm2 16H8v-2h8v2zm0-4H8v-2h8v2zm-3-5V3.5L18.5 9H13z"/>
             </svg>
             Formulários
+          </NavItem>
+          <NavItem
+            onClick={() => navigate("backup")}
+            aria-label="Backup"
+            aria-current={activeKey === "backup" ? "page" : undefined}
+          >
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M19.35 10.04C18.67 6.59 15.64 4 12 4 9.11 4 6.6 5.64 5.35 8.04 2.34 8.36 0 10.91 0 14c0 3.31 2.69 6 6 6h13c2.76 0 5-2.24 5-5 0-2.64-2.05-4.78-4.65-4.96zM14 13v4h-4v-4H7l5-5 5 5h-3z"/>
+            </svg>
+            Backup
           </NavItem>
         </MenuScroll>
       </nav>

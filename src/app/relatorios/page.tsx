@@ -131,18 +131,6 @@ function getBrowserOrigin(): string {
   return "";
 }
 
-function resolveAvatarUrl(u?: string): string {
-  if (!u) return "";
-  const val = String(u);
-  if (val.startsWith("data:")) return val;
-  if (/^https?:\/\//i.test(val)) return val;
-  if (typeof window !== "undefined") {
-    const origin = window.location.origin;
-    if (val.startsWith("/")) return `${origin}${val}`;
-    return `${origin}/${val}`;
-  }
-  return val;
-}
 
 function getResolutionMinutes(ticket: TicketItem): number | null {
   if (ticket.status !== "CLOSED") return null;

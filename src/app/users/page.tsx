@@ -6,6 +6,10 @@ import { useRouter } from "next/navigation";
 import styled from "styled-components";
 import NotificationBell from "@/components/NotificationBell";
 import StandardLayout from "@/components/StandardLayout";
+import Pagination from "@/components/Pagination";
+import { resolveAvatarUrl } from "@/lib/assets";
+import LoadingSpinner from "@/components/LoadingSpinner";
+import { Toast, useToast } from "@/components/Toast";
 
 type AccessProfile = {
   id: number;
@@ -63,6 +67,7 @@ const emptyNewUser: CreateUserState = {
 
 export default function UsersPage() {
   const router = useRouter();
+  const toast = useToast();
 
   const [listLoading, setListLoading] = useState<boolean>(false);
   const [userItems, setUserItems] = useState<UserItem[]>([]);
@@ -79,12 +84,17 @@ export default function UsersPage() {
 
   const [accessProfiles, setAccessProfiles] = useState<AccessProfile[]>([]);
   const [loadingProfiles, setLoadingProfiles] = useState<boolean>(false);
-
+  
+  // Estados de paginação
+  const [currentPage, setCurrentPage] = useState<number>(1);
+  const [totalPages, setTotalPages] = useState<number>(1);
+  const [totalItems, setTotalItems] = useState<number>(0);
+  const pageSize = 20;
 
   useEffect(() => {
-    loadUsers();
+    loadUsers(true);
     loadAccessProfiles();
-  }, []);
+  }, [currentPage]);
 
   useEffect(() => {
     function onVisibility() {
@@ -97,18 +107,6 @@ export default function UsersPage() {
     return () => document.removeEventListener("visibilitychange", onVisibility);
   }, []);
 
-  function resolveAvatarUrl(u?: string): string {
-    if (!u) return "";
-    const val = String(u);
-    if (val.startsWith("data:")) return val;
-    if (/^https?:\/\//i.test(val)) return val;
-    if (typeof window !== "undefined") {
-      const origin = window.location.origin;
-      if (val.startsWith("/")) return `${origin}${val}`;
-      return `${origin}/${val}`;
-    }
-    return val;
-  }
 
   async function loadAccessProfiles() {
     setLoadingProfiles(true);
@@ -146,18 +144,35 @@ export default function UsersPage() {
     };
   }
 
-  async function loadUsers(withSpinner = true) {
+  async function loadUsers(withSpinner = true, page?: number) {
+    const pageToLoad = page ?? currentPage;
     if (withSpinner) setListLoading(true);
     try {
-      const res = await fetch("/api/users");
+      const res = await fetch(`/api/users?page=${pageToLoad}&limit=${pageSize}`);
       if (!res.ok) {
         const json = await res.json().catch(() => null);
         throw new Error(json?.error || "Erro ao carregar usuários.");
       }
       const json = await res.json();
+      
+      // Suportar tanto formato antigo quanto novo (retrocompatibilidade)
       const items = Array.isArray(json?.items) ? json.items : [];
       const mapped = items.map(mapUser);
       setUserItems(mapped);
+      
+      // Atualizar informações de paginação se disponível
+      if (json?.pagination) {
+        // Só atualizar currentPage se não foi explicitamente passado
+        if (page === undefined) {
+          setCurrentPage(json.pagination.page);
+        }
+        setTotalPages(json.pagination.totalPages);
+        setTotalItems(json.pagination.total);
+      } else {
+        // Fallback para formato antigo (retrocompatibilidade)
+        setTotalItems(items.length);
+        setTotalPages(1);
+      }
       if (selectedUserId) {
         const current = mapped.find((item) => item.id === selectedUserId);
         if (current) {
@@ -284,7 +299,9 @@ export default function UsersPage() {
         newsletter: updated.newsletter,
         accessProfileId: updated.accessProfile?.id || null,
       });
-      setEditFeedback({ type: "success", text: "Usuário atualizado com sucesso." });
+      const message = "Usuário atualizado com sucesso.";
+      setEditFeedback({ type: "success", text: message });
+      toast.showSuccess(message);
       setEditOpen(false);
     } catch (error: any) {
       setEditFeedback({ type: "error", text: error?.message || "Erro ao salvar usuário." });
@@ -362,12 +379,16 @@ export default function UsersPage() {
         newsletter: created.newsletter,
         accessProfileId: created.accessProfile?.id || null,
       });
-      setCreateFeedback({ type: "success", text: "Usuário criado com sucesso." });
+      const message = "Usuário criado com sucesso.";
+      setCreateFeedback({ type: "success", text: message });
       setCreateForm(emptyNewUser);
       setCreateOpen(false);
-      setEditFeedback({ type: "success", text: "Usuário criado com sucesso." });
+      setEditFeedback({ type: "success", text: message });
+      toast.showSuccess(message);
     } catch (error: any) {
-      setCreateFeedback({ type: "error", text: error?.message || "Erro ao criar usuário." });
+      const errorMsg = error?.message || "Erro ao criar usuário.";
+      setCreateFeedback({ type: "error", text: errorMsg });
+      toast.showError(errorMsg);
     } finally {
       setCreatingUser(false);
     }
@@ -386,6 +407,7 @@ export default function UsersPage() {
 
   return (
     <StandardLayout>
+      <Toast toasts={toast.toasts} onClose={toast.removeToast} />
         <Content>
           <Card>
             <CardHeader>
@@ -399,7 +421,7 @@ export default function UsersPage() {
                 <Muted>Visualize todos os usuários do RootDesk e gerencie seus dados.</Muted>
               </div>
               <HeaderActions>
-                <ActionButton type="button" onClick={() => loadUsers()} disabled={listLoading}>
+                <ActionButton type="button" onClick={() => loadUsers(true)} disabled={listLoading}>
                   Recarregar
                 </ActionButton>
                 <PrimaryButton type="button" onClick={openCreateModal}>
@@ -486,6 +508,16 @@ export default function UsersPage() {
                 ))}
               </tbody>
             </UsersTable>
+            </TableWrapper>
+            
+            <Pagination
+              currentPage={currentPage}
+              totalPages={totalPages}
+              totalItems={totalItems}
+              pageSize={pageSize}
+              onPageChange={(page) => setCurrentPage(page)}
+              loading={listLoading}
+            />
           </Card>
 
       {isEditOpen && (
@@ -630,7 +662,12 @@ export default function UsersPage() {
             </FormGrid>
             <ModalActions>
               <CancelButton type="button" onClick={closeEditModal} disabled={savingEdit}>Cancelar</CancelButton>
-              <PrimaryButton type="button" onClick={saveUser} disabled={savingEdit}>
+              <PrimaryButton type="button" onClick={saveUser} disabled={savingEdit} style={{ position: "relative" }}>
+                {savingEdit && (
+                  <span style={{ marginRight: 8, display: "inline-flex", alignItems: "center" }}>
+                    <LoadingSpinner size="small" color="#fff" />
+                  </span>
+                )}
                 {savingEdit ? "Salvando..." : "Salvar alterações"}
               </PrimaryButton>
             </ModalActions>
@@ -786,7 +823,12 @@ export default function UsersPage() {
             </FormGrid>
             <ModalActions>
               <CancelButton type="button" onClick={closeCreateModal} disabled={creatingUser}>Cancelar</CancelButton>
-              <PrimaryButton type="button" onClick={createUser} disabled={creatingUser}>
+              <PrimaryButton type="button" onClick={createUser} disabled={creatingUser} style={{ position: "relative" }}>
+                {creatingUser && (
+                  <span style={{ marginRight: 8, display: "inline-flex", alignItems: "center" }}>
+                    <LoadingSpinner size="small" color="#fff" />
+                  </span>
+                )}
                 {creatingUser ? "Criando..." : "Criar usuário"}
               </PrimaryButton>
             </ModalActions>
@@ -826,6 +868,11 @@ const Card = styled.section`
     mask-composite: exclude;
     pointer-events: none;
   }
+  
+  @media (max-width: 768px) {
+    padding: 16px;
+    border-radius: 12px;
+  }
 `;
 
 const CardHeader = styled.div`
@@ -834,6 +881,11 @@ const CardHeader = styled.div`
   gap: 12px;
   align-items: center;
   margin-bottom: 12px;
+  
+  @media (max-width: 768px) {
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
 `;
 
 const HeaderIcon = styled.div`
@@ -869,6 +921,12 @@ const HeaderActions = styled.div`
   margin-left: auto;
   align-items: center;
   flex-wrap: wrap;
+  
+  @media (max-width: 768px) {
+    margin-left: 0;
+    width: 100%;
+    flex-direction: column;
+  }
 `;
 
 const UsersTable = styled.table`
@@ -879,6 +937,12 @@ const UsersTable = styled.table`
   background: #fff;
   border: 1px solid rgba(148, 163, 184, 0.2);
   margin-top: 12px;
+  min-width: 800px;
+  font-size: 0.9rem;
+  
+  @media (max-width: 768px) {
+    font-size: 0.85rem;
+  }
 `;
 
 const TableHeaderCell = styled.th`
@@ -944,17 +1008,23 @@ const Input = styled.input`
 
 const Select = styled.select`
   width: 100%;
-  padding: 12px 14px;
+  padding: 12px 16px;
   border-radius: 12px;
   border: 1px solid rgba(0,0,0,0.08);
   background: #fff;
-  font-size: 0.95rem;
+  font-size: 16px; /* Previne zoom no iOS */
   cursor: pointer;
+  min-height: 44px;
+  
   &:focus {
     outline: 2px solid var(--primary-600);
     outline-offset: 2px;
   }
   box-shadow: inset 0 -1px 0 rgba(0,0,0,0.06);
+  
+  @media (max-width: 768px) {
+    padding: 14px 16px;
+  }
 `;
 
 const CheckboxRow = styled.div`
@@ -978,7 +1048,7 @@ const PrimaryButton = styled.button`
 `;
 
 const ActionButton = styled.button`
-  padding: 8px 10px;
+  padding: 10px 12px;
   border-radius: 8px;
   border: 1px solid var(--border);
   background: #fff;
@@ -986,9 +1056,17 @@ const ActionButton = styled.button`
   font-size: 0.9rem;
   color: var(--primary-800);
   transition: background .15s ease, transform .05s ease;
+  min-height: 44px;
+  white-space: nowrap;
+  
   &:hover { background: #f8fafc; }
   &:active { transform: translateY(1px); }
   &:disabled { opacity: .6; cursor: default; }
+  
+  @media (max-width: 768px) {
+    font-size: 0.85rem;
+    padding: 8px 10px;
+  }
 `;
 
 const Feedback = styled.p<{ $variant: "success" | "error" }>`
@@ -1027,6 +1105,18 @@ const ModalDialog = styled.div<{ $open: boolean }>`
   padding: 20px;
   transition: opacity .18s ease, transform .18s ease;
   z-index: 40;
+  
+  @media (max-width: 768px) {
+    width: 100vw;
+    max-width: 100vw;
+    height: 100vh;
+    max-height: 100vh;
+    border-radius: 0;
+    top: 0;
+    left: 0;
+    transform: translateY(${(p) => (p.$open ? "0" : "100%")});
+    padding: 16px;
+  }
 `;
 
 const ModalHeader = styled.div`
@@ -1059,6 +1149,15 @@ const ModalActions = styled.div`
   align-items: center;
   justify-content: flex-end;
   margin-top: 16px;
+  
+  @media (max-width: 768px) {
+    flex-direction: column-reverse;
+    width: 100%;
+    
+    button {
+      width: 100%;
+    }
+  }
 `;
 
 const UserMenu = styled.div<{ $open: boolean }>`

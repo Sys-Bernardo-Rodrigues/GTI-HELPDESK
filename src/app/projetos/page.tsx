@@ -211,18 +211,6 @@ export default function ProjetosPage() {
     loadUsers();
   }, []);
 
-  function resolveAvatarUrl(u?: string | null): string {
-    if (!u) return "";
-    const val = String(u);
-    if (val.startsWith("data:")) return val;
-    if (/^https?:\/\//i.test(val)) return val;
-    if (typeof window !== "undefined") {
-      const origin = window.location.origin;
-      if (val.startsWith("/")) return `${origin}${val}`;
-      return `${origin}/${val}`;
-    }
-    return val;
-  }
 
   async function loadProjects() {
     setListLoading(true);

@@ -43,5 +43,8 @@ export async function POST(req: NextRequest) {
   const avatarUrl = `/uploads/${filename}`;
   await prisma.user.update({ where: { id: user.id }, data: { avatarUrl } });
 
+  // Invalidar cache da sessão para forçar atualização
+  await invalidateUserSession(user.id);
+
   return NextResponse.json({ avatarUrl });
 }

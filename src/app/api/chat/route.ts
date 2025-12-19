@@ -16,17 +16,20 @@ type ConversationEntry = {
 };
 
 const MAX_HISTORY_ITEMS = 8;
+
+// Cache de respostas usando Redis (fallback para Map em memória se Redis não estiver disponível)
+import { getChatCache, setChatCache } from "@/lib/redis";
+
+// Fallback: cache em memória se Redis não estiver disponível
+const memoryCache = new Map<string, { response: string; timestamp: number }>();
 const CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutos
 
-// Cache simples em memória (pode ser substituído por Redis depois)
-const responseCache = new Map<string, { response: string; timestamp: number }>();
-
-// Limpar cache antigo periodicamente
+// Limpar cache em memória antigo periodicamente (apenas como fallback)
 setInterval(() => {
   const now = Date.now();
-  for (const [key, value] of responseCache.entries()) {
+  for (const [key, value] of memoryCache.entries()) {
     if (now - value.timestamp > CACHE_TTL_MS) {
-      responseCache.delete(key);
+      memoryCache.delete(key);
     }
   }
 }, 60000); // Limpar a cada minuto
@@ -229,21 +232,40 @@ function generateCacheKey(message: string, intent: any, userId: number): string 
   return crypto.createHash("md5").update(`${userId}:${normalized}:${intentStr}`).digest("hex");
 }
 
-// Função para buscar resposta no cache
-function getCachedResponse(cacheKey: string): string | null {
-  const cached = responseCache.get(cacheKey);
+// Função para buscar resposta no cache (Redis com fallback para memória)
+async function getCachedResponse(cacheKey: string): Promise<string | null> {
+  try {
+    // Tentar Redis primeiro
+    const redisCache = await getChatCache(cacheKey);
+    if (redisCache) {
+      return redisCache;
+    }
+  } catch (error) {
+    // Se Redis falhar, usar cache em memória
+    console.warn("[Chat Cache] Redis não disponível, usando cache em memória:", error);
+  }
+  
+  // Fallback: cache em memória
+  const cached = memoryCache.get(cacheKey);
   if (cached && Date.now() - cached.timestamp < CACHE_TTL_MS) {
     return cached.response;
   }
   if (cached) {
-    responseCache.delete(cacheKey);
+    memoryCache.delete(cacheKey);
   }
   return null;
 }
 
-// Função para salvar resposta no cache
-function setCachedResponse(cacheKey: string, response: string): void {
-  responseCache.set(cacheKey, { response, timestamp: Date.now() });
+// Função para salvar resposta no cache (Redis com fallback para memória)
+async function setCachedResponse(cacheKey: string, response: string): Promise<void> {
+  try {
+    // Tentar Redis primeiro
+    await setChatCache(cacheKey, response);
+  } catch (error) {
+    // Se Redis falhar, usar cache em memória
+    console.warn("[Chat Cache] Redis não disponível, usando cache em memória:", error);
+    memoryCache.set(cacheKey, { response, timestamp: Date.now() });
+  }
 }
 
 // Função para extrair nome de usuário da pergunta
@@ -1845,10 +1867,12 @@ export async function POST(req: NextRequest) {
     
     // Verificar cache antes de processar
     const cacheKey = generateCacheKey(message, intent, user.id);
-    const cachedResponse = getCachedResponse(cacheKey);
+    const cachedResponse = await getCachedResponse(cacheKey);
     if (cachedResponse) {
+      // Garantir que cachedResponse seja sempre uma string
+      const cachedMessage = typeof cachedResponse === "string" ? cachedResponse : String(cachedResponse);
       return NextResponse.json({
-        message: cachedResponse,
+        message: cachedMessage,
         intent: intent.type,
         source: "cache",
         sources: {
@@ -1923,7 +1947,7 @@ export async function POST(req: NextRequest) {
     const deterministicResponse = generateResponse(intent, documents, tickets, passwords, history, files, agenda, statistics, reports, message);
     
     // Tentar usar IA local se habilitada
-    let finalResponse = deterministicResponse;
+    let finalResponse: string = typeof deterministicResponse === "string" ? deterministicResponse : String(deterministicResponse);
     let responseSource: "local-ai" | "rule-based" | "cache" = "rule-based";
     
     if (isLocalAiEnabled()) {
@@ -1944,7 +1968,7 @@ export async function POST(req: NextRequest) {
         }, userInfo?.name || userInfo?.email || null);
 
         const aiReply = await callLocalAi(aiMessages, { temperature: 0.85 });
-        if (aiReply && aiReply.trim().length > 0) {
+        if (aiReply && typeof aiReply === "string" && aiReply.trim().length > 0) {
           finalResponse = aiReply;
           responseSource = "local-ai";
         }
@@ -1954,8 +1978,13 @@ export async function POST(req: NextRequest) {
       }
     }
     
+    // Garantir que finalResponse seja sempre uma string
+    if (typeof finalResponse !== "string") {
+      finalResponse = String(finalResponse);
+    }
+    
     // Salvar no cache
-    setCachedResponse(cacheKey, finalResponse);
+    await setCachedResponse(cacheKey, finalResponse);
     
     // Gerar sugestões contextuais
     const suggestions = generateContextualSuggestions(intent, {

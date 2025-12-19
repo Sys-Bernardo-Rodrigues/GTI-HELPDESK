@@ -4,6 +4,7 @@ import { useEffect, useState, useMemo, useRef } from "react";
 import { useRouter } from "next/navigation";
 import styled from "styled-components";
 import StandardLayout from "@/components/StandardLayout";
+import { resolveAvatarUrl } from "@/lib/assets";
 
 const Content = styled.main`
   display: grid;
@@ -425,7 +426,12 @@ function getSourceMeta(source?: ChatMessageSource) {
   return SOURCE_TAGS[source] || null;
 }
 
-function parseMessageContent(content: string): MessageBlock[] {
+function parseMessageContent(content: string | null | undefined): MessageBlock[] {
+  // Garantir que content é uma string válida
+  if (!content || typeof content !== "string") {
+    return [];
+  }
+  
   const lines = content.split(/\r?\n/);
   const blocks: MessageBlock[] = [];
   let currentList: string[] = [];
@@ -489,8 +495,33 @@ function renderInlineParts(text: string) {
   });
 }
 
-function renderMessageContent(content: string) {
-  const blocks = parseMessageContent(content);
+function renderMessageContent(content: string | null | undefined) {
+  // Garantir que content é uma string válida
+  // Se for um objeto, tentar converter para string
+  if (content == null) {
+    return null;
+  }
+  
+  // Se não for string, tentar converter
+  let contentStr: string;
+  if (typeof content === "string") {
+    contentStr = content;
+  } else if (typeof content === "object") {
+    // Se for objeto, tentar JSON.stringify ou usar toString
+    try {
+      contentStr = JSON.stringify(content);
+    } catch {
+      contentStr = String(content);
+    }
+  } else {
+    contentStr = String(content);
+  }
+  
+  if (!contentStr || contentStr.trim().length === 0) {
+    return null;
+  }
+  
+  const blocks = parseMessageContent(contentStr);
   return blocks.map((block, idx) => {
     if (block.type === "list") {
       return (
@@ -1045,18 +1076,6 @@ export default function HomePage() {
     }
   }
 
-  function resolveAvatarUrl(u?: string | null): string {
-    if (!u) return "";
-    const val = String(u);
-    if (val.startsWith("data:")) return val;
-    if (/^https?:\/\//i.test(val)) return val;
-    if (typeof window !== "undefined") {
-      const origin = window.location.origin;
-      if (val.startsWith("/")) return `${origin}${val}`;
-      return `${origin}/${val}`;
-    }
-    return val;
-  }
 
   // Scroll para o final das mensagens do chat
   useEffect(() => {
@@ -1104,10 +1123,38 @@ export default function HomePage() {
   }
 
   function appendMessage(message: Omit<ChatMessageItem, "id" | "createdAt"> & { createdAt?: number }) {
+    // Garantir que content seja sempre uma string válida
+    let content: string;
+    if (message.content == null) {
+      content = "";
+    } else if (typeof message.content === "string") {
+      content = message.content;
+    } else if (typeof message.content === "object") {
+      // Se for objeto, tentar extrair uma propriedade útil ou converter para JSON
+      // Primeiro, tenta propriedades comuns que podem conter o texto
+      if ("message" in message.content && typeof message.content.message === "string") {
+        content = message.content.message;
+      } else if ("text" in message.content && typeof message.content.text === "string") {
+        content = message.content.text;
+      } else if ("content" in message.content && typeof message.content.content === "string") {
+        content = message.content.content;
+      } else {
+        // Se não encontrar propriedade útil, converter para string
+        try {
+          content = JSON.stringify(message.content);
+        } catch {
+          content = String(message.content);
+        }
+      }
+    } else {
+      content = String(message.content);
+    }
+    
     const newMessage: ChatMessageItem = {
       id: generateMessageId(),
       createdAt: message.createdAt ?? Date.now(),
       ...message,
+      content,
     };
     setChatMessages((prev) => [...prev, newMessage]);
     return newMessage;
@@ -1307,10 +1354,25 @@ export default function HomePage() {
       
       const data = await response.json();
       
+      // Garantir que data.message seja sempre uma string
+      let messageContent: string;
+      if (typeof data.message === "string") {
+        messageContent = data.message;
+      } else if (data.message != null) {
+        // Se não for string, tentar converter
+        if (typeof data.message === "object") {
+          messageContent = JSON.stringify(data.message);
+        } else {
+          messageContent = String(data.message);
+        }
+      } else {
+        messageContent = "Desculpe, não consegui processar sua solicitação.";
+      }
+      
       // Adicionar resposta do Dobby
       appendMessage({
         role: "assistant",
-        content: data.message,
+        content: messageContent,
         source: (data.source as ChatMessageSource) ?? "rule-based",
         intent: data.intent,
       });
@@ -1353,9 +1415,25 @@ export default function HomePage() {
       }
       
       const data = await response.json();
+      
+      // Garantir que data.message seja sempre uma string
+      let messageContent: string;
+      if (typeof data.message === "string") {
+        messageContent = data.message;
+      } else if (data.message != null) {
+        // Se não for string, tentar converter
+        if (typeof data.message === "object") {
+          messageContent = JSON.stringify(data.message);
+        } else {
+          messageContent = String(data.message);
+        }
+      } else {
+        messageContent = "Desculpe, não consegui processar sua solicitação.";
+      }
+      
       appendMessage({
         role: "assistant",
-        content: data.message,
+        content: messageContent,
         source: (data.source as ChatMessageSource | "cache") ?? "rule-based",
         intent: data.intent,
         suggestions: data.suggestions,

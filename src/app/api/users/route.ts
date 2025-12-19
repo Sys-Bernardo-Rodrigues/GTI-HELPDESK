@@ -2,6 +2,7 @@ import bcrypt from "bcryptjs";
 import { NextRequest, NextResponse } from "next/server";
 import { getAuthenticatedUser } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { parsePaginationParams, createPaginatedResponse } from "@/lib/pagination";
 
 function sanitizeString(value: unknown, maxLength = 256) {
   if (typeof value !== "string") return "";
@@ -41,13 +42,20 @@ function mapUserResponse(user: {
   };
 }
 
-export async function GET() {
+export async function GET(req: NextRequest) {
   const auth = await getAuthenticatedUser();
   if (!auth) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
   try {
+    const { searchParams } = new URL(req.url);
+    const { page, limit, skip } = parsePaginationParams(searchParams);
+
+    // Buscar total de registros
+    const total = await prisma.user.count();
+
+    // Buscar usuários com paginação
     const users = await prisma.user.findMany({
       select: {
         id: true,
@@ -61,6 +69,7 @@ export async function GET() {
         avatarUrl: true,
         createdAt: true,
         accessProfiles: {
+          take: 1, // Apenas o primeiro perfil (otimização)
           include: {
             profile: {
               select: {
@@ -72,14 +81,16 @@ export async function GET() {
         },
       },
       orderBy: { id: "asc" },
+      skip,
+      take: limit,
     });
 
-    return NextResponse.json({
-      items: users.map((user) => ({
-        ...mapUserResponse(user),
-        accessProfile: user.accessProfiles[0]?.profile || null,
-      })),
-    });
+    const mappedUsers = users.map((user) => ({
+      ...mapUserResponse(user),
+      accessProfile: user.accessProfiles[0]?.profile || null,
+    }));
+
+    return NextResponse.json(createPaginatedResponse(mappedUsers, total, page, limit));
   } catch (error) {
     return NextResponse.json({ error: "Falha ao carregar usuários" }, { status: 500 });
   }

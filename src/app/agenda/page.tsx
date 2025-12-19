@@ -7,6 +7,7 @@ import styled from "styled-components";
 import NotificationBell from "@/components/NotificationBell";
 import StandardLayout from "@/components/StandardLayout";
 import { isHoliday, getHolidayName } from "@/lib/holidays";
+import { resolveAvatarUrl } from "@/lib/assets";
 
 type EventItem = {
   id: number | string;
@@ -1001,18 +1002,6 @@ export default function AgendaPage() {
   const router = useRouter();
 
   // Normaliza URLs do avatar (data URI, http(s), caminhos relativos)
-  function resolveAvatarUrl(u?: string): string {
-    if (!u) return "";
-    const val = String(u);
-    if (val.startsWith("data:")) return val;
-    if (/^https?:\/\//i.test(val)) return val;
-    if (typeof window !== "undefined") {
-      const origin = window.location.origin;
-      if (val.startsWith("/")) return `${origin}${val}`;
-      return `${origin}/${val}`;
-    }
-    return val;
-  }
   const [events, setEvents] = useState<EventItem[]>([]);
   const [scheduledTickets, setScheduledTickets] = useState<any[]>([]);
   const [loading, setLoading] = useState<boolean>(false);

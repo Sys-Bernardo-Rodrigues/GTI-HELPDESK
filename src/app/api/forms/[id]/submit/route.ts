@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { sendTicketNotificationEmail, sendNotificationEmail } from "@/lib/email";
+import { resolveFileUrl } from "@/lib/assets";
 import fs from "fs";
 import path from "path";
 
@@ -54,7 +55,7 @@ function buildSummary(payload: Record<string, any>, formTitle: string, fields: {
     } else {
       value = String(rawValue);
       if (info.type === "FILE" && value && value !== "-" && value !== "null") {
-        value = resolveFileUrl(value);
+        value = getFileUrlForEmail(value);
       }
     }
     lines.push(`${info.label}: ${value}`);
@@ -79,12 +80,20 @@ function buildSummary(payload: Record<string, any>, formTitle: string, fields: {
   return lines.join("\n");
 }
 
-function resolveFileUrl(value: string): string {
+// resolveFileUrl agora vem de @/lib/assets
+// Mantendo função local apenas se precisar de lógica específica do servidor
+function getFileUrlForEmail(value: string): string {
   const trimmed = value.trim();
   if (!trimmed) return value;
+  
+  // Usar resolveFileUrl do helper
+  const resolved = resolveFileUrl(trimmed);
+  if (resolved && resolved !== trimmed) return resolved;
+  
+  // Fallback para caso o helper não tenha funcionado no servidor
   const isAbsolute = /^https?:\/\//i.test(trimmed);
   if (isAbsolute) return trimmed;
-  const base = process.env.NEXT_PUBLIC_APP_URL || process.env.APP_URL || process.env.PUBLIC_APP_URL || "";
+  const base = process.env.NEXT_PUBLIC_APP_URL || process.env.APP_URL || process.env.PUBLIC_APP_URL || process.env.NEXT_PUBLIC_CDN_URL || "";
   if (!base) return trimmed;
   try {
     const url = new URL(trimmed.startsWith("/") ? trimmed : `/${trimmed}`, base);

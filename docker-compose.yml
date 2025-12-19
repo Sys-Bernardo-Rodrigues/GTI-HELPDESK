@@ -53,6 +53,24 @@ services:
     #           count: 1
     #           capabilities: [gpu]
 
+  # Redis - Cache para sessões e respostas do chat
+  redis:
+    image: redis:7-alpine
+    container_name: rootdesk-redis
+    restart: unless-stopped
+    ports:
+      - "${REDIS_PORT:-6379}:6379"
+    volumes:
+      - redis_data:/data
+    command: redis-server --appendonly yes --maxmemory 256mb --maxmemory-policy allkeys-lru
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+    networks:
+      - rootdesk-network
+
 volumes:
   postgres_data:
     driver: local
@@ -60,6 +78,9 @@ volumes:
   ollama_data:
     driver: local
     name: rootdesk_ollama_data
+  redis_data:
+    driver: local
+    name: rootdesk_redis_data
 
 networks:
   rootdesk-network:

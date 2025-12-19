@@ -1,6 +1,10 @@
+/**
+ * Integração com IA Local (Ollama)
+ */
+
 const LOCAL_AI_ENABLED = String(process.env.LOCAL_AI_ENABLED || "false").toLowerCase() === "true";
 const LOCAL_AI_URL = process.env.LOCAL_AI_URL || "http://localhost:11434";
-const LOCAL_AI_MODEL = process.env.LOCAL_AI_MODEL || "llama3";
+const LOCAL_AI_MODEL = process.env.LOCAL_AI_MODEL || "llama3:8b";
 const LOCAL_AI_TIMEOUT_MS = Number(process.env.LOCAL_AI_TIMEOUT_MS || 15000);
 
 export type LocalAiMessage = {
@@ -18,10 +22,19 @@ function getBaseUrl(): string {
   return LOCAL_AI_URL.replace(/\/$/, "");
 }
 
+/**
+ * Verifica se a IA local está habilitada
+ */
 export function isLocalAiEnabled(): boolean {
   return LOCAL_AI_ENABLED;
 }
 
+/**
+ * Chama a IA local (Ollama) com as mensagens fornecidas
+ * @param messages Array de mensagens para o chat
+ * @param options Opções adicionais (temperatura, etc)
+ * @returns Resposta da IA ou null em caso de erro
+ */
 export async function callLocalAi(
   messages: LocalAiMessage[],
   options?: { temperature?: number }
@@ -66,15 +79,4 @@ export async function callLocalAi(
     clearTimeout(timeout);
   }
 }
-
-
-
-
-
-
-
-
-
-
-
 

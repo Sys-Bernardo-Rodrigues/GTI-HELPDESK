@@ -931,34 +931,9 @@ function formatRelativeTime(value?: string | null) {
   }
 }
 
-function resolveAvatarUrl(u?: string): string {
-  if (!u) return "";
-  const val = String(u);
-  if (val.startsWith("data:")) return val;
-  if (/^https?:\/\//i.test(val)) return val;
-  if (typeof window !== "undefined") {
-    const origin = window.location.origin;
-    if (val.startsWith("/")) return `${origin}${val}`;
-    return `${origin}/${val}`;
-  }
-  return val;
-}
-
 function resolveImageUrl(value: string): string {
-  const trimmed = value.trim();
-  if (!trimmed) return value;
-  if (trimmed.startsWith("data:")) return trimmed;
-  if (/^https?:\/\//i.test(trimmed)) return trimmed;
-  
-  // Usar NEXT_PUBLIC_APP_URL se disponível, senão usar window.location.origin
-  const baseUrl = typeof window !== "undefined" 
-    ? (process.env.NEXT_PUBLIC_APP_URL || process.env.PUBLIC_APP_URL || window.location.origin)
-    : (process.env.NEXT_PUBLIC_APP_URL || process.env.PUBLIC_APP_URL || "");
-  
-  if (!baseUrl) return trimmed;
-  
-  if (trimmed.startsWith("/")) return `${baseUrl}${trimmed}`;
-  return `${baseUrl}/${trimmed}`;
+  // Usar o helper centralizado
+  return resolveAvatarUrl(value);
 }
 
 function isImageUrl(value: any, fieldType?: string): boolean {

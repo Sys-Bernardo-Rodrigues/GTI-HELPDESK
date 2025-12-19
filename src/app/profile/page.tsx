@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import styled from "styled-components";
 import StandardLayout from "@/components/StandardLayout";
+import { resolveAvatarUrl } from "@/lib/assets";
 
 const Content = styled.main`
   display: flex;
@@ -445,18 +446,6 @@ export default function ProfilePage() {
   const [twoFactorMessage, setTwoFactorMessage] = useState<string>("");
   const [showTwoFactorActivate, setShowTwoFactorActivate] = useState<boolean>(false);
 
-  function resolveAvatarUrl(u?: string): string {
-    if (!u) return "";
-    const val = String(u);
-    if (val.startsWith("data:")) return val;
-    if (/^https?:\/\//i.test(val)) return val;
-    if (typeof window !== "undefined") {
-      const origin = window.location.origin;
-      if (val.startsWith("/")) return `${origin}${val}`;
-      return `${origin}/${val}`;
-    }
-    return val;
-  }
 
   useEffect(() => {
     (async () => {

@@ -4,6 +4,7 @@ import { ChangeEvent, KeyboardEvent, useEffect, useMemo, useRef, useState } from
 import styled from "styled-components";
 import NotificationBell from "@/components/NotificationBell";
 import StandardLayout from "@/components/StandardLayout";
+import { resolveAvatarUrl } from "@/lib/assets";
 
 type TicketStatus = "OPEN" | "IN_PROGRESS" | "OBSERVATION" | "RESOLVED" | "CLOSED";
 
@@ -1086,20 +1087,6 @@ function formatDate(value?: string | null) {
   } catch {
     return value;
   }
-}
-
-function resolveAvatarUrl(u?: string): string {
-  if (!u) return "";
-  const val = String(u);
-  if (val.startsWith("data:")) return val;
-  if (/^https?:\/\//i.test(val)) return val;
-  const win = getBrowserWindow();
-  if (win?.location?.origin) {
-    const origin = win.location.origin as string;
-    if (val.startsWith("/")) return `${origin}${val}`;
-    return `${origin}/${val}`;
-  }
-  return val;
 }
 
 function getBrowserOrigin(): string {

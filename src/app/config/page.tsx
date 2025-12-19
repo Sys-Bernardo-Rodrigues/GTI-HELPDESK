@@ -4,9 +4,12 @@ import { useEffect, useMemo, useState } from "react";
 import styled from "styled-components";
 import { useRouter, useSearchParams } from "next/navigation";
 import StandardLayout from "@/components/StandardLayout";
+import LoadingSpinner from "@/components/LoadingSpinner";
+import { Toast, useToast } from "@/components/Toast";
+import LoadingOverlay from "@/components/LoadingOverlay";
 
 
-type SectionKey = "general" | "appearance" | "notifications" | "security" | "integrations" | "forms" | "webhooks" | "update" | "env";
+type SectionKey = "general" | "appearance" | "notifications" | "security" | "integrations" | "forms" | "webhooks" | "update" | "env" | "backup";
 
 export default function ConfigPage() {
   const params = useSearchParams();
@@ -91,6 +94,35 @@ export default function ConfigPage() {
   } | null>(null);
   const [versionLoading, setVersionLoading] = useState<boolean>(false);
 
+  // Estado de backup
+  const [backupsList, setBackupsList] = useState<Array<{
+    filename: string;
+    size: number;
+    sizeFormatted: string;
+    createdAt: string;
+    modifiedAt: string;
+  }>>([]);
+  const [backupsLoading, setBackupsLoading] = useState<boolean>(false);
+  const [backupCreating, setBackupCreating] = useState<boolean>(false);
+  const [backupUploading, setBackupUploading] = useState<boolean>(false);
+  const [backupRestoring, setBackupRestoring] = useState<boolean>(false);
+  const [backupSendingEmail, setBackupSendingEmail] = useState<boolean>(false);
+  const [backupFeedback, setBackupFeedback] = useState<{ type: "success" | "error"; text: string } | null>(null);
+  const [backupConfig, setBackupConfig] = useState<{
+    enabled: boolean;
+    schedule: "daily" | "weekly" | "monthly" | null;
+    scheduleTime?: string;
+    scheduleDay?: number;
+    emailRecipients: string[];
+    keepDays: number;
+  }>({
+    enabled: false,
+    schedule: null,
+    emailRecipients: [],
+    keepDays: 30,
+  });
+  const [backupConfigSaving, setBackupConfigSaving] = useState<boolean>(false);
+
   useEffect(() => {
     if (!formsFeedback) return;
     const timer = setTimeout(() => setFormsFeedback(null), 2400);
@@ -162,7 +194,9 @@ export default function ConfigPage() {
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data?.error || "Falha ao salvar");
-      setEnvSuccess(data?.message || "Configurações salvas. Reinicie o servidor para aplicar.");
+      const message = data?.message || "Configurações salvas. Reinicie o servidor para aplicar.";
+      setEnvSuccess(message);
+      toast.showSuccess(message);
       setTimeout(() => setEnvSuccess(null), 5000);
     } catch (err: any) {
       setEnvError(err?.message || "Erro ao salvar configurações");
@@ -285,6 +319,9 @@ export default function ConfigPage() {
       loadForms();
     } else if (section === "webhooks") {
       loadWebhooks();
+    } else if (section === "backup") {
+      loadBackups();
+      loadBackupConfig();
     } else if (section === "env") {
       (async () => {
         setEnvLoading(true);
@@ -350,9 +387,13 @@ export default function ConfigPage() {
       await loadForms();
       setFormTitle(""); setFormDesc(""); setFormRequiresApproval(false); setFormApproverIds([]); setBuilderFields([]);
       setCreateOpen(false);
-      setFormsFeedback({ type: "success", text: "Formulário criado com sucesso." });
+      const message = "Formulário criado com sucesso!";
+      setFormsFeedback({ type: "success", text: message });
+      toast.showSuccess(message);
     } catch (e: any) {
-      setError(e?.message || "Erro ao salvar");
+      const errorMsg = e?.message || "Erro ao salvar";
+      setError(errorMsg);
+      toast.showError(errorMsg);
     } finally {
       setSavingForm(false);
     }
@@ -639,7 +680,9 @@ export default function ConfigPage() {
       setCreateWebhookOpen(false);
       setWebhooksFeedback({ type: "success", text: "Webhook criado com sucesso." });
     } catch (e: any) {
-      setError(e?.message || "Erro ao salvar");
+      const errorMsg = e?.message || "Erro ao salvar";
+      setError(errorMsg);
+      toast.showError(errorMsg);
     } finally {
       setSavingWebhook(false);
     }
@@ -836,6 +879,263 @@ export default function ConfigPage() {
     }
   }
 
+  // ========== Funções de Backup ==========
+  
+  async function loadBackups() {
+    setBackupsLoading(true);
+    try {
+      const res = await fetch("/api/system/backup/list");
+      if (res.ok) {
+        const data = await res.json();
+        setBackupsList(data.backups || []);
+      }
+    } catch (err: any) {
+      console.error("Erro ao carregar backups:", err);
+    } finally {
+      setBackupsLoading(false);
+    }
+  }
+
+  async function loadBackupConfig() {
+    try {
+      const res = await fetch("/api/system/backup/config");
+      if (res.ok) {
+        const data = await res.json();
+        setBackupConfig(data.config || {
+          enabled: false,
+          schedule: null,
+          emailRecipients: [],
+          keepDays: 30,
+        });
+      }
+    } catch (err: any) {
+      console.error("Erro ao carregar configuração de backup:", err);
+    }
+  }
+
+  async function createBackup() {
+    setBackupCreating(true);
+    setBackupFeedback(null);
+    try {
+      const res = await fetch("/api/system/backup/create", { method: "POST" });
+      const data = await res.json();
+      if (res.ok) {
+        const message = `Backup criado com sucesso: ${data.filename} (${data.sizeFormatted})`;
+        setBackupFeedback({
+          type: "success",
+          text: message,
+        });
+        toast.showSuccess(message);
+        await loadBackups();
+      } else {
+        const errorMsg = data.error || "Erro ao criar backup";
+        setBackupFeedback({
+          type: "error",
+          text: errorMsg,
+        });
+        toast.showError(errorMsg);
+      }
+    } catch (err: any) {
+      const errorMsg = err?.message || "Erro ao criar backup";
+      setBackupFeedback({
+        type: "error",
+        text: errorMsg,
+      });
+      toast.showError(errorMsg);
+    } finally {
+      setBackupCreating(false);
+    }
+  }
+
+  async function uploadBackup(file: File) {
+    setBackupUploading(true);
+    setBackupFeedback(null);
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+
+      const res = await fetch("/api/system/backup/upload", {
+        method: "POST",
+        body: formData,
+      });
+      const data = await res.json();
+      if (res.ok) {
+        const message = `Backup enviado com sucesso: ${data.filename} (${data.sizeFormatted})`;
+        setBackupFeedback({
+          type: "success",
+          text: message,
+        });
+        toast.showSuccess(message);
+        await loadBackups();
+      } else {
+        const errorMsg = data.error || "Erro ao fazer upload do backup";
+        setBackupFeedback({
+          type: "error",
+          text: errorMsg,
+        });
+        toast.showError(errorMsg);
+      }
+    } catch (err: any) {
+      const errorMsg = err?.message || "Erro ao fazer upload do backup";
+      setBackupFeedback({
+        type: "error",
+        text: errorMsg,
+      });
+      toast.showError(errorMsg);
+    } finally {
+      setBackupUploading(false);
+    }
+  }
+
+  async function downloadBackup(filename: string) {
+    try {
+      const res = await fetch(`/api/system/backup/download/${encodeURIComponent(filename)}`);
+      if (res.ok) {
+        const blob = await res.blob();
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        window.URL.revokeObjectURL(url);
+        document.body.removeChild(a);
+      } else {
+        const data = await res.json();
+        setBackupFeedback({
+          type: "error",
+          text: data.error || "Erro ao baixar backup",
+        });
+      }
+    } catch (err: any) {
+      setBackupFeedback({
+        type: "error",
+        text: err?.message || "Erro ao baixar backup",
+      });
+    }
+  }
+
+  async function restoreBackup(filename: string) {
+    if (!confirm(`Tem certeza que deseja restaurar o backup "${filename}"? Esta ação irá substituir todos os dados atuais do banco de dados.`)) {
+      return;
+    }
+
+    setBackupRestoring(true);
+    setBackupFeedback(null);
+    try {
+      const res = await fetch("/api/system/backup/restore", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ filename }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        const message = data.message || "Backup restaurado com sucesso";
+        setBackupFeedback({
+          type: "success",
+          text: message,
+        });
+        toast.showSuccess(message);
+      } else {
+        const errorMsg = data.error || "Erro ao restaurar backup";
+        setBackupFeedback({
+          type: "error",
+          text: errorMsg,
+        });
+        toast.showError(errorMsg);
+      }
+    } catch (err: any) {
+      const errorMsg = err?.message || "Erro ao restaurar backup";
+      setBackupFeedback({
+        type: "error",
+        text: errorMsg,
+      });
+      toast.showError(errorMsg);
+    } finally {
+      setBackupRestoring(false);
+    }
+  }
+
+  async function sendBackupByEmail(filename: string, recipients: string[]) {
+    setBackupSendingEmail(true);
+    setBackupFeedback(null);
+    try {
+      const res = await fetch("/api/system/backup/send-email", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ filename, recipients }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        const message = data.message || "Backup enviado por email com sucesso";
+        setBackupFeedback({
+          type: "success",
+          text: message,
+        });
+        toast.showSuccess(message);
+      } else {
+        const errorMsg = data.error || "Erro ao enviar backup por email";
+        setBackupFeedback({
+          type: "error",
+          text: errorMsg,
+        });
+        toast.showError(errorMsg);
+      }
+    } catch (err: any) {
+      const errorMsg = err?.message || "Erro ao enviar backup por email";
+      setBackupFeedback({
+        type: "error",
+        text: errorMsg,
+      });
+      toast.showError(errorMsg);
+    } finally {
+      setBackupSendingEmail(false);
+    }
+  }
+
+  async function saveBackupConfig() {
+    setBackupConfigSaving(true);
+    setBackupFeedback(null);
+    try {
+      const res = await fetch("/api/system/backup/config", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(backupConfig),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        const message = data.message || "Configuração de backup salva com sucesso";
+        setBackupFeedback({
+          type: "success",
+          text: message,
+        });
+        toast.showSuccess(message);
+      } else {
+        const errorMsg = data.error || "Erro ao salvar configuração";
+        setBackupFeedback({
+          type: "error",
+          text: errorMsg,
+        });
+        toast.showError(errorMsg);
+      }
+    } catch (err: any) {
+      const errorMsg = err?.message || "Erro ao salvar configuração";
+      setBackupFeedback({
+        type: "error",
+        text: errorMsg,
+      });
+      toast.showError(errorMsg);
+    } finally {
+      setBackupConfigSaving(false);
+    }
+  }
+
+  useEffect(() => {
+    if (!backupFeedback) return;
+    const timer = setTimeout(() => setBackupFeedback(null), 5000);
+    return () => clearTimeout(timer);
+  }, [backupFeedback]);
+
   async function handleSystemUpdate() {
     setUpdateLoading(true);
     setUpdateFeedback(null);
@@ -867,10 +1167,12 @@ export default function ConfigPage() {
         console.warn("[system/update] Warnings:", data.stderr);
       }
     } catch (err: any) {
+      const errorMsg = err?.message || "Erro ao iniciar atualização.";
       setUpdateFeedback({
         type: "error",
-        text: err?.message || "Erro ao iniciar atualização.",
+        text: errorMsg,
       });
+      toast.showError(errorMsg);
     } finally {
       setUpdateLoading(false);
     }
@@ -908,7 +1210,9 @@ export default function ConfigPage() {
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data?.error || "Falha ao salvar");
-      setEnvSuccess(data?.message || "Configurações salvas. Reinicie o servidor para aplicar.");
+      const message = data?.message || "Configurações salvas. Reinicie o servidor para aplicar.";
+      setEnvSuccess(message);
+      toast.showSuccess(message);
       setTimeout(() => setEnvSuccess(null), 5000);
     } catch (err: any) {
       setEnvError(err?.message || "Erro ao salvar configurações");
@@ -1109,7 +1413,13 @@ export default function ConfigPage() {
                     onClick={handleSystemUpdate}
                     disabled={updateLoading}
                     aria-label="Atualizar sistema a partir do repositório GitHub"
+                    style={{ position: "relative" }}
                   >
+                    {updateLoading && (
+                      <span style={{ marginRight: 8, display: "inline-flex", alignItems: "center" }}>
+                        <LoadingSpinner size="small" color="#fff" />
+                      </span>
+                    )}
                     {updateLoading ? "Atualizando..." : "Atualizar do repositório"}
                   </PrimaryButton>
                 </Actions>
@@ -1253,7 +1563,12 @@ export default function ConfigPage() {
                   <ActionButton type="button" onClick={loadEnvConfig} disabled={envLoading}>
                     Recarregar
                   </ActionButton>
-                  <PrimaryButton type="button" onClick={saveEnvConfig} disabled={envSaving}>
+                  <PrimaryButton type="button" onClick={saveEnvConfig} disabled={envSaving} style={{ position: "relative" }}>
+                    {envSaving && (
+                      <span style={{ marginRight: 8, display: "inline-flex", alignItems: "center" }}>
+                        <LoadingSpinner size="small" color="#fff" />
+                      </span>
+                    )}
                     {envSaving ? "Salvando..." : "Salvar configurações"}
                   </PrimaryButton>
                 </Actions>
@@ -1278,6 +1593,284 @@ export default function ConfigPage() {
             </Muted>
           </div>
         );
+      case "backup":
+        return (
+          <div>
+            {/* Criar Backup */}
+            <SectionDivider />
+            <SectionSubtitle style={{ marginBottom: 16 }}>Criar Backup</SectionSubtitle>
+            <Actions>
+              <PrimaryButton
+                type="button"
+                onClick={createBackup}
+                disabled={backupCreating}
+                style={{ position: "relative" }}
+              >
+                {backupCreating && (
+                  <span style={{ marginRight: 8, display: "inline-flex", alignItems: "center" }}>
+                    <LoadingSpinner size="small" color="#fff" />
+                  </span>
+                )}
+                {backupCreating ? "Criando backup..." : "Criar Backup Agora"}
+              </PrimaryButton>
+            </Actions>
+
+            {/* Upload de Backup */}
+            <SectionDivider />
+            <SectionSubtitle style={{ marginBottom: 16 }}>Upload de Backup</SectionSubtitle>
+            <Field style={{ position: "relative" }}>
+              <Label htmlFor="backup-upload">Selecionar arquivo .sql</Label>
+              {backupUploading && (
+                <div style={{ position: "absolute", top: "42px", left: "12px", display: "flex", alignItems: "center", gap: 8, zIndex: 1 }}>
+                  <LoadingSpinner size="small" />
+                  <span style={{ fontSize: "0.875rem", color: "var(--primary-700)" }}>Enviando backup...</span>
+                </div>
+              )}
+              <Input
+                id="backup-upload"
+                type="file"
+                accept=".sql"
+                onChange={(e) => {
+                  const file = (e.target as HTMLInputElement).files?.[0];
+                  if (file) {
+                    uploadBackup(file);
+                    (e.target as HTMLInputElement).value = ""; // Reset input
+                  }
+                }}
+                disabled={backupUploading}
+                style={{ marginBottom: 12, padding: "8px", opacity: backupUploading ? 0.5 : 1 }}
+              />
+            </Field>
+
+            {/* Lista de Backups */}
+            <SectionDivider />
+            <SectionSubtitle style={{ marginBottom: 16 }}>Backups Disponíveis</SectionSubtitle>
+            {backupsLoading ? (
+              <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "20px 0" }}>
+                <LoadingSpinner size="medium" />
+                <Muted>Carregando backups...</Muted>
+              </div>
+            ) : backupsList.length === 0 ? (
+              <Muted>Nenhum backup disponível</Muted>
+            ) : (
+              <BackupsTable>
+                <thead>
+                  <tr>
+                    <th>Arquivo</th>
+                    <th>Tamanho</th>
+                    <th>Data de Criação</th>
+                    <th>Ações</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {backupsList.map((backup) => (
+                    <tr key={backup.filename}>
+                      <td>{backup.filename}</td>
+                      <td>{backup.sizeFormatted}</td>
+                      <td>{formatDateTime(backup.createdAt)}</td>
+                      <td>
+                        <Actions style={{ gap: 8 }}>
+                          <ActionButton
+                            type="button"
+                            onClick={() => downloadBackup(backup.filename)}
+                          >
+                            Download
+                          </ActionButton>
+                          <ActionButton
+                            type="button"
+                            onClick={() => restoreBackup(backup.filename)}
+                            disabled={backupRestoring}
+                            style={{ position: "relative" }}
+                          >
+                            {backupRestoring && (
+                              <span style={{ marginRight: 6, display: "inline-flex", alignItems: "center" }}>
+                                <LoadingSpinner size="small" />
+                              </span>
+                            )}
+                            {backupRestoring ? "Restaurando..." : "Restaurar"}
+                          </ActionButton>
+                          {backupConfig.emailRecipients.length > 0 && (
+                            <ActionButton
+                              type="button"
+                              onClick={() => {
+                                sendBackupByEmail(backup.filename, backupConfig.emailRecipients);
+                              }}
+                              disabled={backupSendingEmail}
+                              style={{ position: "relative" }}
+                            >
+                              {backupSendingEmail && (
+                                <span style={{ marginRight: 6, display: "inline-flex", alignItems: "center" }}>
+                                  <LoadingSpinner size="small" />
+                                </span>
+                              )}
+                              {backupSendingEmail ? "Enviando..." : "Enviar por Email"}
+                            </ActionButton>
+                          )}
+                        </Actions>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </BackupsTable>
+            )}
+
+            {/* Configuração de Backup Automático */}
+            <SectionDivider />
+            <SectionSubtitle style={{ marginBottom: 16 }}>Backup Automático</SectionSubtitle>
+            <Field>
+              <CheckboxRow>
+                <label>
+                  <input
+                    type="checkbox"
+                    checked={backupConfig.enabled}
+                    onChange={(e) =>
+                      setBackupConfig((prev) => ({ ...prev, enabled: e.target.checked }))
+                    }
+                  />
+                  <span style={{ marginLeft: 8 }}>Habilitar backup automático</span>
+                </label>
+              </CheckboxRow>
+            </Field>
+
+            {backupConfig.enabled && (
+              <>
+                <Field>
+                  <Label htmlFor="backup-schedule">Frequência</Label>
+                  <Select
+                    id="backup-schedule"
+                    value={backupConfig.schedule || ""}
+                    onChange={(e) =>
+                      setBackupConfig((prev) => ({
+                        ...prev,
+                        schedule: e.target.value as "daily" | "weekly" | "monthly" | null,
+                      }))
+                    }
+                  >
+                    <option value="">Selecione...</option>
+                    <option value="daily">Diário</option>
+                    <option value="weekly">Semanal</option>
+                    <option value="monthly">Mensal</option>
+                  </Select>
+                </Field>
+
+                {backupConfig.schedule && (
+                  <>
+                    <Field>
+                      <Label htmlFor="backup-schedule-time">Horário (HH:mm)</Label>
+                      <Input
+                        id="backup-schedule-time"
+                        type="time"
+                        value={backupConfig.scheduleTime || "02:00"}
+                        onChange={(e) =>
+                          setBackupConfig((prev) => ({ ...prev, scheduleTime: e.target.value }))
+                        }
+                      />
+                    </Field>
+
+                    {backupConfig.schedule === "weekly" && (
+                      <Field>
+                        <Label htmlFor="backup-schedule-day">Dia da Semana (0=Dom, 6=Sáb)</Label>
+                        <Input
+                          id="backup-schedule-day"
+                          type="number"
+                          min="0"
+                          max="6"
+                          value={backupConfig.scheduleDay || 0}
+                          onChange={(e) =>
+                            setBackupConfig((prev) => ({
+                              ...prev,
+                              scheduleDay: parseInt(e.target.value) || 0,
+                            }))
+                          }
+                        />
+                      </Field>
+                    )}
+
+                    {backupConfig.schedule === "monthly" && (
+                      <Field>
+                        <Label htmlFor="backup-schedule-day-month">Dia do Mês (1-31)</Label>
+                        <Input
+                          id="backup-schedule-day-month"
+                          type="number"
+                          min="1"
+                          max="31"
+                          value={backupConfig.scheduleDay || 1}
+                          onChange={(e) =>
+                            setBackupConfig((prev) => ({
+                              ...prev,
+                              scheduleDay: parseInt(e.target.value) || 1,
+                            }))
+                          }
+                        />
+                      </Field>
+                    )}
+                  </>
+                )}
+
+                <Field>
+                  <Label htmlFor="backup-keep-days">Manter backups por (dias)</Label>
+                  <Input
+                    id="backup-keep-days"
+                    type="number"
+                    min="1"
+                    value={backupConfig.keepDays}
+                    onChange={(e) =>
+                      setBackupConfig((prev) => ({
+                        ...prev,
+                        keepDays: parseInt(e.target.value) || 30,
+                      }))
+                    }
+                  />
+                </Field>
+
+                <Field>
+                  <Label htmlFor="backup-email-recipient">Emails para receber backup (um por linha)</Label>
+                  <TextArea
+                    id="backup-email-recipient"
+                    rows={4}
+                    value={backupConfig.emailRecipients.join("\n")}
+                    onChange={(e) =>
+                      setBackupConfig((prev) => ({
+                        ...prev,
+                        emailRecipients: e.target.value
+                          .split("\n")
+                          .map((email) => email.trim())
+                          .filter((email) => email.includes("@")),
+                      }))
+                    }
+                    placeholder="admin@example.com&#10;backup@example.com"
+                  />
+                </Field>
+
+                <Actions style={{ marginTop: 16 }}>
+                  <PrimaryButton
+                    type="button"
+                    onClick={saveBackupConfig}
+                    disabled={backupConfigSaving}
+                    style={{ position: "relative" }}
+                  >
+                    {backupConfigSaving && (
+                      <span style={{ marginRight: 8, display: "inline-flex", alignItems: "center" }}>
+                        <LoadingSpinner size="small" color="#fff" />
+                      </span>
+                    )}
+                    {backupConfigSaving ? "Salvando..." : "Salvar Configuração"}
+                  </PrimaryButton>
+                </Actions>
+              </>
+            )}
+
+            <InfoPanel style={{ marginTop: 24 }}>
+              <InfoTitle>Informações importantes</InfoTitle>
+              <HelpList>
+                <li>Os backups são salvos no diretório <InlineCode>backups/</InlineCode> do projeto.</li>
+                <li>Certifique-se de que o <InlineCode>pg_dump</InlineCode> e <InlineCode>psql</InlineCode> estão instalados para criar e restaurar backups.</li>
+                <li>O backup automático requer configuração de cron job ou agendador de tarefas externo.</li>
+                <li>Para enviar por email, configure <InlineCode>EMAIL_ENABLED=true</InlineCode> no .env.</li>
+              </HelpList>
+            </InfoPanel>
+          </div>
+        );
       case "webhooks":
         return (
           <div>
@@ -1287,7 +1880,7 @@ export default function ConfigPage() {
           </div>
         );
     }
-  }, [section, loading, error, updateFeedback, updateLoading, updateRepoUrl, envLoading, envSaving, envError, envSuccess, envConfig, envSearchQuery, systemVersion, versionLoading]);
+  }, [section, loading, error, updateFeedback, updateLoading, updateRepoUrl, envLoading, envSaving, envError, envSuccess, envConfig, envSearchQuery, systemVersion, versionLoading, backupFeedback, backupsLoading, backupsList, backupConfig, backupCreating, backupUploading, backupRestoring, backupSendingEmail, backupConfigSaving]);
 
   const activeForm = manageFormId ? formsList.find((f) => f.id === manageFormId || f.numericId === manageFormId) ?? null : null;
   const activeWebhook = manageWebhookId ? webhooksList.find((w) => w.id === manageWebhookId) ?? null : null;
@@ -1297,8 +1890,9 @@ export default function ConfigPage() {
 
   return (
     <StandardLayout>
+      <Toast toasts={toast.toasts} onClose={toast.removeToast} />
         <Content>
-          {section !== "forms" && section !== "webhooks" && (
+          {section !== "forms" && section !== "webhooks" && section !== "backup" && (
             <Card aria-labelledby="config-title">
               <CardHeader>
                 <div style={{ display: "flex", alignItems: "center", gap: "12px", flex: 1 }}>
@@ -1315,6 +1909,38 @@ export default function ConfigPage() {
               </CardHeader>
               {content}
             </Card>
+          )}
+          {section === "backup" && (
+            <FormsWrapper>
+              <Card aria-labelledby="backup-card-title">
+                <CardHeader>
+                  <div style={{ display: "flex", alignItems: "center", gap: "12px", flex: 1 }}>
+                    <HeaderIcon aria-hidden>
+                      <svg viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M19.35 10.04C18.67 6.59 15.64 4 12 4 9.11 4 6.6 5.64 5.35 8.04 2.34 8.36 0 10.91 0 14c0 3.31 2.69 6 6 6h13c2.76 0 5-2.24 5-5 0-2.64-2.05-4.78-4.65-4.96zM14 13v4h-4v-4H7l5-5 5 5h-3z"/>
+                      </svg>
+                    </HeaderIcon>
+                    <div>
+                      <CardTitle id="backup-card-title">Backup do Sistema</CardTitle>
+                      <Muted>Faça backup do banco de dados, restaure backups existentes e configure backup automático.</Muted>
+                    </div>
+                  </div>
+                  <HeaderActions>
+                    <ActionButton type="button" onClick={() => loadBackups()} disabled={backupsLoading}>
+                      Recarregar
+                    </ActionButton>
+                  </HeaderActions>
+                </CardHeader>
+                {backupFeedback && (
+                  <Feedback role="alert" $variant={backupFeedback.type}>
+                    {backupFeedback.text}
+                  </Feedback>
+                )}
+                <FormsScroll role="region" aria-label="Gerenciamento de backups">
+                  {content}
+                </FormsScroll>
+              </Card>
+            </FormsWrapper>
           )}
           {section === "forms" && (
             <FormsWrapper>
@@ -2047,9 +2673,14 @@ export default function ConfigPage() {
             )}
             <ModalActions>
               <CancelButton type="button" onClick={closeEditModal} disabled={editSaving || editLoading}>Cancelar</CancelButton>
-              <PrimaryButton type="button" onClick={saveEditedForm} disabled={editSaving || editLoading}>
-                {editSaving ? "Salvando..." : "Salvar alterações"}
-              </PrimaryButton>
+                  <PrimaryButton type="button" onClick={saveEditedForm} disabled={editSaving || editLoading} style={{ position: "relative" }}>
+                    {editSaving && (
+                      <span style={{ marginRight: 8, display: "inline-flex", alignItems: "center" }}>
+                        <LoadingSpinner size="small" color="#fff" />
+                      </span>
+                    )}
+                    {editSaving ? "Salvando..." : "Salvar alterações"}
+                  </PrimaryButton>
             </ModalActions>
           </ModalDialog>
         </>
@@ -2275,9 +2906,14 @@ export default function ConfigPage() {
             )}
             <ModalActions>
               <CancelButton type="button" onClick={closeEditWebhookModal} disabled={editWebhookSaving || editWebhookLoading}>Cancelar</CancelButton>
-              <PrimaryButton type="button" onClick={saveEditedWebhook} disabled={editWebhookSaving || editWebhookLoading}>
-                {editWebhookSaving ? "Salvando..." : "Salvar alterações"}
-              </PrimaryButton>
+                  <PrimaryButton type="button" onClick={saveEditedWebhook} disabled={editWebhookSaving || editWebhookLoading} style={{ position: "relative" }}>
+                    {editWebhookSaving && (
+                      <span style={{ marginRight: 8, display: "inline-flex", alignItems: "center" }}>
+                        <LoadingSpinner size="small" color="#fff" />
+                      </span>
+                    )}
+                    {editWebhookSaving ? "Salvando..." : "Salvar alterações"}
+                  </PrimaryButton>
             </ModalActions>
           </ModalDialog>
         </>
@@ -2452,7 +3088,7 @@ fetch(webhookUrl, {
   );
 }
 
-const SECTIONS: SectionKey[] = ["general", "appearance", "notifications", "security", "integrations", "update", "env", "forms", "webhooks"];
+const SECTIONS: SectionKey[] = ["general", "appearance", "notifications", "security", "integrations", "update", "env", "forms", "webhooks", "backup"];
 
 const Content = styled.main`
   display: grid;
@@ -3192,4 +3828,78 @@ const ConfirmButton = styled.button`
   }
   &:active { transform: translateY(1px); }
   &:disabled { opacity: .6; cursor: default; }
+`;
+
+const Select = styled.select`
+  width: 100%;
+  padding: 12px 14px;
+  border-radius: 12px;
+  border: 1px solid rgba(0,0,0,0.08);
+  background: #fff;
+  box-shadow: inset 0 -1px 0 rgba(0,0,0,0.06);
+  font-size: 1rem;
+  cursor: pointer;
+`;
+
+const TextArea = styled.textarea`
+  width: 100%;
+  padding: 12px 14px;
+  border-radius: 12px;
+  border: 1px solid rgba(0,0,0,0.08);
+  background: #fff;
+  box-shadow: inset 0 -1px 0 rgba(0,0,0,0.06);
+  font-size: 1rem;
+  font-family: inherit;
+  resize: vertical;
+`;
+
+const SectionDivider = styled.hr`
+  border: none;
+  border-top: 1px solid var(--border);
+  margin: 32px 0;
+`;
+
+const BackupsTable = styled.table`
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 12px;
+  border-radius: 12px;
+  overflow: hidden;
+  background: #fff;
+  border: 1px solid rgba(148, 163, 184, 0.2);
+
+  thead {
+    background: #f8fafc;
+    border-bottom: 2px solid var(--border);
+  }
+
+  th {
+    padding: 12px 16px;
+    text-align: left;
+    font-weight: 600;
+    font-size: 0.875rem;
+    color: #64748b;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+
+  tbody tr {
+    border-bottom: 1px solid rgba(148, 163, 184, 0.1);
+    transition: background 0.15s ease;
+
+    &:hover {
+      background: #f8fafc;
+    }
+
+    &:last-child {
+      border-bottom: none;
+    }
+  }
+
+  td {
+    padding: 12px 16px;
+    font-size: 0.9rem;
+    color: #1f2937;
+    vertical-align: middle;
+  }
 `;

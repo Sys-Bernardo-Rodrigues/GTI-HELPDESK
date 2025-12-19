@@ -2,18 +2,40 @@ import { NextRequest, NextResponse } from "next/server";
 import { getAuthenticatedUser } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { calculateProjectProgress } from "@/lib/projectProgress";
+import { parsePaginationParams, createPaginatedResponse } from "@/lib/pagination";
 
-export async function GET() {
+export async function GET(req: NextRequest) {
   const user = await getAuthenticatedUser();
   if (!user) return NextResponse.json({ error: "Não autenticado" }, { status: 401 });
 
   try {
+    const { searchParams } = new URL(req.url);
+    const { page, limit, skip } = parsePaginationParams(searchParams);
+
+    // Buscar total de registros
+    const total = await prisma.project.count();
+
     const projects = await prisma.project.findMany({
       orderBy: { updatedAt: "desc" },
-      include: {
+      skip,
+      take: limit,
+      select: {
+        id: true,
+        name: true,
+        description: true,
+        status: true,
+        progress: true,
+        startDate: true,
+        endDate: true,
+        color: true,
+        createdAt: true,
+        updatedAt: true,
         createdBy: { select: { id: true, name: true, email: true, avatarUrl: true } },
         members: {
-          include: {
+          select: {
+            id: true,
+            userId: true,
+            role: true,
             user: { select: { id: true, name: true, email: true, avatarUrl: true } },
           },
         },
@@ -23,53 +45,40 @@ export async function GET() {
       },
     });
 
-    // Calcular progresso baseado nas tarefas para cada projeto
-    const items = await Promise.all(
-      projects.map(async (project) => {
-        const calculatedProgress = await calculateProjectProgress(project.id);
-        
-        // Atualizar o progresso no banco se for diferente
-        if (calculatedProgress !== project.progress) {
-          await prisma.project.update({
-            where: { id: project.id },
-            data: { progress: calculatedProgress },
-          });
-        }
+    // Otimização: Calcular progresso apenas se necessário (pode ser feito em background job)
+    // Por enquanto, usar o progresso armazenado e atualizar em batch se necessário
+    const items = projects.map((project) => ({
+      id: project.id,
+      name: project.name,
+      description: project.description,
+      status: project.status,
+      progress: project.progress, // Usar progresso armazenado (atualizado por job ou sob demanda)
+      startDate: project.startDate,
+      endDate: project.endDate,
+      color: project.color,
+      createdAt: project.createdAt,
+      updatedAt: project.updatedAt,
+      createdBy: {
+        id: project.createdBy.id,
+        name: project.createdBy.name,
+        email: project.createdBy.email,
+        avatarUrl: project.createdBy.avatarUrl,
+      },
+      members: project.members.map((member) => ({
+        id: member.id,
+        userId: member.userId,
+        role: member.role,
+        user: {
+          id: member.user.id,
+          name: member.user.name,
+          email: member.user.email,
+          avatarUrl: member.user.avatarUrl,
+        },
+      })),
+      ticketsCount: project._count.tickets,
+    }));
 
-        return {
-          id: project.id,
-          name: project.name,
-          description: project.description,
-          status: project.status,
-          progress: calculatedProgress,
-          startDate: project.startDate,
-          endDate: project.endDate,
-          color: project.color,
-          createdAt: project.createdAt,
-          updatedAt: project.updatedAt,
-          createdBy: {
-            id: project.createdBy.id,
-            name: project.createdBy.name,
-            email: project.createdBy.email,
-            avatarUrl: project.createdBy.avatarUrl,
-          },
-          members: project.members.map((member) => ({
-            id: member.id,
-            userId: member.userId,
-            role: member.role,
-            user: {
-              id: member.user.id,
-              name: member.user.name,
-              email: member.user.email,
-              avatarUrl: member.user.avatarUrl,
-            },
-          })),
-          ticketsCount: project._count.tickets,
-        };
-      })
-    );
-
-    return NextResponse.json({ items });
+    return NextResponse.json(createPaginatedResponse(items, total, page, limit));
   } catch (error: any) {
     console.error("Erro ao carregar projetos:", error);
     return NextResponse.json({ error: error?.message || "Erro ao carregar projetos" }, { status: 500 });

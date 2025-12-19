@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getAuthenticatedUser } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { encrypt, decrypt } from "@/lib/encryption";
+import { parsePaginationParams, createPaginatedResponse } from "@/lib/pagination";
 
 function sanitizeString(value: unknown, maxLength = 10000) {
   if (typeof value !== "string") return "";
@@ -57,15 +58,28 @@ function mapDocumentResponse(document: {
   }
 }
 
-export async function GET() {
+export async function GET(req: NextRequest) {
   try {
     const auth = await getAuthenticatedUser();
     if (!auth) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
+    const { searchParams } = new URL(req.url);
+    const { page, limit, skip } = parsePaginationParams(searchParams);
+
+    // Buscar total de registros
+    const total = await prisma.document.count();
+
     const documents = await prisma.document.findMany({
-      include: {
+      select: {
+        id: true,
+        title: true,
+        content: true,
+        category: true,
+        tags: true,
+        createdAt: true,
+        updatedAt: true,
         createdBy: {
           select: {
             id: true,
@@ -75,9 +89,12 @@ export async function GET() {
         },
       },
       orderBy: { updatedAt: "desc" },
+      skip,
+      take: limit,
     });
 
-    return NextResponse.json({ items: documents.map(mapDocumentResponse) });
+    const items = documents.map(mapDocumentResponse);
+    return NextResponse.json(createPaginatedResponse(items, total, page, limit));
   } catch (error: any) {
     console.error("Error fetching documents:", error);
     const errorMessage = error?.message || String(error);
