@@ -32,7 +32,20 @@ export const prisma = global.prisma ?? new PrismaClient({
 });
 
 if (process.env.NODE_ENV !== "production") {
-  global.prisma = prisma;
+  // Se o global.prisma não tem o modelo shift, recriar (após regeneração do Prisma)
+  if (global.prisma && !('shift' in global.prisma)) {
+    global.prisma.$disconnect().catch(() => {});
+    global.prisma = new PrismaClient({
+      datasources: {
+        db: {
+          url: getDatabaseUrl(),
+        },
+      },
+    });
+  }
+  if (!global.prisma) {
+    global.prisma = prisma;
+  }
 }
 
 export async function assertDbConnection() {

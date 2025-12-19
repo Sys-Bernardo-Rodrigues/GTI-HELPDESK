@@ -47,6 +47,8 @@ model User {
   createdTasks           ProjectTask[]       @relation("TaskCreator")
   accessProfiles         UserAccessProfile[]
   chatFeedbacks          ChatFeedback[]
+  shifts                 Shift[]
+  createdShifts          Shift[]             @relation("ShiftCreator")
 }
 
 model Category {
@@ -388,4 +390,23 @@ model ChatFeedback {
   @@index([messageId])
   @@index([isHelpful])
   @@index([createdAt])
+}
+
+model Shift {
+  id          Int      @id @default(autoincrement())
+  userId      Int
+  date        DateTime // Data de início do plantão
+  endDate     DateTime? // Data de fim do plantão (quando o plantão cruza dias)
+  startTime   String?  // HH:mm formato - horário de início
+  endTime     String?  // HH:mm formato - horário de fim
+  notes       String?  @db.Text
+  createdById Int      // Quem criou o plantão
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdBy   User     @relation("ShiftCreator", fields: [createdById], references: [id])
+
+  @@index([date])
+  @@index([endDate])
+  @@index([userId])
 }

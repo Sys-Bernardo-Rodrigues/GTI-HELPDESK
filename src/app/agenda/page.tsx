@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import styled from "styled-components";
 import NotificationBell from "@/components/NotificationBell";
 import StandardLayout from "@/components/StandardLayout";
+import { isHoliday, getHolidayName } from "@/lib/holidays";
 
 type EventItem = {
   id: number | string;
@@ -447,7 +448,7 @@ const CalendarDayHeader = styled.div`
   border-bottom: 2px solid #e2e8f0;
 `;
 
-const CalendarDay = styled.div<{ $isToday?: boolean; $isOtherMonth?: boolean; $hasEvents?: boolean }>`
+const CalendarDay = styled.div<{ $isToday?: boolean; $isOtherMonth?: boolean; $hasEvents?: boolean; $isHoliday?: boolean }>`
   background: #fff;
   min-height: 120px;
   padding: 10px 8px;
@@ -467,8 +468,21 @@ const CalendarDay = styled.div<{ $isToday?: boolean; $isOtherMonth?: boolean; $h
     background: #fafbfc;
     opacity: 0.6;
   `}
+  ${(p) => p.$isHoliday && !p.$isToday && `
+    background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+    border-left: 3px solid #f59e0b;
+  `}
+  ${(p) => p.$isHoliday && p.$isToday && `
+    background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%);
+    border-left: 3px solid #f59e0b;
+  `}
   &:hover {
-    background: ${(p) => p.$isToday ? "linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%)" : "#f8fafc"};
+    background: ${(p) => {
+      if (p.$isHoliday && p.$isToday) return "linear-gradient(135deg, #bfdbfe 0%, #93c5fd 100%)";
+      if (p.$isHoliday && !p.$isToday) return "linear-gradient(135deg, #fde68a 0%, #fcd34d 100%)";
+      if (p.$isToday) return "linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%)";
+      return "#f8fafc";
+    }};
     transform: ${(p) => p.$isToday ? "scale(1.02)" : "scale(1.01)"};
     z-index: 2;
     box-shadow: ${(p) => p.$isToday ? "0 8px 16px rgba(59, 130, 246, 0.2)" : "0 2px 8px rgba(0, 0, 0, 0.08)"};
@@ -479,10 +493,14 @@ const CalendarDay = styled.div<{ $isToday?: boolean; $isOtherMonth?: boolean; $h
   }
 `;
 
-const DayNumber = styled.div<{ $isToday?: boolean }>`
+const DayNumber = styled.div<{ $isToday?: boolean; $isHoliday?: boolean }>`
   font-size: 0.9rem;
   font-weight: ${(p) => (p.$isToday ? "700" : "600")};
-  color: ${(p) => (p.$isToday ? "var(--primary-700)" : "#1e293b")};
+  color: ${(p) => {
+    if (p.$isToday) return "var(--primary-700)";
+    if (p.$isHoliday) return "#f59e0b";
+    return "#1e293b";
+  }};
   margin-bottom: 6px;
   display: inline-flex;
   align-items: center;
@@ -490,7 +508,20 @@ const DayNumber = styled.div<{ $isToday?: boolean }>`
   width: 24px;
   height: 24px;
   border-radius: 6px;
-  background: ${(p) => (p.$isToday ? "rgba(59, 130, 246, 0.1)" : "transparent")};
+  background: ${(p) => {
+    if (p.$isToday) return "rgba(59, 130, 246, 0.1)";
+    if (p.$isHoliday) return "rgba(245, 158, 11, 0.1)";
+    return "transparent";
+  }};
+`;
+
+const HolidayIndicator = styled.span`
+  font-size: 0.65rem;
+  color: #f59e0b;
+  font-weight: 700;
+  margin-left: 4px;
+  display: inline-flex;
+  align-items: center;
 `;
 
 const EventBadge = styled.div<{ $color: string }>`
@@ -1371,6 +1402,12 @@ export default function AgendaPage() {
                   />
                   <span>Meus compromissos</span>
                 </FilterToggle>
+                <ActionButton 
+                  onClick={() => router.push("/agenda/plantoes")}
+                  style={{ background: "#10b981", color: "#fff", borderColor: "#10b981" }}
+                >
+                  Plantões
+                </ActionButton>
                 <ActionButton onClick={previousMonth}>‹ Anterior</ActionButton>
                 <ActionButton onClick={goToToday}>Hoje</ActionButton>
                 <ActionButton onClick={nextMonth}>Próximo ›</ActionButton>
@@ -1383,18 +1420,25 @@ export default function AgendaPage() {
               ))}
               {calendarDays.map((day, idx) => {
                 const dayEvents = getEventsForDate(day);
+                const holiday = isHoliday(day);
+                const holidayName = holiday ? getHolidayName(day) : null;
                 return (
                   <CalendarDay
                     key={idx}
                     $isToday={isToday(day)}
                     $isOtherMonth={isOtherMonth(day)}
                     $hasEvents={dayEvents.length > 0}
+                    $isHoliday={holiday}
                     onClick={() => {
                       setSelectedDayForView(day);
                       setDayViewOpen(true);
                     }}
+                    title={holidayName || undefined}
                   >
-                    <DayNumber $isToday={isToday(day)}>{day.getDate()}</DayNumber>
+                    <DayNumber $isToday={isToday(day)} $isHoliday={holiday}>
+                      {day.getDate()}
+                      {holiday && <HolidayIndicator>🎉</HolidayIndicator>}
+                    </DayNumber>
                     {dayEvents.slice(0, 3).map((event) => {
                       // Determinar qual avatar mostrar (assignedTo tem prioridade para tickets, senão o criador)
                       const displayAvatar = event.type === "ticket" 
