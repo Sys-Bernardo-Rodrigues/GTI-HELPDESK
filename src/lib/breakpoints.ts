@@ -25,3 +25,4 @@ export const media = {
  * Tamanho mínimo recomendado para elementos tocáveis em mobile (WCAG)
  */
 export const TOUCH_TARGET_SIZE = "44px";
+

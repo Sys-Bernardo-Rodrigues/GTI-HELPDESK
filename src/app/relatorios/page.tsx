@@ -1,10 +1,13 @@
 "use client";
 
 import { ChangeEvent, KeyboardEvent, useEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import styled, { keyframes, css } from "styled-components";
 import { useSound } from "@/lib/sounds";
 import NotificationBell from "@/components/NotificationBell";
 import StandardLayout from "@/components/StandardLayout";
+import LoadingSpinner from "@/components/LoadingSpinner";
+import { Toast, useToast } from "@/components/Toast";
 
 type TicketStatus = "OPEN" | "IN_PROGRESS" | "OBSERVATION" | "RESOLVED" | "CLOSED";
 
@@ -177,6 +180,7 @@ function isOverdue(ticket: TicketItem, thresholdHours: number = 48): boolean {
 
 export default function ReportsPage() {
   const sounds = useSound();
+  const toast = useToast();
   const [tickets, setTickets] = useState<TicketItem[]>([]);
   const [users, setUsers] = useState<UserOption[]>([]);
   const [forms, setForms] = useState<Array<{ id: number; title: string }>>([]);
@@ -190,15 +194,55 @@ export default function ReportsPage() {
   const [assigneeFilter, setAssigneeFilter] = useState<string>("ALL");
   const [feedback, setFeedback] = useState<FeedbackMessage>(null);
   const [exporting, setExporting] = useState<boolean>(false);
+  const [periodPreset, setPeriodPreset] = useState<string>("custom");
+  const [systemMetrics, setSystemMetrics] = useState<any>(null);
+  const [loadingMetrics, setLoadingMetrics] = useState<boolean>(false);
+  const [filtersOpen, setFiltersOpen] = useState<boolean>(false);
+  const [autoRefreshInterval, setAutoRefreshInterval] = useState<number | null>(null); // em segundos
 
   useEffect(() => {
     loadTickets();
+    loadSystemMetrics();
   }, []);
 
   useEffect(() => {
     loadUsers();
     loadForms();
   }, []);
+
+  // Auto-refresh
+  useEffect(() => {
+    if (autoRefreshInterval === null || autoRefreshInterval === 0) {
+      return;
+    }
+
+    const intervalMs = autoRefreshInterval * 1000;
+    const intervalId = setInterval(() => {
+      loadTickets({ silent: true });
+      loadSystemMetrics();
+    }, intervalMs);
+
+    return () => {
+      clearInterval(intervalId);
+    };
+  }, [autoRefreshInterval]);
+
+  async function loadSystemMetrics() {
+    setLoadingMetrics(true);
+    try {
+      const res = await fetch("/api/reports/metrics");
+      if (!res.ok) {
+        console.error("Erro ao carregar métricas:", res.status);
+        return;
+      }
+      const data = await res.json();
+      setSystemMetrics(data);
+    } catch (err: any) {
+      console.error("Erro ao carregar métricas do sistema:", err);
+    } finally {
+      setLoadingMetrics(false);
+    }
+  }
 
 
   async function loadTickets(options?: { silent?: boolean }) {
@@ -234,8 +278,10 @@ export default function ReportsPage() {
       }
     } catch (err: any) {
       console.error("Erro ao carregar tickets:", err);
-      setError(err?.message || "Erro desconhecido");
-      setFeedback({ type: "error", message: err?.message || "Erro ao carregar tickets" });
+      const errorMsg = err?.message || "Erro ao carregar tickets";
+      setError(errorMsg);
+      setFeedback({ type: "error", message: errorMsg });
+      toast.showError(errorMsg);
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -521,7 +567,9 @@ export default function ReportsPage() {
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
-      setFeedback({ type: "success", message: "Relatório exportado com sucesso!" });
+      const message = "Relatório exportado com sucesso!";
+      setFeedback({ type: "success", message });
+      toast.showSuccess(message);
       sounds.playSuccess();
     } catch (err: any) {
       setFeedback({ type: "error", message: err?.message || "Erro ao exportar relatório" });
@@ -541,10 +589,11 @@ export default function ReportsPage() {
   if (loading) {
     return (
       <StandardLayout>
-            <LoadingContainer>
-              <LoadingSpinner />
-              <LoadingText>Carregando relatórios...</LoadingText>
-            </LoadingContainer>
+        <Toast toasts={toast.toasts} onClose={toast.removeToast} />
+        <LoadingContainer>
+          <LoadingSpinner size="large" />
+          <LoadingText>Carregando relatórios...</LoadingText>
+        </LoadingContainer>
       </StandardLayout>
     );
   }
@@ -564,7 +613,55 @@ export default function ReportsPage() {
                 </div>
               </HeaderBlock>
               <HeaderActions>
-                <ExportButton type="button" onClick={handleExport} disabled={loading || exporting}>
+                <AutoRefreshControl>
+                  <AutoRefreshLabel htmlFor="auto-refresh-select">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="14" height="14" style={{ marginRight: 6 }}>
+                      <circle cx="12" cy="12" r="10"/>
+                      <polyline points="12 6 12 12 16 14"/>
+                    </svg>
+                    Auto-refresh:
+                  </AutoRefreshLabel>
+                  <AutoRefreshSelect
+                    id="auto-refresh-select"
+                    value={autoRefreshInterval === null ? "" : autoRefreshInterval}
+                    onChange={(e: ChangeEvent<HTMLSelectElement>) => {
+                      const value = e.target.value;
+                      setAutoRefreshInterval(value === "" ? null : parseInt(value, 10));
+                    }}
+                  >
+                    <option value="">Desativado</option>
+                    <option value="5">5 segundos</option>
+                    <option value="10">10 segundos</option>
+                    <option value="20">20 segundos</option>
+                    <option value="30">30 segundos</option>
+                  </AutoRefreshSelect>
+                  {autoRefreshInterval !== null && (
+                    <AutoRefreshIndicator $active={autoRefreshInterval !== null} title="Auto-refresh ativo">
+                      <span></span>
+                    </AutoRefreshIndicator>
+                  )}
+                </AutoRefreshControl>
+                <KioskButton type="button" onClick={() => window.open("/relatorios/kiosk", "_blank", "fullscreen=yes")} title="Abrir em modo kiosk (tela cheia)">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="16" height="16" style={{ marginRight: 6 }}>
+                    <path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"/>
+                  </svg>
+                  Modo Kiosk
+                </KioskButton>
+                <FilterButton type="button" onClick={() => setFiltersOpen(true)}>
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="16" height="16" style={{ marginRight: 8 }}>
+                    <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/>
+                  </svg>
+                  Filtros
+                  {filteredTickets.length !== tickets.length && (
+                    <FiltersBadgeCount>{filteredTickets.length}</FiltersBadgeCount>
+                  )}
+                </FilterButton>
+                <ExportButton type="button" onClick={handleExport} disabled={loading || exporting} style={{ position: "relative" }}>
+                  {exporting && (
+                    <span style={{ marginRight: 8, display: "inline-flex", alignItems: "center" }}>
+                      <LoadingSpinner size="small" color="#1d4ed8" />
+                    </span>
+                  )}
                   {exporting ? "Exportando..." : "Exportar CSV"}
                 </ExportButton>
                 <ReloadButton 
@@ -572,12 +669,17 @@ export default function ReportsPage() {
                   disabled={loading || refreshing}
                   title={refreshing ? "Atualizando..." : "Atualizar"}
                   aria-label={refreshing ? "Atualizando..." : "Atualizar"}
+                  style={{ position: "relative" }}
                 >
-                  <ReloadIcon $spinning={refreshing} viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <path d="M1 4V10H7" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                    <path d="M23 20V14H17" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                    <path d="M20.49 9A9 9 0 0 0 5.64 5.64L1 10M23 14L18.36 18.36A9 9 0 0 1 3.51 15" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                  </ReloadIcon>
+                  {refreshing ? (
+                    <LoadingSpinner size="small" color="#1d4ed8" />
+                  ) : (
+                    <ReloadIcon $spinning={false} viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                      <path d="M1 4V10H7" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                      <path d="M23 20V14H17" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                      <path d="M20.49 9A9 9 0 0 0 5.64 5.64L1 10M23 14L18.36 18.36A9 9 0 0 1 3.51 15" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                    </ReloadIcon>
+                  )}
                 </ReloadButton>
               </HeaderActions>
             </PageHeader>
@@ -588,88 +690,147 @@ export default function ReportsPage() {
               </FeedbackBanner>
             )}
 
-            <FiltersBar>
-              <FiltersHeader>
-                <div>
-                  <FiltersTitle>Filtros</FiltersTitle>
-                </div>
-                <FiltersSummary>
-                  <FiltersBadge>{filteredTickets.length.toLocaleString("pt-BR")} ticket(s)</FiltersBadge>
-                </FiltersSummary>
-              </FiltersHeader>
+            {filtersOpen && typeof document !== "undefined" && createPortal(
+              <>
+                <ModalBackdrop 
+                  $open={filtersOpen} 
+                  onClick={() => setFiltersOpen(false)} 
+                  aria-hidden={!filtersOpen} 
+                />
+                <FiltersModalDialog
+                  role="dialog"
+                  aria-modal="true"
+                  aria-labelledby="filters-modal-title"
+                  $open={filtersOpen}
+                  onKeyDown={(e) => { if (e.key === "Escape") setFiltersOpen(false); }}
+                >
+                  <FiltersModalHeader>
+                    <div>
+                      <FiltersModalTitle id="filters-modal-title">Filtros</FiltersModalTitle>
+                      <FiltersModalSubtitle>Ajuste os filtros para refinar sua busca</FiltersModalSubtitle>
+                    </div>
+                    <CloseButton onClick={() => setFiltersOpen(false)} aria-label="Fechar filtros">
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="20" height="20">
+                        <line x1="18" y1="6" x2="6" y2="18"/>
+                        <line x1="6" y1="6" x2="18" y2="18"/>
+                      </svg>
+                    </CloseButton>
+                  </FiltersModalHeader>
 
-              <FiltersGrid>
-                <FilterGroup>
-                  <FilterLabel>Período</FilterLabel>
-                  <DateInputs>
-                    <DateInput
-                      type="date"
-                      value={dateFrom}
-                      onChange={(e: ChangeEvent<HTMLInputElement>) => setDateFrom(e.target.value)}
-                    />
-                    <DateSeparator>até</DateSeparator>
-                    <DateInput
-                      type="date"
-                      value={dateTo}
-                      onChange={(e: ChangeEvent<HTMLInputElement>) => setDateTo(e.target.value)}
-                    />
-                  </DateInputs>
-                </FilterGroup>
+                  <FiltersGrid>
+                    <FilterGroup>
+                      <FilterLabel>Período Rápido</FilterLabel>
+                      <PeriodPresetSelect
+                        value={periodPreset}
+                        onChange={(e: ChangeEvent<HTMLSelectElement>) => setPeriodPresetValue(e.target.value)}
+                      >
+                        <option value="custom">Personalizado</option>
+                        <option value="today">Hoje</option>
+                        <option value="yesterday">Ontem</option>
+                        <option value="thisWeek">Esta Semana</option>
+                        <option value="lastWeek">Semana Passada</option>
+                        <option value="thisMonth">Este Mês</option>
+                        <option value="lastMonth">Mês Passado</option>
+                        <option value="last30days">Últimos 30 Dias</option>
+                        <option value="last90days">Últimos 90 Dias</option>
+                        <option value="all">Todos</option>
+                      </PeriodPresetSelect>
+                    </FilterGroup>
 
-                <FilterGroup>
-                  <FilterLabel>Status</FilterLabel>
-                  <Select
-                    value={statusFilter}
-                    onChange={(e: ChangeEvent<HTMLSelectElement>) => setStatusFilter(e.target.value)}
-                  >
-                    <option value="ALL">Todos</option>
-                    {Object.entries(STATUS_LABELS).map(([value, label]) => (
-                      <option key={value} value={value}>
-                        {label}
-                      </option>
-                    ))}
-                  </Select>
-                </FilterGroup>
+                    <FilterGroup>
+                      <FilterLabel>Período Personalizado</FilterLabel>
+                      <DateInputs>
+                        <DateInput
+                          type="date"
+                          value={dateFrom}
+                          onChange={(e: ChangeEvent<HTMLInputElement>) => setDateFrom(e.target.value)}
+                        />
+                        <DateSeparator>até</DateSeparator>
+                        <DateInput
+                          type="date"
+                          value={dateTo}
+                          onChange={(e: ChangeEvent<HTMLInputElement>) => setDateTo(e.target.value)}
+                        />
+                      </DateInputs>
+                    </FilterGroup>
 
-                <FilterGroup>
-                  <FilterLabel>Formulário</FilterLabel>
-                  <Select
-                    value={formFilter}
-                    onChange={(e: ChangeEvent<HTMLSelectElement>) => setFormFilter(e.target.value)}
-                  >
-                    <option value="ALL">Todos</option>
-                    {availableForms.length === 0 && forms.length === 0 ? (
-                      <option disabled>Carregando formulários...</option>
-                    ) : (
-                      (availableForms.length > 0 ? availableForms : forms).map((form) => (
-                        <option key={form.id} value={String(form.id)}>
-                          {form.title}
-                        </option>
-                      ))
-                    )}
-                  </Select>
-                </FilterGroup>
+                    <FilterGroup>
+                      <FilterLabel>Status</FilterLabel>
+                      <Select
+                        value={statusFilter}
+                        onChange={(e: ChangeEvent<HTMLSelectElement>) => setStatusFilter(e.target.value)}
+                      >
+                        <option value="ALL">Todos</option>
+                        {Object.entries(STATUS_LABELS).map(([value, label]) => (
+                          <option key={value} value={value}>
+                            {label}
+                          </option>
+                        ))}
+                      </Select>
+                    </FilterGroup>
 
-                <FilterGroup>
-                  <FilterLabel>Responsável</FilterLabel>
-                  <Select
-                    value={assigneeFilter}
-                    onChange={(e: ChangeEvent<HTMLSelectElement>) => setAssigneeFilter(e.target.value)}
-                  >
-                    <option value="ALL">Todos</option>
-                    {availableUsers.length === 0 && users.length === 0 ? (
-                      <option disabled>Carregando responsáveis...</option>
-                    ) : (
-                      (availableUsers.length > 0 ? availableUsers : users).map((user) => (
-                        <option key={user.id} value={String(user.id)}>
-                          {user.name || user.email}
-                        </option>
-                      ))
-                    )}
-                  </Select>
-                </FilterGroup>
-              </FiltersGrid>
-            </FiltersBar>
+                    <FilterGroup>
+                      <FilterLabel>Formulário</FilterLabel>
+                      <Select
+                        value={formFilter}
+                        onChange={(e: ChangeEvent<HTMLSelectElement>) => setFormFilter(e.target.value)}
+                      >
+                        <option value="ALL">Todos</option>
+                        {availableForms.length === 0 && forms.length === 0 ? (
+                          <option disabled>Carregando formulários...</option>
+                        ) : (
+                          (availableForms.length > 0 ? availableForms : forms).map((form) => (
+                            <option key={form.id} value={String(form.id)}>
+                              {form.title}
+                            </option>
+                          ))
+                        )}
+                      </Select>
+                    </FilterGroup>
+
+                    <FilterGroup>
+                      <FilterLabel>Responsável</FilterLabel>
+                      <Select
+                        value={assigneeFilter}
+                        onChange={(e: ChangeEvent<HTMLSelectElement>) => setAssigneeFilter(e.target.value)}
+                      >
+                        <option value="ALL">Todos</option>
+                        {availableUsers.length === 0 && users.length === 0 ? (
+                          <option disabled>Carregando responsáveis...</option>
+                        ) : (
+                          (availableUsers.length > 0 ? availableUsers : users).map((user) => (
+                            <option key={user.id} value={String(user.id)}>
+                              {user.name || user.email}
+                            </option>
+                          ))
+                        )}
+                      </Select>
+                    </FilterGroup>
+                  </FiltersGrid>
+
+                  <FiltersModalFooter>
+                    <FiltersSummary>
+                      <FiltersBadge>{filteredTickets.length.toLocaleString("pt-BR")} ticket(s) encontrado(s)</FiltersBadge>
+                    </FiltersSummary>
+                    <FiltersModalActions>
+                      <FilterCancelButton type="button" onClick={() => setFiltersOpen(false)}>
+                        Fechar
+                      </FilterCancelButton>
+                      <FilterApplyButton 
+                        type="button" 
+                        onClick={() => {
+                          setFiltersOpen(false);
+                          loadTickets();
+                        }}
+                      >
+                        Aplicar Filtros
+                      </FilterApplyButton>
+                    </FiltersModalActions>
+                  </FiltersModalFooter>
+                </FiltersModalDialog>
+              </>,
+              document.body
+            )}
 
             {filteredTickets.length === 0 && !loading ? (
               <EmptyState>
@@ -689,8 +850,199 @@ export default function ReportsPage() {
               </EmptyState>
             ) : (
               <>
+            {systemMetrics && !loadingMetrics && (
+              <SystemMetricsSection>
+                <MetricsSectionTitle>Métricas Gerais do Sistema</MetricsSectionTitle>
+                <SystemMetricsGrid>
+                  <SystemMetricCard $highlight>
+                    <SystemMetricIcon $color="#2563eb">
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/>
+                        <circle cx="9" cy="7" r="4"/>
+                        <path d="M22 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/>
+                      </svg>
+                    </SystemMetricIcon>
+                    <SystemMetricContent>
+                      <SystemMetricValue>{systemMetrics.general.totalUsers}</SystemMetricValue>
+                      <SystemMetricLabel>Total de Usuários</SystemMetricLabel>
+                      {systemMetrics.recent.usersLast30DaysCount > 0 && (
+                        <SystemMetricChange $positive>
+                          +{systemMetrics.recent.usersLast30DaysCount} nos últimos 30 dias
+                        </SystemMetricChange>
+                      )}
+                    </SystemMetricContent>
+                  </SystemMetricCard>
+
+                  <SystemMetricCard $highlight>
+                    <SystemMetricIcon $color="#10b981">
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <path d="M20 6h-2.18c.11-.31.18-.65.18-1a2.996 2.996 0 0 0-5.5-1.65l-.5.67-.5-.68C10.96 2.54 10 2 9 2 7.34 2 6 3.34 6 5c0 .35.07.69.18 1H4c-1.11 0-1.99.89-1.99 2L2 19c0 1.11.89 2 2 2h16c1.11 0 2-.89 2-2V8c0-1.11-.89-2-2-2z"/>
+                      </svg>
+                    </SystemMetricIcon>
+                    <SystemMetricContent>
+                      <SystemMetricValue>{systemMetrics.general.totalTickets}</SystemMetricValue>
+                      <SystemMetricLabel>Total de Tickets</SystemMetricLabel>
+                      {systemMetrics.recent.ticketsLast30DaysCount > 0 && (
+                        <SystemMetricChange $positive>
+                          +{systemMetrics.recent.ticketsLast30DaysCount} nos últimos 30 dias
+                        </SystemMetricChange>
+                      )}
+                    </SystemMetricContent>
+                  </SystemMetricCard>
+
+                  <SystemMetricCard $highlight>
+                    <SystemMetricIcon $color="#8b5cf6">
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                        <polyline points="14 2 14 8 20 8"/>
+                        <line x1="16" y1="13" x2="8" y2="13"/>
+                        <line x1="16" y1="17" x2="8" y2="17"/>
+                        <polyline points="10 9 9 9 8 9"/>
+                      </svg>
+                    </SystemMetricIcon>
+                    <SystemMetricContent>
+                      <SystemMetricValue>{systemMetrics.general.totalForms}</SystemMetricValue>
+                      <SystemMetricLabel>Total de Formulários</SystemMetricLabel>
+                      {systemMetrics.recent.formsLast30DaysCount > 0 && (
+                        <SystemMetricChange $positive>
+                          +{systemMetrics.recent.formsLast30DaysCount} nos últimos 30 dias
+                        </SystemMetricChange>
+                      )}
+                    </SystemMetricContent>
+                  </SystemMetricCard>
+
+                  <SystemMetricCard>
+                    <SystemMetricIcon $color="#f59e0b">
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
+                        <polyline points="22 4 12 14.01 9 11.01"/>
+                      </svg>
+                    </SystemMetricIcon>
+                    <SystemMetricContent>
+                      <SystemMetricValue>{systemMetrics.general.resolutionRate.toFixed(1)}%</SystemMetricValue>
+                      <SystemMetricLabel>Taxa de Resolução Geral</SystemMetricLabel>
+                      <SystemMetricSubtext>
+                        {systemMetrics.general.closedTickets} de {systemMetrics.general.totalTickets} tickets encerrados
+                      </SystemMetricSubtext>
+                    </SystemMetricContent>
+                  </SystemMetricCard>
+
+                  {systemMetrics.general.avgResolutionTimeMinutes !== null && (
+                    <SystemMetricCard>
+                      <SystemMetricIcon $color="#7c3aed">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                          <circle cx="12" cy="12" r="10"/>
+                          <polyline points="12 6 12 12 16 14"/>
+                        </svg>
+                      </SystemMetricIcon>
+                      <SystemMetricContent>
+                        <SystemMetricValue>{formatDuration(systemMetrics.general.avgResolutionTimeMinutes)}</SystemMetricValue>
+                        <SystemMetricLabel>Tempo Médio de Resolução</SystemMetricLabel>
+                        <SystemMetricSubtext>Baseado em todos os tickets encerrados</SystemMetricSubtext>
+                      </SystemMetricContent>
+                    </SystemMetricCard>
+                  )}
+
+                  <SystemMetricCard>
+                    <SystemMetricIcon $color="#3b82f6">
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+                      </svg>
+                    </SystemMetricIcon>
+                    <SystemMetricContent>
+                      <SystemMetricValue>{systemMetrics.general.responseRate.toFixed(1)}%</SystemMetricValue>
+                      <SystemMetricLabel>Taxa de Resposta</SystemMetricLabel>
+                      <SystemMetricSubtext>Tickets com pelo menos uma atualização</SystemMetricSubtext>
+                    </SystemMetricContent>
+                  </SystemMetricCard>
+
+                  <SystemMetricCard>
+                    <SystemMetricIcon $color="#ef4444">
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <path d="M7 7h10M7 12h10M7 17h10"/>
+                        <circle cx="18" cy="6" r="2"/>
+                        <circle cx="18" cy="11" r="2"/>
+                        <circle cx="18" cy="16" r="2"/>
+                      </svg>
+                    </SystemMetricIcon>
+                    <SystemMetricContent>
+                      <SystemMetricValue>{systemMetrics.general.totalCategories}</SystemMetricValue>
+                      <SystemMetricLabel>Categorias</SystemMetricLabel>
+                    </SystemMetricContent>
+                  </SystemMetricCard>
+
+                  <SystemMetricCard>
+                    <SystemMetricIcon $color="#06b6d4">
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <path d="M20 13H4V7a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v6z"/>
+                        <path d="M4 13l4-4M20 13l-4-4M8 13h8"/>
+                      </svg>
+                    </SystemMetricIcon>
+                    <SystemMetricContent>
+                      <SystemMetricValue>{systemMetrics.general.totalWebhooks}</SystemMetricValue>
+                      <SystemMetricLabel>Webhooks Configurados</SystemMetricLabel>
+                    </SystemMetricContent>
+                  </SystemMetricCard>
+
+                  <SystemMetricCard>
+                    <SystemMetricIcon $color="#6366f1">
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4z"/>
+                      </svg>
+                    </SystemMetricIcon>
+                    <SystemMetricContent>
+                      <SystemMetricValue>{systemMetrics.general.totalAccessProfiles}</SystemMetricValue>
+                      <SystemMetricLabel>Perfis de Acesso</SystemMetricLabel>
+                    </SystemMetricContent>
+                  </SystemMetricCard>
+                </SystemMetricsGrid>
+
+                {systemMetrics.topForms && systemMetrics.topForms.length > 0 && (
+                  <TopFormsSection>
+                    <MetricsSectionTitle>Formulários Mais Utilizados</MetricsSectionTitle>
+                    <TopFormsList>
+                      {systemMetrics.topForms.map((form: any, index: number) => (
+                        <TopFormItem key={form.id}>
+                          <TopFormRank>#{index + 1}</TopFormRank>
+                          <TopFormInfo>
+                            <TopFormTitle>{form.title}</TopFormTitle>
+                            <TopFormSubtext>{form.submissionsCount} submissões</TopFormSubtext>
+                          </TopFormInfo>
+                          <TopFormBadge>{form.submissionsCount}</TopFormBadge>
+                        </TopFormItem>
+                      ))}
+                    </TopFormsList>
+                  </TopFormsSection>
+                )}
+
+                {systemMetrics.categoryBreakdown && systemMetrics.categoryBreakdown.length > 0 && (
+                  <CategoryBreakdownSection>
+                    <MetricsSectionTitle>Distribuição por Categoria</MetricsSectionTitle>
+                    <CategoryChart>
+                      {systemMetrics.categoryBreakdown.map((item: any) => {
+                        const percentage = systemMetrics.general.totalTickets > 0 
+                          ? (item.count / systemMetrics.general.totalTickets) * 100 
+                          : 0;
+                        return (
+                          <CategoryBar key={item.categoryId}>
+                            <CategoryBarLabel>{item.categoryName}</CategoryBarLabel>
+                            <CategoryBarTrack>
+                              <CategoryBarFill $percentage={percentage}>
+                                <CategoryBarValue>{item.count}</CategoryBarValue>
+                              </CategoryBarFill>
+                            </CategoryBarTrack>
+                            <CategoryBarPercentage>{percentage.toFixed(1)}%</CategoryBarPercentage>
+                          </CategoryBar>
+                        );
+                      })}
+                    </CategoryChart>
+                  </CategoryBreakdownSection>
+                )}
+              </SystemMetricsSection>
+            )}
+
             <MetricsSection>
-              <MetricsSectionTitle>Métricas Principais</MetricsSectionTitle>
+              <MetricsSectionTitle>Métricas do Período Selecionado</MetricsSectionTitle>
               <PrimaryMetricsGrid>
                 <StatCard $primary>
                   <StatIcon $primary>
@@ -1136,6 +1488,7 @@ export default function ReportsPage() {
                   <SectionTitle>Performance da Equipe</SectionTitle>
                   <SectionSubtitle>Análise detalhada do desempenho por responsável</SectionSubtitle>
                 </SectionHeader>
+                <PerformanceTableWrapper>
                 <PerformanceTable>
                   <TableTitle>
                     Performance por Responsável
@@ -1181,6 +1534,7 @@ export default function ReportsPage() {
                   </TableBody>
                 </Table>
                 </PerformanceTable>
+                </PerformanceTableWrapper>
               </PerformanceSection>
             )}
               </>
@@ -1421,6 +1775,11 @@ const Card = styled.section`
 
 const MainCard = styled(Card)`
   grid-column: span 12;
+  
+  @media (max-width: 768px) {
+    padding: 16px;
+    border-radius: 12px;
+  }
 `;
 
 const ConfirmBackdrop = styled.div<{ $open: boolean }>`
@@ -1491,6 +1850,11 @@ const PageHeader = styled.header`
   margin-bottom: 24px;
   gap: 16px;
   flex-wrap: wrap;
+  
+  @media (max-width: 768px) {
+    flex-direction: column;
+    gap: 20px;
+  }
 `;
 
 const HeaderBlock = styled.div`
@@ -1528,6 +1892,11 @@ const HeaderActions = styled.div`
   display: flex;
   gap: 12px;
   align-items: center;
+  
+  @media (max-width: 768px) {
+    width: 100%;
+    flex-direction: column;
+  }
 `;
 
 const ExportButton = styled.button`
@@ -1597,6 +1966,11 @@ const FiltersBar = styled.section`
   background: linear-gradient(180deg, rgba(248, 250, 252, 0.78), #ffffff 120%);
   box-shadow: 0 20px 36px -30px rgba(15, 23, 42, 0.45);
   margin-bottom: 24px;
+  
+  @media (max-width: 768px) {
+    padding: 16px;
+    border-radius: 12px;
+  }
 `;
 
 const FiltersHeader = styled.div`
@@ -1632,7 +2006,16 @@ const FiltersBadge = styled.span`
 const FiltersGrid = styled.div`
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-  gap: 16px;
+  gap: 20px;
+  padding: 24px;
+  overflow-y: auto;
+  flex: 1;
+  
+  @media (max-width: 768px) {
+    grid-template-columns: 1fr;
+    gap: 20px;
+    padding: 20px 16px;
+  }
 `;
 
 const FilterGroup = styled.div`
@@ -1662,11 +2045,16 @@ const DateInput = styled.input`
   border: 1px solid rgba(148, 163, 184, 0.3);
   background: #ffffff;
   color: #0f172a;
-  font-size: 0.9rem;
+  font-size: 16px; /* Previne zoom no iOS */
+  min-height: 44px;
   &:focus {
     outline: none;
     border-color: #2563eb;
     box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+  }
+  
+  @media (max-width: 768px) {
+    padding: 12px 14px;
   }
 `;
 
@@ -1684,11 +2072,23 @@ const Select = styled.select`
   color: #0f172a;
   font-size: 0.9rem;
   cursor: pointer;
+  min-height: 44px;
+  font-size: 16px; /* Previne zoom no iOS */
   &:focus {
     outline: none;
     border-color: #2563eb;
     box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
   }
+  
+  @media (max-width: 768px) {
+    padding: 12px 14px;
+  }
+`;
+
+const PeriodPresetSelect = styled(Select)`
+  background: linear-gradient(180deg, rgba(37, 99, 235, 0.05), rgba(37, 99, 235, 0.02));
+  border-color: rgba(37, 99, 235, 0.3);
+  font-weight: 500;
 `;
 
 const MetricsSection = styled.div`
@@ -1725,11 +2125,20 @@ const ReportsGrid = styled.div`
   @media (min-width: 1400px) {
     gap: 20px;
   }
+  
+  @media (max-width: 768px) {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 12px;
+  }
+  
+  @media (max-width: 480px) {
+    grid-template-columns: 1fr;
+  }
 `;
 
 const StatCard = styled.div<{ $primary?: boolean }>`
   padding: ${(p) => (p.$primary ? "24px" : "16px")};
-  border-radius: 12px;
+  border-radius: 16px;
   border: ${(p) => (p.$primary ? "2px solid rgba(37, 99, 235, 0.2)" : "1px solid rgba(148, 163, 184, 0.18)")};
   background: ${(p) => (p.$primary ? "linear-gradient(135deg, rgba(37, 99, 235, 0.08), rgba(59, 130, 246, 0.04))" : "linear-gradient(180deg, #ffffff, rgba(248, 250, 252, 0.6))")};
   display: flex;
@@ -1737,13 +2146,32 @@ const StatCard = styled.div<{ $primary?: boolean }>`
   align-items: center;
   text-align: center;
   gap: ${(p) => (p.$primary ? "12px" : "10px")};
-  transition: all 0.2s ease;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+  overflow: hidden;
+  
+  &::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.4), transparent);
+    transition: left 0.5s ease;
+  }
+  
+  &:hover::before {
+    left: 100%;
+  }
+  
   ${(p) => p.$primary && `
-    box-shadow: 0 4px 12px rgba(37, 99, 235, 0.1);
+    box-shadow: 0 4px 16px rgba(37, 99, 235, 0.12), 0 2px 8px rgba(37, 99, 235, 0.08);
   `}
+  
   &:hover {
-    transform: translateY(-2px);
-    box-shadow: ${(p) => (p.$primary ? "0 8px 24px rgba(37, 99, 235, 0.15)" : "0 8px 20px rgba(0, 0, 0, 0.1)")};
+    transform: translateY(-4px) scale(1.02);
+    box-shadow: ${(p) => (p.$primary ? "0 12px 32px rgba(37, 99, 235, 0.2), 0 4px 16px rgba(37, 99, 235, 0.12)" : "0 12px 28px rgba(0, 0, 0, 0.12), 0 4px 12px rgba(0, 0, 0, 0.08)")};
   }
 `;
 
@@ -1891,13 +2319,30 @@ const ChartsGrid = styled.div`
   grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
   gap: 24px;
   margin-top: 24px;
+  
+  @media (max-width: 768px) {
+    grid-template-columns: 1fr;
+    gap: 20px;
+  }
 `;
 
 const ChartCard = styled.div`
   padding: 24px;
-  border-radius: 12px;
+  border-radius: 16px;
   border: 1px solid rgba(148, 163, 184, 0.18);
   background: linear-gradient(180deg, #ffffff, rgba(248, 250, 252, 0.6));
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  
+  &:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08), 0 4px 12px rgba(0, 0, 0, 0.04);
+  }
+  
+  @media (max-width: 768px) {
+    padding: 20px;
+    border-radius: 12px;
+  }
 `;
 
 const ChartTitle = styled.h3`
@@ -1954,7 +2399,25 @@ const StatusBarFill = styled.div<{ $percentage: number; $status: TicketStatus }>
   align-items: center;
   justify-content: flex-end;
   padding-right: 12px;
-  transition: width 0.5s ease;
+  transition: width 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+  overflow: hidden;
+  
+  &::after {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
+    animation: shimmer 2s infinite;
+  }
+  
+  @keyframes shimmer {
+    0% { left: -100%; }
+    100% { left: 100%; }
+  }
 `;
 
 const StatusBarValue = styled.span`
@@ -2128,9 +2591,637 @@ const PerformanceSection = styled.div`
   margin-top: 32px;
 `;
 
-const PerformanceTable = styled(Card)`
+const PerformanceTableWrapper = styled.div`
   margin-top: 24px;
   overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  
+  @media (max-width: 768px) {
+    margin: 24px -16px 0;
+    padding: 0 16px;
+  }
+`;
+
+const SystemMetricsSection = styled.div`
+  margin-bottom: 48px;
+  padding: 32px;
+  background: linear-gradient(180deg, rgba(248, 250, 252, 0.5), rgba(255, 255, 255, 0.8));
+  border-radius: 20px;
+  border: 1px solid rgba(148, 163, 184, 0.1);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.04);
+  
+  @media (max-width: 768px) {
+    padding: 24px 16px;
+    border-radius: 16px;
+  }
+`;
+
+const SystemMetricsGrid = styled.div`
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 20px;
+  margin-bottom: 32px;
+  
+  @media (max-width: 768px) {
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+`;
+
+const SystemMetricCard = styled.div<{ $highlight?: boolean }>`
+  padding: 24px;
+  border-radius: 16px;
+  border: ${(p) => (p.$highlight ? "2px solid rgba(37, 99, 235, 0.2)" : "1px solid rgba(148, 163, 184, 0.18)")};
+  background: ${(p) => (p.$highlight ? "linear-gradient(135deg, rgba(37, 99, 235, 0.08), rgba(59, 130, 246, 0.04))" : "linear-gradient(180deg, #ffffff, rgba(248, 250, 252, 0.6))")};
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+  overflow: hidden;
+  
+  &::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.4), transparent);
+    transition: left 0.5s ease;
+  }
+  
+  &:hover {
+    transform: translateY(-4px) scale(1.02);
+    box-shadow: ${(p) => (p.$highlight ? "0 12px 32px rgba(37, 99, 235, 0.2), 0 4px 16px rgba(37, 99, 235, 0.12)" : "0 12px 28px rgba(0, 0, 0, 0.12), 0 4px 12px rgba(0, 0, 0, 0.08)")};
+  }
+  
+  &:hover::before {
+    left: 100%;
+  }
+`;
+
+const SystemMetricIcon = styled.div<{ $color?: string }>`
+  width: 56px;
+  height: 56px;
+  border-radius: 12px;
+  background: ${(p) => {
+    const color = p.$color || "#2563eb";
+    const rgba = color === "#2563eb" ? "rgba(37, 99, 235, 0.15)" :
+                 color === "#10b981" ? "rgba(16, 185, 129, 0.15)" :
+                 color === "#8b5cf6" ? "rgba(139, 92, 246, 0.15)" :
+                 color === "#f59e0b" ? "rgba(245, 158, 11, 0.15)" :
+                 color === "#7c3aed" ? "rgba(124, 58, 237, 0.15)" :
+                 color === "#3b82f6" ? "rgba(59, 130, 246, 0.15)" :
+                 color === "#ef4444" ? "rgba(239, 68, 68, 0.15)" :
+                 color === "#06b6d4" ? "rgba(6, 182, 212, 0.15)" :
+                 "rgba(99, 102, 241, 0.15)";
+    return rgba;
+  }};
+  color: ${(p) => p.$color || "#2563eb"};
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  
+  svg {
+    width: 28px;
+    height: 28px;
+  }
+`;
+
+const SystemMetricContent = styled.div`
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+`;
+
+const SystemMetricValue = styled.div`
+  font-size: 2rem;
+  font-weight: 700;
+  color: #0f172a;
+  line-height: 1.2;
+`;
+
+const SystemMetricLabel = styled.div`
+  font-size: 0.9rem;
+  color: #475569;
+  font-weight: 600;
+`;
+
+const SystemMetricSubtext = styled.div`
+  font-size: 0.75rem;
+  color: #64748b;
+  margin-top: 4px;
+`;
+
+const SystemMetricChange = styled.div<{ $positive?: boolean }>`
+  font-size: 0.75rem;
+  color: ${(p) => (p.$positive ? "#10b981" : "#ef4444")};
+  font-weight: 600;
+  margin-top: 4px;
+`;
+
+const TopFormsSection = styled.div`
+  margin-top: 32px;
+  padding-top: 32px;
+  border-top: 1px solid rgba(148, 163, 184, 0.18);
+`;
+
+const TopFormsList = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-top: 20px;
+`;
+
+const TopFormItem = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 16px;
+  border-radius: 12px;
+  background: linear-gradient(180deg, #ffffff, rgba(248, 250, 252, 0.6));
+  border: 1px solid rgba(148, 163, 184, 0.18);
+  transition: all 0.2s ease;
+  
+  &:hover {
+    transform: translateX(4px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+    border-color: rgba(37, 99, 235, 0.3);
+  }
+`;
+
+const TopFormRank = styled.div`
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  background: linear-gradient(135deg, rgba(37, 99, 235, 0.15), rgba(59, 130, 246, 0.08));
+  color: #2563eb;
+  font-weight: 700;
+  font-size: 1.1rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+`;
+
+const TopFormInfo = styled.div`
+  flex: 1;
+  min-width: 0;
+`;
+
+const TopFormTitle = styled.div`
+  font-size: 1rem;
+  font-weight: 600;
+  color: #0f172a;
+  margin-bottom: 4px;
+`;
+
+const TopFormSubtext = styled.div`
+  font-size: 0.8rem;
+  color: #64748b;
+`;
+
+const TopFormBadge = styled.div`
+  padding: 8px 14px;
+  border-radius: 8px;
+  background: linear-gradient(135deg, rgba(37, 99, 235, 0.1), rgba(59, 130, 246, 0.05));
+  color: #2563eb;
+  font-weight: 700;
+  font-size: 1.1rem;
+  flex-shrink: 0;
+`;
+
+const CategoryBreakdownSection = styled.div`
+  margin-top: 32px;
+  padding-top: 32px;
+  border-top: 1px solid rgba(148, 163, 184, 0.18);
+`;
+
+const CategoryChart = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  margin-top: 20px;
+`;
+
+const CategoryBar = styled.div`
+  display: grid;
+  grid-template-columns: 150px 1fr 60px;
+  gap: 12px;
+  align-items: center;
+  
+  @media (max-width: 768px) {
+    grid-template-columns: 120px 1fr 50px;
+    gap: 8px;
+  }
+`;
+
+const CategoryBarLabel = styled.div`
+  font-size: 0.9rem;
+  font-weight: 500;
+  color: #475569;
+`;
+
+const CategoryBarTrack = styled.div`
+  height: 32px;
+  border-radius: 8px;
+  background: rgba(148, 163, 184, 0.1);
+  overflow: hidden;
+  position: relative;
+`;
+
+const CategoryBarFill = styled.div<{ $percentage: number }>`
+  height: 100%;
+  width: ${(p) => p.$percentage}%;
+  background: linear-gradient(90deg, #8b5cf6, #7c3aed);
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  padding-right: 12px;
+  transition: width 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+`;
+
+const CategoryBarValue = styled.span`
+  color: #ffffff;
+  font-weight: 600;
+  font-size: 0.85rem;
+`;
+
+const CategoryBarPercentage = styled.div`
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #64748b;
+  text-align: right;
+`;
+
+const FilterButton = styled.button`
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 16px;
+  border-radius: 10px;
+  border: 1px solid rgba(148, 163, 184, 0.25);
+  background: linear-gradient(180deg, #ffffff, rgba(248, 250, 252, 0.6));
+  color: #0f172a;
+  font-weight: 600;
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  position: relative;
+  
+  &:hover {
+    border-color: rgba(37, 99, 235, 0.4);
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.95), rgba(248, 250, 252, 0.8));
+    box-shadow: 0 4px 12px rgba(37, 99, 235, 0.15);
+    transform: translateY(-1px);
+  }
+  
+  &:active {
+    transform: translateY(0);
+  }
+  
+  svg {
+    flex-shrink: 0;
+  }
+  
+  @media (max-width: 768px) {
+    padding: 10px 14px;
+    font-size: 0.85rem;
+    
+    svg {
+      width: 14px;
+      height: 14px;
+    }
+  }
+`;
+
+const FiltersBadgeCount = styled.span`
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 6px;
+  border-radius: 10px;
+  background: linear-gradient(135deg, #2563eb, #1d4ed8);
+  color: #ffffff;
+  font-size: 0.75rem;
+  font-weight: 700;
+  margin-left: 4px;
+`;
+
+const ModalBackdrop = styled.div<{ $open: boolean }>`
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(4px);
+  opacity: ${(p) => (p.$open ? 1 : 0)};
+  pointer-events: ${(p) => (p.$open ? "auto" : "none")};
+  transition: opacity 0.2s ease;
+  z-index: 9998;
+`;
+
+const FiltersModalDialog = styled.div<{ $open: boolean }>`
+  position: fixed;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%) scale(${(p) => (p.$open ? 1 : 0.96)});
+  opacity: ${(p) => (p.$open ? 1 : 0)};
+  background: #fff;
+  border: 1px solid rgba(148, 163, 184, 0.2);
+  border-radius: 20px;
+  box-shadow: 0 24px 48px rgba(0, 0, 0, 0.2), 0 8px 16px rgba(0, 0, 0, 0.1);
+  width: min(90vw, 800px);
+  max-height: min(85vh, 700px);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  transition: opacity 0.2s ease, transform 0.2s ease;
+  z-index: 9999;
+  
+  @media (max-width: 768px) {
+    width: 100vw;
+    max-width: 100vw;
+    height: 100vh;
+    max-height: 100vh;
+    border-radius: 0;
+    top: 0;
+    left: 0;
+    transform: translateY(${(p) => (p.$open ? "0" : "100%")});
+  }
+`;
+
+const FiltersModalHeader = styled.div`
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 24px;
+  border-bottom: 1px solid rgba(148, 163, 184, 0.18);
+  background: linear-gradient(180deg, rgba(248, 250, 252, 0.5), rgba(255, 255, 255, 0.8));
+  
+  @media (max-width: 768px) {
+    padding: 20px 16px;
+  }
+`;
+
+const FiltersModalTitle = styled.h2`
+  margin: 0 0 4px 0;
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #0f172a;
+  
+  @media (max-width: 768px) {
+    font-size: 1.3rem;
+  }
+`;
+
+const FiltersModalSubtitle = styled.p`
+  margin: 0;
+  font-size: 0.9rem;
+  color: #64748b;
+  font-weight: 400;
+`;
+
+const CloseButton = styled.button`
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  border: 1px solid rgba(148, 163, 184, 0.2);
+  background: #fff;
+  color: #64748b;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  flex-shrink: 0;
+  
+  &:hover {
+    background: rgba(239, 68, 68, 0.1);
+    border-color: rgba(239, 68, 68, 0.3);
+    color: #ef4444;
+  }
+  
+  &:active {
+    transform: scale(0.95);
+  }
+  
+  svg {
+    width: 20px;
+    height: 20px;
+  }
+`;
+
+const FiltersModalFooter = styled.div`
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 20px 24px;
+  border-top: 1px solid rgba(148, 163, 184, 0.18);
+  background: linear-gradient(180deg, rgba(248, 250, 252, 0.3), rgba(255, 255, 255, 0.6));
+  
+  @media (max-width: 768px) {
+    flex-direction: column;
+    align-items: stretch;
+    padding: 16px;
+  }
+`;
+
+const FiltersModalActions = styled.div`
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  
+  @media (max-width: 768px) {
+    width: 100%;
+    flex-direction: column-reverse;
+    
+    button {
+      width: 100%;
+    }
+  }
+`;
+
+const FilterCancelButton = styled.button`
+  padding: 12px 20px;
+  border-radius: 10px;
+  border: 1px solid rgba(148, 163, 184, 0.3);
+  background: #fff;
+  color: #475569;
+  font-weight: 600;
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  
+  &:hover {
+    border-color: rgba(148, 163, 184, 0.5);
+    background: rgba(248, 250, 252, 0.8);
+  }
+  
+  &:active {
+    transform: scale(0.98);
+  }
+`;
+
+const FilterApplyButton = styled.button`
+  padding: 12px 24px;
+  border-radius: 10px;
+  border: 1px solid transparent;
+  background: linear-gradient(135deg, #2563eb, #1d4ed8);
+  color: #fff;
+  font-weight: 600;
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);
+  
+  &:hover {
+    background: linear-gradient(135deg, #1d4ed8, #1e40af);
+    box-shadow: 0 6px 16px rgba(37, 99, 235, 0.4);
+    transform: translateY(-1px);
+  }
+  
+  &:active {
+    transform: translateY(0);
+    box-shadow: 0 2px 8px rgba(37, 99, 235, 0.3);
+  }
+`;
+
+const AutoRefreshControl = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  border-radius: 10px;
+  border: 1px solid rgba(148, 163, 184, 0.25);
+  background: linear-gradient(180deg, #ffffff, rgba(248, 250, 252, 0.6));
+  
+  @media (max-width: 768px) {
+    order: -1;
+    width: 100%;
+    justify-content: space-between;
+  }
+`;
+
+const AutoRefreshLabel = styled.label`
+  display: flex;
+  align-items: center;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #475569;
+  white-space: nowrap;
+  cursor: pointer;
+  
+  svg {
+    flex-shrink: 0;
+  }
+  
+  @media (max-width: 768px) {
+    font-size: 0.8rem;
+  }
+`;
+
+const AutoRefreshSelect = styled.select`
+  padding: 6px 10px;
+  border-radius: 8px;
+  border: 1px solid rgba(148, 163, 184, 0.3);
+  background: #ffffff;
+  color: #0f172a;
+  font-size: 0.85rem;
+  font-weight: 500;
+  cursor: pointer;
+  min-width: 120px;
+  
+  &:focus {
+    outline: none;
+    border-color: #2563eb;
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+  }
+  
+  @media (max-width: 768px) {
+    min-width: auto;
+    flex: 1;
+  }
+`;
+
+const AutoRefreshIndicator = styled.div<{ $active: boolean }>`
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: ${(p) => (p.$active ? "#10b981" : "transparent")};
+  position: relative;
+  flex-shrink: 0;
+  
+  ${(p) =>
+    p.$active &&
+    `
+    animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+    
+    @keyframes pulse {
+      0%, 100% {
+        opacity: 1;
+      }
+      50% {
+        opacity: 0.5;
+      }
+    }
+  `}
+`;
+
+const KioskButton = styled.button`
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 10px 16px;
+  border-radius: 10px;
+  border: 1px solid rgba(148, 163, 184, 0.25);
+  background: linear-gradient(180deg, #ffffff, rgba(248, 250, 252, 0.6));
+  color: #0f172a;
+  font-weight: 600;
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  
+  &:hover {
+    border-color: rgba(139, 92, 246, 0.4);
+    background: linear-gradient(180deg, rgba(139, 92, 246, 0.05), rgba(139, 92, 246, 0.02));
+    color: #7c3aed;
+    box-shadow: 0 4px 12px rgba(139, 92, 246, 0.15);
+    transform: translateY(-1px);
+  }
+  
+  &:active {
+    transform: translateY(0);
+  }
+  
+  svg {
+    flex-shrink: 0;
+  }
+  
+  @media (max-width: 768px) {
+    padding: 10px 14px;
+    font-size: 0.85rem;
+    
+    svg {
+      width: 14px;
+      height: 14px;
+    }
+  }
+`;
+
+const PerformanceTable = styled(Card)`
+  overflow-x: auto;
+  min-width: 800px;
+  
+  @media (max-width: 768px) {
+    min-width: 100%;
+  }
 `;
 
 const TableTitle = styled.h3`
@@ -2234,15 +3325,6 @@ const LoadingContainer = styled.div`
   justify-content: center;
   gap: 16px;
   min-height: 100dvh;
-`;
-
-const LoadingSpinner = styled.div`
-  width: 48px;
-  height: 48px;
-  border: 4px solid rgba(37, 99, 235, 0.1);
-  border-top-color: #2563eb;
-  border-radius: 50%;
-  animation: ${SPIN} 1s linear infinite;
 `;
 
 const LoadingText = styled.div`

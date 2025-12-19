@@ -108,7 +108,7 @@ type ToastProps = {
 };
 
 export function Toast({ toasts, onClose }: ToastProps) {
-  if (toasts.length === 0) return null;
+  if (!toasts || toasts.length === 0) return null;
   
   return (
     <ToastWrapper>
@@ -192,11 +192,13 @@ function ToastItem({ toast, onClose }: { toast: ToastItem; onClose: (id: string)
 let toastIdCounter = 0;
 
 type ToastContextType = {
+  toasts: ToastItem[];
   showToast: (message: string, type?: ToastType, duration?: number) => void;
   showSuccess: (message: string, duration?: number) => void;
   showError: (message: string, duration?: number) => void;
   showWarning: (message: string, duration?: number) => void;
   showInfo: (message: string, duration?: number) => void;
+  removeToast: (id: string) => void;
 };
 
 export function useToast(): ToastContextType {
@@ -212,11 +214,13 @@ export function useToast(): ToastContextType {
   };
 
   return {
+    toasts,
     showToast,
     showSuccess: (message: string, duration?: number) => showToast(message, "success", duration),
     showError: (message: string, duration?: number) => showToast(message, "error", duration),
     showWarning: (message: string, duration?: number) => showToast(message, "warning", duration),
     showInfo: (message: string, duration?: number) => showToast(message, "info", duration),
+    removeToast,
   };
 }
 
