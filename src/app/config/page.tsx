@@ -4280,7 +4280,7 @@ fetch(webhookUrl, {
             setEditPageIsPublished(false);
             setEditPageError("");
           }} aria-hidden={!editPageOpen} />
-          <ModalDialog
+          <PageModalDialog
             role="dialog"
             aria-modal="true"
             aria-labelledby="edit-page-title"
@@ -4297,75 +4297,124 @@ fetch(webhookUrl, {
               }
             }}
           >
-            <ModalHeader>
-              <ModalIcon aria-hidden>
-                <svg viewBox="0 0 24 24" fill="currentColor">
+            <PageModalHeader>
+              <PageModalIcon aria-hidden>
+                <svg viewBox="0 0 24 24" fill="currentColor" width="32" height="32">
                   <path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/>
                 </svg>
-              </ModalIcon>
-              <div>
-                <ModalTitle id="edit-page-title">Editar página</ModalTitle>
-                <Muted>Atualize o título, descrição e conteúdo HTML da página.</Muted>
+              </PageModalIcon>
+              <div style={{ flex: 1 }}>
+                <PageModalTitle id="edit-page-title">Editar Página</PageModalTitle>
+                <PageModalSubtitle>Atualize o título, descrição e conteúdo da página usando o editor visual</PageModalSubtitle>
               </div>
-            </ModalHeader>
-            {editPageLoading && (
-              <div style={{ padding: "20px", textAlign: "center" }}>
-                <Muted>Carregando página...</Muted>
-              </div>
-            )}
-            {editPageError && (
-              <Feedback role="alert" $variant="error">{editPageError}</Feedback>
-            )}
-            {!editPageLoading && (
-              <div>
-                <Field>
-                  <Label htmlFor="edit-page-title">Título</Label>
-                  <Input
-                    id="edit-page-title"
-                    type="text"
-                    placeholder="Ex.: Página de Suporte"
-                    value={editPageTitle}
-                    onChange={(event) => {
-                      const value = (event.currentTarget as unknown as { value?: string }).value ?? "";
-                      setEditPageTitle(value);
-                    }}
-                  />
-                </Field>
-                <Field>
-                  <Label htmlFor="edit-page-desc">Descrição</Label>
-                  <Input
-                    id="edit-page-desc"
-                    type="text"
-                    placeholder="Breve descrição da página"
-                    value={editPageDescription}
-                    onChange={(event) => {
-                      const value = (event.currentTarget as unknown as { value?: string }).value ?? "";
-                      setEditPageDescription(value);
-                    }}
-                  />
-                </Field>
-                <Field>
-                  <Label>Conteúdo da Página (Editor Visual)</Label>
-                  <div style={{ border: "1px solid var(--border)", borderRadius: "8px", padding: "16px", background: "#f8fafc" }}>
-                    <PageBuilder blocks={editPageBlocks} onChange={setEditPageBlocks} />
-                  </div>
-                </Field>
-                <Field>
-                  <label style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer" }}>
-                    <input
-                      type="checkbox"
-                      checked={editPageIsPublished}
-                      onChange={(event) => {
-                        const checked = Boolean((event.currentTarget as unknown as { checked?: boolean }).checked);
-                        setEditPageIsPublished(checked);
-                      }}
-                    />
-                    <span>Publicar página</span>
-                  </label>
-                </Field>
-              </div>
-            )}
-            <ModalActions>
+            </PageModalHeader>
+            
+            <PageModalContent>
+              {editPageLoading && (
+                <div style={{ padding: "40px", textAlign: "center" }}>
+                  <LoadingSpinner size="medium" />
+                  <Muted style={{ marginTop: "16px", display: "block" }}>Carregando página...</Muted>
+                </div>
+              )}
+              {editPageError && (
+                <Feedback role="alert" $variant="error">{editPageError}</Feedback>
+              )}
+              {!editPageLoading && (
+                <>
+                  <PageFormSection>
+                    <PageSectionTitle>Informações Básicas</PageSectionTitle>
+                    <Field>
+                      <Label htmlFor="edit-page-title">
+                        Título da Página <span style={{ color: "#ef4444" }}>*</span>
+                      </Label>
+                      <Input
+                        id="edit-page-title"
+                        type="text"
+                        placeholder="Ex.: Página de Suporte, Central de Ajuda..."
+                        value={editPageTitle}
+                        onChange={(event) => {
+                          const value = (event.currentTarget as unknown as { value?: string }).value ?? "";
+                          setEditPageTitle(value);
+                        }}
+                        style={{ fontSize: "1rem", padding: "12px 16px" }}
+                      />
+                      <Muted style={{ marginTop: "4px", fontSize: "0.875rem" }}>
+                        O título será usado para gerar o link da página (slug)
+                      </Muted>
+                    </Field>
+                    <Field>
+                      <Label htmlFor="edit-page-desc">Descrição (Opcional)</Label>
+                      <Input
+                        id="edit-page-desc"
+                        type="text"
+                        placeholder="Breve descrição do que esta página oferece..."
+                        value={editPageDescription}
+                        onChange={(event) => {
+                          const value = (event.currentTarget as unknown as { value?: string }).value ?? "";
+                          setEditPageDescription(value);
+                        }}
+                        style={{ fontSize: "1rem", padding: "12px 16px" }}
+                      />
+                    </Field>
+                  </PageFormSection>
+
+                  <PageFormSection>
+                    <PageSectionTitle>Conteúdo da Página</PageSectionTitle>
+                    <PageBuilderContainer>
+                      <PageBuilder blocks={editPageBlocks} onChange={setEditPageBlocks} />
+                    </PageBuilderContainer>
+                    {editPageBlocks.length === 0 && (
+                      <EmptyBuilderState>
+                        <div style={{ fontSize: "3rem", marginBottom: "16px" }}>📝</div>
+                        <div style={{ fontSize: "1.1rem", fontWeight: 600, marginBottom: "8px", color: "#0f172a" }}>
+                          Comece adicionando blocos
+                        </div>
+                        <div style={{ color: "#64748b", fontSize: "0.9rem" }}>
+                          Arraste blocos da paleta lateral ou clique neles para adicionar
+                        </div>
+                      </EmptyBuilderState>
+                    )}
+                  </PageFormSection>
+
+                  <PageFormSection>
+                    <PageSectionTitle>Configurações</PageSectionTitle>
+                    <Field>
+                      <label style={{ 
+                        display: "flex", 
+                        alignItems: "center", 
+                        gap: 12, 
+                        cursor: "pointer",
+                        padding: "12px 16px",
+                        borderRadius: "8px",
+                        border: "1px solid rgba(148, 163, 184, 0.2)",
+                        background: editPageIsPublished ? "rgba(34, 197, 94, 0.05)" : "#fff",
+                        transition: "all 0.2s ease"
+                      }}>
+                        <input
+                          type="checkbox"
+                          checked={editPageIsPublished}
+                          onChange={(event) => {
+                            const checked = Boolean((event.currentTarget as unknown as { checked?: boolean }).checked);
+                            setEditPageIsPublished(checked);
+                          }}
+                          style={{ width: "18px", height: "18px", cursor: "pointer" }}
+                        />
+                        <div>
+                          <div style={{ fontWeight: 600, color: "#0f172a", marginBottom: "2px" }}>
+                            Publicar página imediatamente
+                          </div>
+                          <div style={{ fontSize: "0.875rem", color: "#64748b" }}>
+                            A página ficará acessível publicamente após salvar
+                          </div>
+                        </div>
+                      </label>
+                    </Field>
+                  </PageFormSection>
+                </>
+              )}
+            </PageModalContent>
+
+            <PageModalActions>
               <CancelButton type="button" onClick={() => {
                 if (editPageSaving) return;
                 setEditPageOpen(false);
@@ -4378,11 +4427,23 @@ fetch(webhookUrl, {
               }} disabled={editPageSaving}>
                 Cancelar
               </CancelButton>
-              <ConfirmButton type="button" onClick={saveEditPage} disabled={editPageSaving || editPageLoading} aria-label="Salvar alterações">
-                {editPageSaving ? "Salvando..." : "Salvar"}
+              <ConfirmButton type="button" onClick={saveEditPage} disabled={editPageSaving || editPageLoading || !editPageTitle.trim() || editPageBlocks.length === 0} aria-label="Salvar alterações">
+                {editPageSaving ? (
+                  <>
+                    <LoadingSpinner size="small" color="#fff" style={{ marginRight: "8px" }} />
+                    Salvando...
+                  </>
+                ) : (
+                  <>
+                    <svg viewBox="0 0 24 24" fill="currentColor" width="18" height="18" style={{ marginRight: "8px" }}>
+                      <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/>
+                    </svg>
+                    Salvar Alterações
+                  </>
+                )}
               </ConfirmButton>
-            </ModalActions>
-          </ModalDialog>
+            </PageModalActions>
+          </PageModalDialog>
         </>
       )}
     </StandardLayout>

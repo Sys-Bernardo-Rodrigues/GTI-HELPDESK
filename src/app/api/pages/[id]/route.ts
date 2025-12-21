@@ -74,18 +74,9 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
       return NextResponse.json({ error: "Página não encontrada" }, { status: 404 });
     }
 
-    const slug = slugify(title);
-    
-    // Verificar se já existe outra página com o mesmo slug
-    if (slug !== existing.slug) {
-      const slugExists = await prisma.publicPage.findUnique({
-        where: { slug },
-      });
-      
-      if (slugExists) {
-        return NextResponse.json({ error: "Já existe uma página com este título" }, { status: 400 });
-      }
-    }
+    // Manter o slug original da página ao editar
+    // O slug só é alterado se o usuário explicitamente solicitar (não implementado por enquanto)
+    const slug = existing.slug;
 
     const updated = await prisma.publicPage.update({
       where: { id: pageId },
@@ -94,7 +85,7 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
         description: description || null,
         content: content || "",
         blocks: blocks || null,
-        slug,
+        // Não atualizar o slug - manter o original
         isPublished,
       },
       include: {

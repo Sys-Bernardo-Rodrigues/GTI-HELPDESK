@@ -252,6 +252,8 @@ export default function PublicPage({ params }: { params: Promise<{ slug: string 
   }
 
   function renderBlock(block: PageBlock) {
+    const pageUrl = typeof window !== "undefined" ? window.location.href : "";
+    
     switch (block.type) {
       case "heading":
         const HeadingTag = `h${block.props?.headingLevel || 2}` as keyof JSX.IntrinsicElements;
@@ -275,7 +277,6 @@ export default function PublicPage({ params }: { params: Promise<{ slug: string 
           </p>
         );
       case "button":
-        const pageUrl = typeof window !== "undefined" ? window.location.href : "";
         return (
           <div style={{ 
             margin: "1.5em 0",
@@ -341,6 +342,91 @@ export default function PublicPage({ params }: { params: Promise<{ slug: string 
             >
               {block.props?.text || "Link"}
             </a>
+          </div>
+        );
+      case "button-group":
+        return (
+          <div style={{ 
+            margin: "1.5em 0",
+            display: "flex",
+            gap: block.props?.buttonGap || "12px",
+            justifyContent: block.props?.buttonAlign === "center" ? "center" : 
+                          block.props?.buttonAlign === "right" ? "flex-end" :
+                          block.props?.buttonAlign === "stretch" ? "stretch" : "flex-start",
+            flexWrap: "wrap",
+            alignItems: "center"
+          }}>
+            {(block.props?.buttons || []).map((btn) => (
+              <div key={btn.id} style={{ display: "flex", flexDirection: "column", gap: "8px", alignItems: "flex-start" }}>
+                <Button
+                  $style={btn.style || "primary"}
+                  onClick={() => {
+                    if (btn.url) {
+                      if (btn.target === "_blank") {
+                        window.open(btn.url, "_blank");
+                      } else {
+                        window.location.href = btn.url;
+                      }
+                    }
+                  }}
+                  style={{ 
+                    flex: block.props?.buttonAlign === "stretch" ? "1" : "0 1 auto",
+                    marginRight: 0
+                  }}
+                >
+                  {btn.text || "Botão"}
+                </Button>
+                {btn.copyLink && (
+                  <CopyLinkButton
+                    onClick={() => copyToClipboard(btn.url || pageUrl)}
+                    title="Copiar link"
+                    style={{ fontSize: "0.75rem", padding: "6px 12px" }}
+                  >
+                    📋 Copiar
+                  </CopyLinkButton>
+                )}
+              </div>
+            ))}
+          </div>
+        );
+      case "container":
+        return (
+          <div style={{
+            margin: "1.5em 0",
+            padding: block.props?.containerPadding || "20px",
+            background: block.props?.containerBackground || "transparent",
+            border: block.props?.containerBorder || "1px solid rgba(148, 163, 184, 0.2)",
+            borderRadius: block.props?.containerBorderRadius || "8px",
+          }}>
+            {/* Container pode conter outros blocos no futuro */}
+          </div>
+        );
+      case "spacer":
+        return (
+          <div style={{ 
+            height: block.props?.spacerHeight || "40px",
+            width: "100%",
+          }} />
+        );
+      case "columns":
+        return (
+          <div style={{
+            margin: "1.5em 0",
+            display: "grid",
+            gridTemplateColumns: `repeat(${block.props?.columns || 2}, 1fr)`,
+            gap: block.props?.columnGap || "20px",
+          }}>
+            {Array.from({ length: block.props?.columns || 2 }).map((_, i) => (
+              <div key={i} style={{
+                padding: "16px",
+                background: "#f8fafc",
+                border: "1px solid rgba(148, 163, 184, 0.2)",
+                borderRadius: "8px",
+                minHeight: "80px",
+              }}>
+                {/* Colunas podem conter outros blocos no futuro */}
+              </div>
+            ))}
           </div>
         );
       default:
