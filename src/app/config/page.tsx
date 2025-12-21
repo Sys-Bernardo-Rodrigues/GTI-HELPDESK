@@ -223,11 +223,6 @@ export default function ConfigPage() {
   }
 
   async function saveEnvConfig() {
-    if (process.env.ALLOW_ENV_EDIT !== "true") {
-      setEnvError("Edição de .env desabilitada (ALLOW_ENV_EDIT != true)");
-      return;
-    }
-
     setEnvSaving(true);
     setEnvError(null);
     setEnvSuccess(null);
@@ -1434,11 +1429,6 @@ export default function ConfigPage() {
   }
 
   async function saveEnvConfig() {
-    if (process.env.ALLOW_ENV_EDIT !== "true") {
-      setEnvError("Edição de .env desabilitada (ALLOW_ENV_EDIT != true)");
-      return;
-    }
-
     setEnvSaving(true);
     setEnvError(null);
     setEnvSuccess(null);
@@ -2385,7 +2375,7 @@ export default function ConfigPage() {
                     <li>Após salvar, reinicie o servidor para aplicar as mudanças.</li>
                     <li>Campos marcados com <strong>*</strong> são obrigatórios.</li>
                     <li>Campos com 🔒 contêm informações sensíveis e são mascarados.</li>
-                    <li>Certifique-se de que <InlineCode>ALLOW_ENV_EDIT=true</InlineCode> para permitir edição.</li>
+                    <li>Para habilitar a edição pela interface, edite manualmente o arquivo <InlineCode>.env</InlineCode> e defina <InlineCode>ALLOW_ENV_EDIT=true</InlineCode>. Depois, reinicie o servidor.</li>
                     <li>Use Exportar/Importar para fazer backup das configurações.</li>
                   </HelpList>
                 </InfoPanel>

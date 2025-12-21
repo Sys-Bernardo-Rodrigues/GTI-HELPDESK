@@ -508,7 +508,6 @@ export default function UsersPage() {
                 ))}
               </tbody>
             </UsersTable>
-            </TableWrapper>
             
             <Pagination
               currentPage={currentPage}

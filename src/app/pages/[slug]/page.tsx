@@ -6,128 +6,213 @@ import { PageBlock } from "@/components/PageBuilder";
 
 const Wrapper = styled.div`
   min-height: 100vh;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  padding: 40px 20px;
+  background: linear-gradient(135deg, var(--primary-50) 0%, var(--secondary-50) 50%, var(--primary-100) 100%);
+  padding: 60px 20px;
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: center;
+  position: relative;
+  overflow: hidden;
+
+  &::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: 
+      radial-gradient(circle at 20% 30%, rgba(2, 132, 199, 0.1) 0%, transparent 50%),
+      radial-gradient(circle at 80% 70%, rgba(147, 51, 234, 0.1) 0%, transparent 50%);
+    pointer-events: none;
+  }
 `;
 
 const Card = styled.article`
-  background: #fff;
-  border-radius: 16px;
-  padding: 40px;
-  max-width: 900px;
+  background: var(--surface);
+  border-radius: 24px;
+  padding: 56px;
+  max-width: 960px;
   width: 100%;
-  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+  box-shadow: var(--shadow-xl);
+  border: 1px solid var(--border);
+  position: relative;
+  z-index: 1;
+  animation: fadeInUp 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+
+  @keyframes fadeInUp {
+    from {
+      opacity: 0;
+      transform: translateY(30px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  @media (max-width: 768px) {
+    padding: 40px 28px;
+    border-radius: 20px;
+  }
 `;
 
 const Title = styled.h1`
-  font-size: 2.5rem;
-  font-weight: 700;
-  color: #0f172a;
-  margin: 0 0 16px;
+  font-size: 3rem;
+  font-weight: 800;
+  margin: 0 0 20px;
   line-height: 1.2;
+  letter-spacing: -0.03em;
+  background: linear-gradient(135deg, var(--primary-700) 0%, var(--secondary-700) 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+
+  @media (max-width: 768px) {
+    font-size: 2.25rem;
+  }
 `;
 
 const Description = styled.p`
-  font-size: 1.1rem;
-  color: #64748b;
-  margin: 0 0 32px;
-  line-height: 1.6;
+  font-size: 1.25rem;
+  color: var(--text-muted);
+  margin: 0 0 48px;
+  line-height: 1.7;
+  font-weight: 400;
+
+  @media (max-width: 768px) {
+    font-size: 1.125rem;
+    margin-bottom: 32px;
+  }
 `;
 
 const Content = styled.div`
-  font-size: 1rem;
+  font-size: 1.125rem;
   line-height: 1.8;
-  color: #334155;
+  color: var(--text);
   
   h1, h2, h3, h4, h5, h6 {
-    color: #0f172a;
+    color: var(--text);
     margin-top: 2em;
     margin-bottom: 1em;
     font-weight: 700;
+    letter-spacing: -0.02em;
+    line-height: 1.3;
   }
   
-  h1 { font-size: 2rem; }
-  h2 { font-size: 1.75rem; }
-  h3 { font-size: 1.5rem; }
-  h4 { font-size: 1.25rem; }
+  h1 { 
+    font-size: 2.5rem; 
+    background: linear-gradient(135deg, var(--primary-700) 0%, var(--secondary-700) 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+  h2 { 
+    font-size: 2rem;
+    color: var(--primary-700);
+  }
+  h3 { font-size: 1.75rem; }
+  h4 { font-size: 1.5rem; }
   
   p {
-    margin-bottom: 1em;
+    margin-bottom: 1.5em;
+    color: var(--text-muted);
   }
   
   ul, ol {
-    margin: 1em 0;
+    margin: 1.5em 0;
     padding-left: 2em;
+    color: var(--text-muted);
   }
   
   li {
-    margin-bottom: 0.5em;
+    margin-bottom: 0.75em;
+    line-height: 1.7;
   }
   
   a {
-    color: #3b82f6;
-    text-decoration: underline;
+    color: var(--primary-600);
+    text-decoration: none;
+    font-weight: 600;
+    border-bottom: 2px solid transparent;
+    transition: all 0.2s ease;
     
     &:hover {
-      color: #2563eb;
+      color: var(--primary-700);
+      border-bottom-color: var(--primary-400);
     }
   }
   
   code {
-    background: #f1f5f9;
-    padding: 2px 6px;
-    border-radius: 4px;
+    background: var(--gray-100);
+    padding: 4px 8px;
+    border-radius: 6px;
     font-family: 'Courier New', monospace;
     font-size: 0.9em;
+    color: var(--primary-700);
+    border: 1px solid var(--border);
   }
   
   pre {
-    background: #1e293b;
-    color: #e2e8f0;
-    padding: 16px;
-    border-radius: 8px;
+    background: var(--gray-900);
+    color: var(--gray-100);
+    padding: 24px;
+    border-radius: 12px;
     overflow-x: auto;
-    margin: 1em 0;
+    margin: 1.5em 0;
+    box-shadow: var(--shadow-md);
+    border: 1px solid var(--border);
     
     code {
       background: transparent;
       padding: 0;
       color: inherit;
+      border: none;
     }
   }
   
   blockquote {
-    border-left: 4px solid #3b82f6;
-    padding-left: 16px;
-    margin: 1em 0;
-    color: #64748b;
+    border-left: 4px solid var(--primary-500);
+    padding: 16px 24px;
+    margin: 1.5em 0;
+    background: var(--primary-50);
+    border-radius: 8px;
+    color: var(--text);
     font-style: italic;
+    box-shadow: var(--shadow-sm);
   }
   
   img {
     max-width: 100%;
     height: auto;
-    border-radius: 8px;
-    margin: 1em 0;
+    border-radius: 12px;
+    margin: 2em 0;
+    box-shadow: var(--shadow-lg);
   }
   
   table {
     width: 100%;
     border-collapse: collapse;
-    margin: 1em 0;
+    margin: 2em 0;
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: var(--shadow-md);
+    border: 1px solid var(--border);
     
     th, td {
-      padding: 12px;
-      border: 1px solid #e2e8f0;
+      padding: 16px;
+      border: 1px solid var(--border);
       text-align: left;
     }
     
     th {
-      background: #f8fafc;
-      font-weight: 600;
+      background: linear-gradient(135deg, var(--primary-50) 0%, var(--primary-100) 100%);
+      font-weight: 700;
+      color: var(--primary-900);
+    }
+
+    tr:nth-child(even) {
+      background: var(--gray-50);
     }
   }
 `;
@@ -150,28 +235,35 @@ const BlocksContainer = styled.div`
   margin-top: 32px;
 `;
 
-const Button = styled.button<{ $style: "primary" | "secondary" | "outline" }>`
-  padding: 12px 24px;
-  border-radius: 8px;
-  border: ${(p) => (p.$style === "outline" ? "2px solid #3b82f6" : "none")};
+const StyledButton = styled.button<{ $style: "primary" | "secondary" | "outline" }>`
+  padding: 14px 28px;
+  border-radius: 12px;
+  border: ${(p) => (p.$style === "outline" ? "2px solid var(--primary-500)" : "none")};
   background: ${(p) => 
-    p.$style === "primary" ? "#3b82f6" : 
-    p.$style === "secondary" ? "#64748b" : 
+    p.$style === "primary" ? "linear-gradient(135deg, var(--primary-600) 0%, var(--primary-700) 100%)" : 
+    p.$style === "secondary" ? "linear-gradient(135deg, var(--gray-600) 0%, var(--gray-700) 100%)" : 
     "transparent"};
-  color: ${(p) => (p.$style === "outline" ? "#3b82f6" : "#fff")};
+  color: ${(p) => (p.$style === "outline" ? "var(--primary-700)" : "#fff")};
   font-size: 1rem;
   font-weight: 600;
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   margin-right: 12px;
+  box-shadow: ${(p) => 
+    p.$style === "primary" ? "0 4px 14px rgba(2, 132, 199, 0.35)" :
+    p.$style === "secondary" ? "0 4px 14px rgba(71, 85, 105, 0.3)" :
+    "none"};
 
   &:hover {
     background: ${(p) => 
-      p.$style === "primary" ? "#2563eb" : 
-      p.$style === "secondary" ? "#475569" : 
-      "rgba(59, 130, 246, 0.1)"};
+      p.$style === "primary" ? "linear-gradient(135deg, var(--primary-700) 0%, var(--primary-800) 100%)" : 
+      p.$style === "secondary" ? "linear-gradient(135deg, var(--gray-700) 0%, var(--gray-800) 100%)" : 
+      "var(--primary-50)"};
     transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    box-shadow: ${(p) => 
+      p.$style === "primary" ? "0 8px 20px rgba(2, 132, 199, 0.45)" :
+      p.$style === "secondary" ? "0 8px 20px rgba(71, 85, 105, 0.4)" :
+      "var(--shadow-md)"};
   }
 
   &:active {
@@ -282,7 +374,7 @@ export default function PublicPage({ params }: { params: Promise<{ slug: string 
             margin: "1.5em 0",
             textAlign: block.props?.align || "left"
           }}>
-            <Button
+            <StyledButton
               $style={block.props?.buttonStyle || "primary"}
               onClick={() => {
                 if (block.props?.url) {
@@ -295,7 +387,7 @@ export default function PublicPage({ params }: { params: Promise<{ slug: string 
               }}
             >
               {block.props?.buttonText || "Botão"}
-            </Button>
+            </StyledButton>
             {block.props?.copyLink && (
               <CopyLinkButton
                 onClick={() => copyToClipboard(block.props?.url || pageUrl)}
@@ -358,7 +450,7 @@ export default function PublicPage({ params }: { params: Promise<{ slug: string 
           }}>
             {(block.props?.buttons || []).map((btn) => (
               <div key={btn.id} style={{ display: "flex", flexDirection: "column", gap: "8px", alignItems: "flex-start" }}>
-                <Button
+                <StyledButton
                   $style={btn.style || "primary"}
                   onClick={() => {
                     if (btn.url) {
@@ -375,7 +467,7 @@ export default function PublicPage({ params }: { params: Promise<{ slug: string 
                   }}
                 >
                   {btn.text || "Botão"}
-                </Button>
+                </StyledButton>
                 {btn.copyLink && (
                   <CopyLinkButton
                     onClick={() => copyToClipboard(btn.url || pageUrl)}
