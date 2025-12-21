@@ -7,13 +7,15 @@ import StandardLayout from "@/components/StandardLayout";
 import LoadingSpinner from "@/components/LoadingSpinner";
 import { Toast, useToast } from "@/components/Toast";
 import LoadingOverlay from "@/components/LoadingOverlay";
+import PageBuilder, { PageBlock } from "@/components/PageBuilder";
 
 
-type SectionKey = "general" | "appearance" | "notifications" | "security" | "integrations" | "forms" | "webhooks" | "update" | "env" | "backup";
+type SectionKey = "general" | "appearance" | "notifications" | "security" | "integrations" | "forms" | "webhooks" | "update" | "env" | "backup" | "pages";
 
 export default function ConfigPage() {
   const params = useSearchParams();
   const router = useRouter();
+  const toast = useToast();
   const initialSection = (params?.get("section") as SectionKey) || "forms";
   const [section, setSection] = useState<SectionKey>(initialSection);
   const [loading, setLoading] = useState<boolean>(false);
@@ -65,6 +67,28 @@ export default function ConfigPage() {
   const [webhookHelpOpen, setWebhookHelpOpen] = useState<boolean>(false);
   const [testingWebhook, setTestingWebhook] = useState<boolean>(false);
   const [testResult, setTestResult] = useState<{ success: boolean; message: string; ticketId?: number } | null>(null);
+  
+  // Estado do gerenciamento de páginas públicas
+  const [pagesList, setPagesList] = useState<Array<{ id: number; title: string; slug: string; description?: string | null; isPublished: boolean; link: string; createdAt?: string; updatedAt?: string; createdByName?: string | null; createdByEmail?: string | null }>>([]);
+  const [pageTitle, setPageTitle] = useState<string>("");
+  const [pageDescription, setPageDescription] = useState<string>("");
+  const [pageBlocks, setPageBlocks] = useState<PageBlock[]>([]);
+  const [pageIsPublished, setPageIsPublished] = useState<boolean>(false);
+  const [savingPage, setSavingPage] = useState<boolean>(false);
+  const [createPageOpen, setCreatePageOpen] = useState<boolean>(false);
+  const [pagesFeedback, setPagesFeedback] = useState<{ type: "success" | "error"; text: string } | null>(null);
+  const [managePageOpen, setManagePageOpen] = useState<boolean>(false);
+  const [managePageId, setManagePageId] = useState<number | null>(null);
+  const [pagesLoading, setPagesLoading] = useState<boolean>(false);
+  const [editPageOpen, setEditPageOpen] = useState<boolean>(false);
+  const [editPageId, setEditPageId] = useState<number | null>(null);
+  const [editPageTitle, setEditPageTitle] = useState<string>("");
+  const [editPageDescription, setEditPageDescription] = useState<string>("");
+  const [editPageBlocks, setEditPageBlocks] = useState<PageBlock[]>([]);
+  const [editPageIsPublished, setEditPageIsPublished] = useState<boolean>(false);
+  const [editPageLoading, setEditPageLoading] = useState<boolean>(false);
+  const [editPageSaving, setEditPageSaving] = useState<boolean>(false);
+  const [editPageError, setEditPageError] = useState<string>("");
 
   // Estado de configuração de ambiente (.env) - Nova implementação
   // IMPORTANTE: Declarar antes dos useEffects que o utilizam
@@ -74,6 +98,9 @@ export default function ConfigPage() {
   const [envError, setEnvError] = useState<string | null>(null);
   const [envSuccess, setEnvSuccess] = useState<string | null>(null);
   const [envSearchQuery, setEnvSearchQuery] = useState("");
+  const [envCollapsedCategories, setEnvCollapsedCategories] = useState<Set<string>>(new Set());
+  const [envVisiblePasswords, setEnvVisiblePasswords] = useState<Set<string>>(new Set());
+  const [envValidationErrors, setEnvValidationErrors] = useState<Record<string, string>>({});
 
   // Estado da atualização via GitHub
   const [updateRepoUrl, setUpdateRepoUrl] = useState<string>("");
@@ -145,6 +172,24 @@ export default function ConfigPage() {
   useEffect(() => {
     if (section === "env" || section === "update") {
       loadEnvConfig();
+    }
+  }, [section]);
+
+  // Inicializar todas as categorias como recolhidas quando a seção env for acessada
+  useEffect(() => {
+    if (section === "env") {
+      const allCategories = [
+        "E-mail (SMTP)",
+        "Inteligência Artificial",
+        "Banco de Dados",
+        "URLs e Ambiente",
+        "Segurança e Usuários",
+        "Docker",
+        "Operações Avançadas",
+        "Redis",
+        "Criptografia",
+      ];
+      setEnvCollapsedCategories(new Set(allCategories));
     }
   }, [section]);
 
@@ -312,11 +357,43 @@ export default function ConfigPage() {
   }
   }
 
+  // Utilitário para carregar lista de páginas públicas
+  async function loadPages() {
+    setPagesLoading(true);
+    try {
+      const res = await fetch("/api/pages");
+      if (res.ok) {
+        const json = (await res.json()) as Record<string, any>;
+        const items = (json.items || []).map((i: any) => ({
+          id: i.id,
+          title: i.title,
+          slug: i.slug,
+          description: i.description ?? null,
+          isPublished: Boolean(i.isPublished),
+          link: i.link,
+          createdAt: i.createdAt,
+          updatedAt: i.updatedAt,
+          createdByName: i.createdByName ?? null,
+          createdByEmail: i.createdByEmail ?? null,
+        }));
+        setPagesList(items);
+        setPagesFeedback(null);
+        setError("");
+      }
+    } catch (err: any) {
+      setError(err?.message || "Erro ao carregar páginas");
+    } finally {
+      setPagesLoading(false);
+  }
+  }
+
   // Carregar ao entrar na seção
   useEffect(() => {
     if (section === "forms") {
       loadUsers();
       loadForms();
+    } else if (section === "pages") {
+      loadPages();
     } else if (section === "webhooks") {
       loadWebhooks();
     } else if (section === "backup") {
@@ -630,6 +707,169 @@ export default function ConfigPage() {
       setEditError(err?.message || "Erro ao salvar formulário");
     } finally {
       setEditSaving(false);
+    }
+  }
+
+  // Funções para gerenciar páginas públicas
+  async function savePage() {
+    if (!pageTitle.trim()) {
+      setError("Informe um título para a página");
+      return;
+    }
+    if (pageBlocks.length === 0) {
+      setError("Adicione pelo menos um bloco à página");
+      return;
+    }
+    setSavingPage(true);
+    try {
+      const payload = {
+        title: pageTitle.trim(),
+        description: pageDescription.trim() || null,
+        content: "", // Mantido para compatibilidade
+        blocks: JSON.stringify(pageBlocks),
+        isPublished: pageIsPublished,
+      };
+      const res = await fetch("/api/pages", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) });
+      if (!res.ok) {
+        const json = (await res.json().catch(() => null)) as Record<string, any> | null;
+        throw new Error(json?.error || "Falha ao salvar página");
+      }
+      await loadPages();
+      setPageTitle(""); setPageDescription(""); setPageBlocks([]); setPageIsPublished(false);
+      setCreatePageOpen(false);
+      const message = "Página criada com sucesso!";
+      setPagesFeedback({ type: "success", text: message });
+      toast.showSuccess(message);
+    } catch (e: any) {
+      const errorMsg = e?.message || "Erro ao salvar";
+      setError(errorMsg);
+      toast.showError(errorMsg);
+    } finally {
+      setSavingPage(false);
+    }
+  }
+
+  async function deletePage(pageId: number) {
+    if (!confirm("Tem certeza que deseja deletar esta página?")) return;
+    try {
+      const res = await fetch(`/api/pages/${pageId}`, { method: "DELETE" });
+      if (!res.ok) {
+        const json = (await res.json().catch(() => null)) as Record<string, any> | null;
+        throw new Error(json?.error || "Falha ao deletar página");
+      }
+      await loadPages();
+      setManagePageOpen(false);
+      setManagePageId(null);
+      const message = "Página deletada com sucesso!";
+      setPagesFeedback({ type: "success", text: message });
+      toast.showSuccess(message);
+    } catch (e: any) {
+      const errorMsg = e?.message || "Erro ao deletar";
+      setError(errorMsg);
+      toast.showError(errorMsg);
+    }
+  }
+
+  async function togglePageVisibility(pageId: number, currentStatus: boolean) {
+    try {
+      // Carregar a página completa primeiro
+      const res = await fetch(`/api/pages/${pageId}?t=${Date.now()}`);
+      if (!res.ok) {
+        const json = (await res.json().catch(() => null)) as Record<string, any> | null;
+        throw new Error(json?.error || "Falha ao carregar página");
+      }
+      const page = (await res.json()) as Record<string, any>;
+      
+      // Atualizar apenas o status
+      const updateRes = await fetch(`/api/pages/${pageId}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ 
+          title: page.title,
+          description: page.description || "",
+          content: page.content || "",
+          blocks: page.blocks || null,
+          isPublished: !currentStatus 
+        }),
+      });
+      if (!updateRes.ok) {
+        const json = (await updateRes.json().catch(() => null)) as Record<string, any> | null;
+        throw new Error(json?.error || "Falha ao atualizar status");
+      }
+      await loadPages();
+      setPagesFeedback({ type: "success", text: "Status da página atualizado com sucesso." });
+    } catch (e: any) {
+      const errorMsg = e?.message || "Erro ao atualizar";
+      setError(errorMsg);
+      toast.showError(errorMsg);
+    }
+  }
+
+  async function openEditPage(pageId: number) {
+    setEditPageId(pageId);
+    setEditPageOpen(true);
+    setEditPageLoading(true);
+    setEditPageError("");
+    setPagesFeedback(null);
+    try {
+      const res = await fetch(`/api/pages/${pageId}?t=${Date.now()}`);
+      if (!res.ok) {
+        const json = (await res.json().catch(() => null)) as Record<string, any> | null;
+        throw new Error(json?.error || "Falha ao carregar página");
+      }
+      const data = (await res.json()) as Record<string, any>;
+      setEditPageTitle(data?.title ?? "");
+      setEditPageDescription(data?.description ?? "");
+      try {
+        const blocks = data?.blocks ? (typeof data.blocks === "string" ? JSON.parse(data.blocks) : data.blocks) : [];
+        setEditPageBlocks(Array.isArray(blocks) ? blocks : []);
+      } catch {
+        setEditPageBlocks([]);
+      }
+      setEditPageIsPublished(Boolean(data?.isPublished ?? false));
+    } catch (e: any) {
+      setEditPageError(e?.message || "Erro ao carregar página");
+    } finally {
+      setEditPageLoading(false);
+    }
+  }
+
+  async function saveEditPage() {
+    if (!editPageTitle.trim()) {
+      setEditPageError("Informe um título para a página");
+      return;
+    }
+    if (editPageBlocks.length === 0) {
+      setEditPageError("Adicione pelo menos um bloco à página");
+      return;
+    }
+    if (!editPageId) return;
+    setEditPageSaving(true);
+    try {
+      const payload = {
+        title: editPageTitle.trim(),
+        description: editPageDescription.trim() || null,
+        content: "", // Mantido para compatibilidade
+        blocks: JSON.stringify(editPageBlocks),
+        isPublished: editPageIsPublished,
+      };
+      const res = await fetch(`/api/pages/${editPageId}`, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) });
+      if (!res.ok) {
+        const json = (await res.json().catch(() => null)) as Record<string, any> | null;
+        throw new Error(json?.error || "Falha ao atualizar página");
+      }
+      await loadPages();
+      setEditPageOpen(false);
+      setEditPageId(null);
+      setManagePageOpen(false);
+      setManagePageId(null);
+      const message = "Página atualizada com sucesso!";
+      setPagesFeedback({ type: "success", text: message });
+      toast.showSuccess(message);
+    } catch (e: any) {
+      setEditPageError(e?.message || "Erro ao atualizar");
+    } finally {
+      setEditPageSaving(false);
     }
   }
 
@@ -1448,52 +1688,520 @@ export default function ConfigPage() {
           </div>
         );
       case "env":
-        // Lista de todas as variáveis permitidas, organizadas por categoria
-        const envCategories = [
-          {
-            title: "E-mail (SMTP)",
-            keys: ["EMAIL_ENABLED", "SMTP_HOST", "SMTP_PORT", "SMTP_SECURE", "SMTP_USER", "SMTP_PASSWORD", "EMAIL_FROM", "EMAIL_FROM_NAME"],
+        // Metadados completos para cada variável de ambiente
+        const envVariablesMetadata: Record<string, {
+          label: string;
+          description: string;
+          type: "string" | "boolean" | "number" | "password" | "url" | "email";
+          required: boolean;
+          sensitive: boolean;
+          category: string;
+          placeholder?: string;
+          validation?: (value: string) => string | null;
+          examples?: string[];
+        }> = {
+          // E-mail (SMTP)
+          EMAIL_ENABLED: {
+            label: "Habilitar E-mail",
+            description: "Ativa ou desativa o envio de emails pelo sistema",
+            type: "boolean",
+            required: false,
+            sensitive: false,
+            category: "E-mail (SMTP)",
           },
-          {
-            title: "Inteligência Artificial",
-            keys: ["LOCAL_AI_ENABLED", "LOCAL_AI_URL", "LOCAL_AI_MODEL", "LOCAL_AI_TIMEOUT_MS", "LOCAL_AI_PORT"],
+          SMTP_HOST: {
+            label: "Servidor SMTP",
+            description: "Endereço do servidor SMTP (ex: smtp.gmail.com, smtp-mail.outlook.com)",
+            type: "string",
+            required: false,
+            sensitive: false,
+            category: "E-mail (SMTP)",
+            placeholder: "smtp.gmail.com",
+            examples: ["smtp.gmail.com", "smtp-mail.outlook.com", "smtp.sendgrid.net"],
           },
-          {
-            title: "Banco de Dados",
-            keys: ["DATABASE_URL", "SHADOW_DATABASE_URL", "DB_HOST", "DB_PORT", "DB_USER", "DB_PASSWORD", "DB_NAME"],
+          SMTP_PORT: {
+            label: "Porta SMTP",
+            description: "Porta do servidor SMTP (587 para TLS, 465 para SSL)",
+            type: "number",
+            required: false,
+            sensitive: false,
+            category: "E-mail (SMTP)",
+            placeholder: "587",
+            validation: (v) => {
+              const num = parseInt(v);
+              if (v && (isNaN(num) || num < 1 || num > 65535)) return "Porta inválida (1-65535)";
+              return null;
+            },
           },
-          {
-            title: "URLs e Ambiente",
-            keys: ["APP_URL", "NEXT_PUBLIC_APP_URL", "PUBLIC_APP_URL", "NODE_ENV"],
+          SMTP_SECURE: {
+            label: "Conexão Segura",
+            description: "Usar SSL/TLS (true para porta 465, false para porta 587)",
+            type: "boolean",
+            required: false,
+            sensitive: false,
+            category: "E-mail (SMTP)",
           },
-          {
-            title: "Segurança e Usuários",
-            keys: ["AUTH_SECRET", "DEFAULT_USER_EMAIL", "DEFAULT_USER_PASSWORD", "DEFAULT_USER_NAME", "DEFAULT_USER_TWO_FACTOR"],
+          SMTP_USER: {
+            label: "Usuário SMTP",
+            description: "Email ou usuário para autenticação SMTP",
+            type: "email",
+            required: false,
+            sensitive: false,
+            category: "E-mail (SMTP)",
+            placeholder: "seu-email@gmail.com",
           },
-          {
-            title: "Docker",
-            keys: ["USE_DOCKER_DB", "USE_DOCKER_OLLAMA"],
+          SMTP_PASSWORD: {
+            label: "Senha SMTP",
+            description: "Senha ou App Password para autenticação SMTP",
+            type: "password",
+            required: false,
+            sensitive: true,
+            category: "E-mail (SMTP)",
           },
-          {
-            title: "Operações Avançadas",
-            keys: ["ALLOW_GIT_UPDATE", "ALLOWED_REPO_URL", "ALLOW_ENV_EDIT"],
+          EMAIL_FROM: {
+            label: "Email Remetente",
+            description: "Endereço de email que aparecerá como remetente",
+            type: "email",
+            required: false,
+            sensitive: false,
+            category: "E-mail (SMTP)",
+            placeholder: "noreply@rootdesk.com",
           },
-        ];
+          EMAIL_FROM_NAME: {
+            label: "Nome do Remetente",
+            description: "Nome que aparecerá junto com o email remetente",
+            type: "string",
+            required: false,
+            sensitive: false,
+            category: "E-mail (SMTP)",
+            placeholder: "RootDesk",
+          },
+          // Inteligência Artificial
+          LOCAL_AI_ENABLED: {
+            label: "Habilitar IA Local",
+            description: "Ativa o assistente virtual Dobby usando Ollama",
+            type: "boolean",
+            required: false,
+            sensitive: false,
+            category: "Inteligência Artificial",
+          },
+          LOCAL_AI_URL: {
+            label: "URL do Ollama",
+            description: "URL do servidor Ollama (geralmente http://localhost:11434)",
+            type: "url",
+            required: false,
+            sensitive: false,
+            category: "Inteligência Artificial",
+            placeholder: "http://localhost:11434",
+          },
+          LOCAL_AI_MODEL: {
+            label: "Modelo de IA",
+            description: "Nome do modelo Ollama a ser usado (ex: llama3:8b, mistral:7b)",
+            type: "string",
+            required: false,
+            sensitive: false,
+            category: "Inteligência Artificial",
+            placeholder: "llama3:8b",
+            examples: ["llama3:8b", "mistral:7b", "codellama:7b", "phi3:mini"],
+          },
+          LOCAL_AI_TIMEOUT_MS: {
+            label: "Timeout (ms)",
+            description: "Tempo máximo em milissegundos para aguardar resposta do modelo",
+            type: "number",
+            required: false,
+            sensitive: false,
+            category: "Inteligência Artificial",
+            placeholder: "15000",
+          },
+          LOCAL_AI_PORT: {
+            label: "Porta do Ollama",
+            description: "Porta do servidor Ollama (usado pelo docker-compose)",
+            type: "number",
+            required: false,
+            sensitive: false,
+            category: "Inteligência Artificial",
+            placeholder: "11434",
+          },
+          // Banco de Dados
+          DATABASE_URL: {
+            label: "URL do Banco de Dados",
+            description: "URL completa de conexão PostgreSQL (formato: postgresql://user:pass@host:port/db?schema=public)",
+            type: "url",
+            required: true,
+            sensitive: true,
+            category: "Banco de Dados",
+            placeholder: "postgresql://user:password@localhost:5432/helpdesk?schema=public",
+            validation: (v) => {
+              if (!v) return "URL do banco é obrigatória";
+              if (!v.includes("postgresql://")) return "URL deve começar com postgresql://";
+              return null;
+            },
+          },
+          SHADOW_DATABASE_URL: {
+            label: "URL do Shadow Database",
+            description: "URL do banco de dados shadow para migrações do Prisma",
+            type: "url",
+            required: false,
+            sensitive: true,
+            category: "Banco de Dados",
+            placeholder: "postgresql://user:password@localhost:5432/shadow_db?schema=public",
+          },
+          DB_HOST: {
+            label: "Host do Banco",
+            description: "Endereço do servidor PostgreSQL",
+            type: "string",
+            required: false,
+            sensitive: false,
+            category: "Banco de Dados",
+            placeholder: "localhost",
+          },
+          DB_PORT: {
+            label: "Porta do Banco",
+            description: "Porta do PostgreSQL (padrão: 5432)",
+            type: "number",
+            required: false,
+            sensitive: false,
+            category: "Banco de Dados",
+            placeholder: "5432",
+          },
+          DB_USER: {
+            label: "Usuário do Banco",
+            description: "Nome de usuário do PostgreSQL",
+            type: "string",
+            required: false,
+            sensitive: false,
+            category: "Banco de Dados",
+            placeholder: "helpdesk_user",
+          },
+          DB_PASSWORD: {
+            label: "Senha do Banco",
+            description: "Senha do usuário PostgreSQL",
+            type: "password",
+            required: false,
+            sensitive: true,
+            category: "Banco de Dados",
+          },
+          DB_NAME: {
+            label: "Nome do Banco",
+            description: "Nome do banco de dados PostgreSQL",
+            type: "string",
+            required: false,
+            sensitive: false,
+            category: "Banco de Dados",
+            placeholder: "helpdesk",
+          },
+          // URLs e Ambiente
+          APP_URL: {
+            label: "URL da Aplicação",
+            description: "URL base da aplicação (usado em links de email)",
+            type: "url",
+            required: false,
+            sensitive: false,
+            category: "URLs e Ambiente",
+            placeholder: "http://localhost:3000",
+          },
+          NEXT_PUBLIC_APP_URL: {
+            label: "URL Pública (Next.js)",
+            description: "URL pública acessível pelo cliente (Next.js)",
+            type: "url",
+            required: false,
+            sensitive: false,
+            category: "URLs e Ambiente",
+            placeholder: "http://localhost:3000",
+          },
+          PUBLIC_APP_URL: {
+            label: "URL Pública",
+            description: "URL pública da aplicação",
+            type: "url",
+            required: false,
+            sensitive: false,
+            category: "URLs e Ambiente",
+            placeholder: "http://localhost:3000",
+          },
+          NODE_ENV: {
+            label: "Ambiente Node.js",
+            description: "Ambiente de execução (development, production, test)",
+            type: "string",
+            required: false,
+            sensitive: false,
+            category: "URLs e Ambiente",
+            placeholder: "development",
+            examples: ["development", "production", "test"],
+          },
+          // Segurança e Usuários
+          AUTH_SECRET: {
+            label: "Chave Secreta de Autenticação",
+            description: "Chave para assinar tokens JWT (mínimo 32 caracteres, gere com: openssl rand -base64 32)",
+            type: "password",
+            required: true,
+            sensitive: true,
+            category: "Segurança e Usuários",
+            validation: (v) => {
+              if (!v) return "Chave secreta é obrigatória";
+              if (v.length < 32) return "Chave deve ter no mínimo 32 caracteres";
+              return null;
+            },
+          },
+          DEFAULT_USER_EMAIL: {
+            label: "Email do Usuário Padrão",
+            description: "Email do administrador criado automaticamente",
+            type: "email",
+            required: false,
+            sensitive: false,
+            category: "Segurança e Usuários",
+            placeholder: "admin@example.com",
+          },
+          DEFAULT_USER_PASSWORD: {
+            label: "Senha do Usuário Padrão",
+            description: "Senha do administrador padrão (altere em produção!)",
+            type: "password",
+            required: false,
+            sensitive: true,
+            category: "Segurança e Usuários",
+            validation: (v) => {
+              if (v && v.length < 6) return "Senha deve ter no mínimo 6 caracteres";
+              return null;
+            },
+          },
+          DEFAULT_USER_NAME: {
+            label: "Nome do Usuário Padrão",
+            description: "Nome do administrador padrão",
+            type: "string",
+            required: false,
+            sensitive: false,
+            category: "Segurança e Usuários",
+            placeholder: "Administrador",
+          },
+          DEFAULT_USER_TWO_FACTOR: {
+            label: "2FA para Usuário Padrão",
+            description: "Habilitar autenticação de dois fatores para o usuário padrão",
+            type: "boolean",
+            required: false,
+            sensitive: false,
+            category: "Segurança e Usuários",
+          },
+          // Docker
+          USE_DOCKER_DB: {
+            label: "Usar Docker para PostgreSQL",
+            description: "Usar container Docker para o banco de dados",
+            type: "boolean",
+            required: false,
+            sensitive: false,
+            category: "Docker",
+          },
+          USE_DOCKER_OLLAMA: {
+            label: "Usar Docker para Ollama",
+            description: "Usar container Docker para o servidor Ollama",
+            type: "boolean",
+            required: false,
+            sensitive: false,
+            category: "Docker",
+          },
+          USE_DOCKER_REDIS: {
+            label: "Usar Docker para Redis",
+            description: "Usar container Docker para o Redis",
+            type: "boolean",
+            required: false,
+            sensitive: false,
+            category: "Docker",
+          },
+          // Operações Avançadas
+          ALLOW_GIT_UPDATE: {
+            label: "Permitir Atualização via Git",
+            description: "Permite atualizar o sistema via git pull pela interface web",
+            type: "boolean",
+            required: false,
+            sensitive: false,
+            category: "Operações Avançadas",
+          },
+          ALLOWED_REPO_URL: {
+            label: "URL do Repositório Permitido",
+            description: "URL do repositório Git permitido para atualização (opcional, mas recomendado)",
+            type: "url",
+            required: false,
+            sensitive: false,
+            category: "Operações Avançadas",
+            placeholder: "https://github.com/usuario/repositorio.git",
+          },
+          ALLOW_ENV_EDIT: {
+            label: "Permitir Edição de .env",
+            description: "Permite editar variáveis de ambiente pela interface web",
+            type: "boolean",
+            required: false,
+            sensitive: false,
+            category: "Operações Avançadas",
+          },
+          // Redis
+          REDIS_ENABLED: {
+            label: "Habilitar Redis",
+            description: "Ativa o uso do Redis para cache de sessões e respostas",
+            type: "boolean",
+            required: false,
+            sensitive: false,
+            category: "Redis",
+          },
+          REDIS_HOST: {
+            label: "Host do Redis",
+            description: "Endereço do servidor Redis",
+            type: "string",
+            required: false,
+            sensitive: false,
+            category: "Redis",
+            placeholder: "localhost",
+          },
+          REDIS_PORT: {
+            label: "Porta do Redis",
+            description: "Porta do servidor Redis (padrão: 6379)",
+            type: "number",
+            required: false,
+            sensitive: false,
+            category: "Redis",
+            placeholder: "6379",
+          },
+          REDIS_PASSWORD: {
+            label: "Senha do Redis",
+            description: "Senha do Redis (opcional, deixe vazio se não usar autenticação)",
+            type: "password",
+            required: false,
+            sensitive: true,
+            category: "Redis",
+          },
+          // Criptografia
+          ENCRYPTION_KEY: {
+            label: "Chave de Criptografia",
+            description: "Chave para criptografar arquivos sensíveis (64 caracteres hex, gere com: openssl rand -hex 32)",
+            type: "password",
+            required: true,
+            sensitive: true,
+            category: "Criptografia",
+            validation: (v) => {
+              if (!v) return "Chave de criptografia é obrigatória";
+              if (!/^[0-9a-f]{64}$/i.test(v)) return "Chave deve ter exatamente 64 caracteres hexadecimais";
+              return null;
+            },
+          },
+        };
+
+        // Agrupar variáveis por categoria
+        const categoriesMap = new Map<string, string[]>();
+        Object.entries(envVariablesMetadata).forEach(([key, meta]) => {
+          if (!categoriesMap.has(meta.category)) {
+            categoriesMap.set(meta.category, []);
+          }
+          categoriesMap.get(meta.category)!.push(key);
+        });
+
+        const envCategories = Array.from(categoriesMap.entries()).map(([title, keys]) => ({
+          title,
+          keys,
+        }));
 
         // Filtrar variáveis baseado na busca
         const filteredCategories = envCategories.map((cat) => ({
           ...cat,
-          keys: cat.keys.filter((key) =>
-            envSearchQuery.trim() === "" || key.toLowerCase().includes(envSearchQuery.toLowerCase())
-          ),
+          keys: cat.keys.filter((key) => {
+            const meta = envVariablesMetadata[key];
+            const searchLower = envSearchQuery.toLowerCase();
+            return (
+              envSearchQuery.trim() === "" ||
+              key.toLowerCase().includes(searchLower) ||
+              meta.label.toLowerCase().includes(searchLower) ||
+              meta.description.toLowerCase().includes(searchLower)
+            );
+          }),
         })).filter((cat) => cat.keys.length > 0);
 
-        // Determinar tipo de input baseado na chave
-        const getInputType = (key: string): string => {
-          if (key.includes("PASSWORD") || key.includes("SECRET")) return "password";
-          if (key.includes("EMAIL")) return "email";
-          if (key.includes("URL")) return "url";
-          return "text";
+        // Funções auxiliares
+        const toggleCategory = (categoryTitle: string) => {
+          setEnvCollapsedCategories((prev) => {
+            const next = new Set(prev);
+            if (next.has(categoryTitle)) {
+              next.delete(categoryTitle);
+            } else {
+              next.add(categoryTitle);
+            }
+            return next;
+          });
+        };
+
+        const togglePasswordVisibility = (key: string) => {
+          setEnvVisiblePasswords((prev) => {
+            const next = new Set(prev);
+            if (next.has(key)) {
+              next.delete(key);
+            } else {
+              next.add(key);
+            }
+            return next;
+          });
+        };
+
+        const validateEnvValue = (key: string, value: string): string | null => {
+          const meta = envVariablesMetadata[key];
+          if (!meta) return null;
+          if (meta.validation) return meta.validation(value);
+          if (meta.required && !value.trim()) return "Este campo é obrigatório";
+          return null;
+        };
+
+        const handleEnvChange = (key: string, value: string) => {
+          setEnvConfig((prev) => ({ ...prev, [key]: value }));
+          const error = validateEnvValue(key, value);
+          setEnvValidationErrors((prev) => {
+            const next = { ...prev };
+            if (error) {
+              next[key] = error;
+            } else {
+              delete next[key];
+            }
+            return next;
+          });
+        };
+
+        const getInputValue = (key: string, meta: typeof envVariablesMetadata[string]): string => {
+          const value = envConfig[key] ?? "";
+          if (meta.type === "boolean") {
+            return value === "true" || value === "1" ? "true" : "false";
+          }
+          return value;
+        };
+
+        const handleBooleanChange = (key: string, checked: boolean) => {
+          handleEnvChange(key, checked ? "true" : "false");
+        };
+
+        const exportEnvConfig = () => {
+          const dataStr = JSON.stringify(envConfig, null, 2);
+          const dataBlob = new Blob([dataStr], { type: "application/json" });
+          const url = URL.createObjectURL(dataBlob);
+          const link = document.createElement("a");
+          link.href = url;
+          link.download = `env-config-${new Date().toISOString().split("T")[0]}.json`;
+          link.click();
+          URL.revokeObjectURL(url);
+          toast.showSuccess("Configuração exportada com sucesso!");
+        };
+
+        const importEnvConfig = () => {
+          const input = document.createElement("input");
+          input.type = "file";
+          input.accept = ".json";
+          input.onchange = (e) => {
+            const file = (e.target as HTMLInputElement).files?.[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = (event) => {
+              try {
+                const imported = JSON.parse(event.target?.result as string);
+                setEnvConfig((prev) => ({ ...prev, ...imported }));
+                toast.showSuccess("Configuração importada com sucesso!");
+              } catch (err) {
+                toast.showError("Erro ao importar configuração. Verifique o formato do arquivo.");
+              }
+            };
+            reader.readAsText(file);
+          };
+          input.click();
         };
 
         return (
@@ -1522,63 +2230,163 @@ export default function ConfigPage() {
               <Skeleton aria-hidden />
             ) : (
               <>
-                <Field style={{ marginBottom: 20 }}>
-                  <Label htmlFor="env-search">Buscar variável</Label>
+                {/* Barra de busca e ações */}
+                <EnvToolbar>
+                  <Field style={{ flex: 1, marginBottom: 0 }}>
                   <Input
                     id="env-search"
                     type="text"
-                    placeholder="Digite o nome da variável..."
+                      placeholder="Buscar por nome, descrição ou valor..."
                     value={envSearchQuery}
                     onChange={(e) => setEnvSearchQuery((e.currentTarget as any).value ?? "")}
+                      style={{ marginBottom: 0 }}
                   />
                 </Field>
+                  <ActionButton type="button" onClick={exportEnvConfig} style={{ marginLeft: 12 }}>
+                    📥 Exportar
+                  </ActionButton>
+                  <ActionButton type="button" onClick={importEnvConfig} style={{ marginLeft: 8 }}>
+                    📤 Importar
+                  </ActionButton>
+                  <ActionButton type="button" onClick={loadEnvConfig} disabled={envLoading} style={{ marginLeft: 8 }}>
+                    🔄 Recarregar
+                  </ActionButton>
+                </EnvToolbar>
 
-                {filteredCategories.map((category) => (
-                  <EnvGroup key={category.title} style={{ marginBottom: 20 }}>
-                    <EnvGroupTitle>{category.title}</EnvGroupTitle>
-                    {category.keys.map((key) => (
-                      <Field key={key}>
-                        <Label htmlFor={`env-${key}`}>{key}</Label>
-                        <Input
+                {/* Lista de categorias */}
+                <EnvCategoriesGrid>
+                  {filteredCategories.map((category) => {
+                  const isCollapsed = envCollapsedCategories.has(category.title);
+                  const meta = envVariablesMetadata[category.keys[0]];
+                  
+                  return (
+                    <EnvCategoryCard key={category.title} $collapsed={isCollapsed}>
+                      <EnvCategoryHeader onClick={() => toggleCategory(category.title)}>
+                        <EnvCategoryTitle>
+                          <EnvCategoryIcon>{isCollapsed ? "▶" : "▼"}</EnvCategoryIcon>
+                          {category.title}
+                          <EnvCategoryCount>({category.keys.length})</EnvCategoryCount>
+                        </EnvCategoryTitle>
+                        <EnvCategoryToggle>{isCollapsed ? "Expandir" : "Recolher"}</EnvCategoryToggle>
+                      </EnvCategoryHeader>
+                      
+                      {!isCollapsed && (
+                        <EnvCategoryContent>
+                          {category.keys.map((key) => {
+                            const meta = envVariablesMetadata[key];
+                            if (!meta) return null;
+                            
+                            const value = getInputValue(key, meta);
+                            const isPassword = meta.type === "password";
+                            const isVisible = envVisiblePasswords.has(key);
+                            const hasError = envValidationErrors[key];
+                            const isEmpty = !value || value.trim() === "";
+
+                            return (
+                              <EnvFieldWrapper key={key} $hasError={!!hasError} $required={meta.required}>
+                                <EnvFieldHeader>
+                                  <EnvFieldLabel htmlFor={`env-${key}`}>
+                                    {meta.label}
+                                    {meta.required && <EnvRequiredBadge> *</EnvRequiredBadge>}
+                                    {meta.sensitive && <EnvSensitiveBadge> 🔒</EnvSensitiveBadge>}
+                                  </EnvFieldLabel>
+                                  {isPassword && (
+                                    <EnvTogglePassword
+                                      type="button"
+                                      onClick={() => togglePasswordVisibility(key)}
+                                      title={isVisible ? "Ocultar senha" : "Mostrar senha"}
+                                    >
+                                      {isVisible ? "👁️" : "👁️‍🗨️"}
+                                    </EnvTogglePassword>
+                                  )}
+                                </EnvFieldHeader>
+                                
+                                <EnvFieldDescription>{meta.description}</EnvFieldDescription>
+
+                                {meta.type === "boolean" ? (
+                                  <CheckboxRow>
+                                    <input
+                                      type="checkbox"
                           id={`env-${key}`}
-                          type={getInputType(key)}
-                          value={envConfig[key] ?? ""}
-                          onChange={(e) =>
-                            setEnvConfig((prev) => ({
-                              ...prev,
-                              [key]: (e.currentTarget as any).value ?? "",
-                            }))
-                          }
-                        />
-                      </Field>
-                    ))}
-                  </EnvGroup>
-                ))}
+                                      checked={value === "true"}
+                                      onChange={(e) => handleBooleanChange(key, e.target.checked)}
+                                    />
+                                    <label htmlFor={`env-${key}`} style={{ marginLeft: 8 }}>
+                                      {value === "true" ? "Habilitado" : "Desabilitado"}
+                                    </label>
+                                  </CheckboxRow>
+                                ) : (
+                                  <EnvInput
+                                    id={`env-${key}`}
+                                    type={isPassword && !isVisible ? "password" : meta.type === "number" ? "number" : meta.type === "email" ? "email" : meta.type === "url" ? "url" : "text"}
+                                    value={value}
+                                    placeholder={meta.placeholder}
+                                    onChange={(e) => handleEnvChange(key, (e.currentTarget as any).value ?? "")}
+                                    $hasError={!!hasError}
+                                    $isEmpty={isEmpty && !meta.required}
+                                  />
+                                )}
+
+                                {hasError && (
+                                  <EnvFieldError role="alert">{hasError}</EnvFieldError>
+                                )}
+
+                                {meta.examples && meta.examples.length > 0 && (
+                                  <EnvFieldExamples>
+                                    <strong>Exemplos:</strong> {meta.examples.join(", ")}
+                                  </EnvFieldExamples>
+                                )}
+
+                                {isEmpty && meta.required && (
+                                  <EnvFieldWarning>⚠️ Este campo é obrigatório</EnvFieldWarning>
+                                )}
+                              </EnvFieldWrapper>
+                            );
+                          })}
+                        </EnvCategoryContent>
+                      )}
+                    </EnvCategoryCard>
+                  );
+                  })}
+                </EnvCategoriesGrid>
 
                 {filteredCategories.length === 0 && envSearchQuery.trim() !== "" && (
-                  <Muted>Nenhuma variável encontrada para "{envSearchQuery}".</Muted>
+                  <Muted style={{ textAlign: "center", padding: "40px 20px" }}>
+                    Nenhuma variável encontrada para "{envSearchQuery}".
+                  </Muted>
                 )}
 
-                <Actions style={{ marginTop: 24 }}>
-                  <ActionButton type="button" onClick={loadEnvConfig} disabled={envLoading}>
-                    Recarregar
-                  </ActionButton>
-                  <PrimaryButton type="button" onClick={saveEnvConfig} disabled={envSaving} style={{ position: "relative" }}>
+                {/* Ações */}
+                <Actions style={{ marginTop: 32 }}>
+                  <PrimaryButton 
+                    type="button" 
+                    onClick={saveEnvConfig} 
+                    disabled={envSaving || Object.keys(envValidationErrors).length > 0}
+                    style={{ position: "relative" }}
+                  >
                     {envSaving && (
                       <span style={{ marginRight: 8, display: "inline-flex", alignItems: "center" }}>
                         <LoadingSpinner size="small" color="#fff" />
                       </span>
                     )}
-                    {envSaving ? "Salvando..." : "Salvar configurações"}
+                    {envSaving ? "Salvando..." : "💾 Salvar configurações"}
                   </PrimaryButton>
                 </Actions>
 
+                {Object.keys(envValidationErrors).length > 0 && (
+                  <Feedback role="alert" $variant="error" style={{ marginTop: 16 }}>
+                    ⚠️ Corrija os erros de validação antes de salvar.
+                  </Feedback>
+                )}
+
                 <InfoPanel style={{ marginTop: 24 }}>
-                  <InfoTitle>Informações importantes</InfoTitle>
+                  <InfoTitle>ℹ️ Informações importantes</InfoTitle>
                   <HelpList>
                     <li>Após salvar, reinicie o servidor para aplicar as mudanças.</li>
-                    <li>Senhas e chaves secretas são mascaradas por segurança.</li>
+                    <li>Campos marcados com <strong>*</strong> são obrigatórios.</li>
+                    <li>Campos com 🔒 contêm informações sensíveis e são mascarados.</li>
                     <li>Certifique-se de que <InlineCode>ALLOW_ENV_EDIT=true</InlineCode> para permitir edição.</li>
+                    <li>Use Exportar/Importar para fazer backup das configurações.</li>
                   </HelpList>
                 </InfoPanel>
               </>
@@ -1590,6 +2398,14 @@ export default function ConfigPage() {
           <div>
             <SectionTitle>Formulários Públicos</SectionTitle>
             <Muted>Crie, gerencie e compartilhe formulários públicos.
+            </Muted>
+          </div>
+        );
+      case "pages":
+        return (
+          <div>
+            <SectionTitle>Páginas Públicas</SectionTitle>
+            <Muted>Crie, gerencie e compartilhe páginas web públicas.
             </Muted>
           </div>
         );
@@ -1880,7 +2696,7 @@ export default function ConfigPage() {
           </div>
         );
     }
-  }, [section, loading, error, updateFeedback, updateLoading, updateRepoUrl, envLoading, envSaving, envError, envSuccess, envConfig, envSearchQuery, systemVersion, versionLoading, backupFeedback, backupsLoading, backupsList, backupConfig, backupCreating, backupUploading, backupRestoring, backupSendingEmail, backupConfigSaving]);
+  }, [section, loading, error, updateFeedback, updateLoading, updateRepoUrl, envLoading, envSaving, envError, envSuccess, envConfig, envSearchQuery, envVisiblePasswords, envCollapsedCategories, envValidationErrors, systemVersion, versionLoading, backupFeedback, backupsLoading, backupsList, backupConfig, backupCreating, backupUploading, backupRestoring, backupSendingEmail, backupConfigSaving]);
 
   const activeForm = manageFormId ? formsList.find((f) => f.id === manageFormId || f.numericId === manageFormId) ?? null : null;
   const activeWebhook = manageWebhookId ? webhooksList.find((w) => w.id === manageWebhookId) ?? null : null;
@@ -1892,7 +2708,7 @@ export default function ConfigPage() {
     <StandardLayout>
       <Toast toasts={toast.toasts} onClose={toast.removeToast} />
         <Content>
-          {section !== "forms" && section !== "webhooks" && section !== "backup" && (
+          {section !== "forms" && section !== "webhooks" && section !== "backup" && section !== "pages" && (
             <Card aria-labelledby="config-title">
               <CardHeader>
                 <div style={{ display: "flex", alignItems: "center", gap: "12px", flex: 1 }}>
@@ -2145,6 +2961,108 @@ export default function ConfigPage() {
                           </FormsCell>
                           <FormsCell>
                             <ActionButton type="button" onClick={() => openManageWebhook(webhook.id)}>
+                              Gerenciar
+                            </ActionButton>
+                          </FormsCell>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </FormsTable>
+                </FormsScroll>
+              </Card>
+            </FormsWrapper>
+          )}
+          {section === "pages" && (
+            <FormsWrapper>
+              <Card aria-labelledby="pages-card-title">
+                <CardHeader>
+                  <div style={{ display: "flex", alignItems: "center", gap: "12px", flex: 1 }}>
+                    <HeaderIcon aria-hidden>
+                      <svg viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M14 2H6c-1.1 0-1.99.9-1.99 2L4 20c0 1.1.89 2 1.99 2H18c1.1 0 2-.9 2-2V8l-6-6zm2 16H8v-2h8v2zm0-4H8v-2h8v2zm-3-5V3.5L18.5 9H13z"/>
+                      </svg>
+                    </HeaderIcon>
+                    <div>
+                      <CardTitle id="pages-card-title">Páginas públicas</CardTitle>
+                      <Muted>Gerencie páginas web públicas com conteúdo HTML personalizado.</Muted>
+                    </div>
+                  </div>
+                  <HeaderActions>
+                    <ActionButton type="button" onClick={() => loadPages()} disabled={pagesLoading}>
+                      Recarregar
+                    </ActionButton>
+                    <PrimaryButton type="button" onClick={() => setCreatePageOpen(true)}>
+                      Nova página
+                    </PrimaryButton>
+                  </HeaderActions>
+                </CardHeader>
+                {error && (
+                  <Feedback role="alert" $variant="error">{error}</Feedback>
+                )}
+                {pagesFeedback && !managePageOpen && !createPageOpen && (
+                  <Feedback role={pagesFeedback.type === "error" ? "alert" : "status"} $variant={pagesFeedback.type}>
+                    {pagesFeedback.text}
+                  </Feedback>
+                )}
+                <FormsScroll role="region" aria-label="Lista de páginas">
+                  <FormsTable>
+                    <thead>
+                      <tr>
+                        <FormsHeaderCell>Página</FormsHeaderCell>
+                        <FormsHeaderCell>Status</FormsHeaderCell>
+                        <FormsHeaderCell>Criado por</FormsHeaderCell>
+                        <FormsHeaderCell>Atualizado em</FormsHeaderCell>
+                        <FormsHeaderCell>Link</FormsHeaderCell>
+                        <FormsHeaderCell aria-label="Ações" />
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {pagesLoading && (
+                        <tr>
+                          <FormsCell colSpan={6}>
+                            <Muted>Carregando páginas...</Muted>
+                          </FormsCell>
+                        </tr>
+                      )}
+                      {!pagesLoading && pagesList.length === 0 && (
+                        <tr>
+                          <FormsCell colSpan={6}>
+                            <Muted>Nenhuma página cadastrada ainda.</Muted>
+                          </FormsCell>
+                        </tr>
+                      )}
+                      {!pagesLoading && pagesList.map((page) => (
+                        <tr key={page.id}>
+                          <FormsCell>
+                            <FormTitle>
+                              <strong>{page.title}</strong>
+                              {page.description && <small>{page.description}</small>}
+                              <small>Slug: {page.slug}</small>
+                            </FormTitle>
+                          </FormsCell>
+                          <FormsCell>
+                            <StatusBadge $tone={page.isPublished ? "success" : "warning"}>
+                              {page.isPublished ? "Publicada" : "Rascunho"}
+                            </StatusBadge>
+                          </FormsCell>
+                          <FormsCell>
+                            <FormMeta>{page.createdByName || page.createdByEmail || "—"}</FormMeta>
+                          </FormsCell>
+                          <FormsCell>{formatDateTime(page.updatedAt || page.createdAt)}</FormsCell>
+                          <FormsCell>
+                            {page.isPublished ? (
+                              <FormLink href={`/pages/${page.slug}`} target="_blank" rel="noreferrer">
+                                /pages/{page.slug}
+                              </FormLink>
+                            ) : (
+                              <span>-</span>
+                            )}
+                          </FormsCell>
+                          <FormsCell>
+                            <ActionButton type="button" onClick={() => {
+                              setManagePageId(page.id);
+                              setManagePageOpen(true);
+                            }}>
                               Gerenciar
                             </ActionButton>
                           </FormsCell>
@@ -3084,11 +4002,394 @@ fetch(webhookUrl, {
           </ModalDialog>
         </>
       )}
+
+      {createPageOpen && (
+        <>
+          <ModalBackdrop $open={createPageOpen} onClick={() => {
+            setCreatePageOpen(false);
+            setPageTitle("");
+            setPageDescription("");
+            setPageBlocks([]);
+            setPageIsPublished(false);
+          }} aria-hidden={!createPageOpen} />
+          <PageModalDialog
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="create-page-title"
+            $open={createPageOpen}
+            onKeyDown={(e) => { 
+              if (e.key === "Escape") {
+                setCreatePageOpen(false);
+                setPageTitle("");
+                setPageDescription("");
+                setPageBlocks([]);
+                setPageIsPublished(false);
+              }
+            }}
+          >
+            <PageModalHeader>
+              <PageModalIcon aria-hidden>
+                <svg viewBox="0 0 24 24" fill="currentColor" width="32" height="32">
+                  <path d="M14 2H6c-1.1 0-1.99.9-1.99 2L4 20c0 1.1.89 2 1.99 2H18c1.1 0 2-.9 2-2V8l-6-6zm2 16H8v-2h8v2zm0-4H8v-2h8v2zm-3-5V3.5L18.5 9H13z"/>
+                </svg>
+              </PageModalIcon>
+              <div style={{ flex: 1 }}>
+                <PageModalTitle id="create-page-title">Criar Nova Página</PageModalTitle>
+                <PageModalSubtitle>Use o editor visual para criar sua página com blocos arrastáveis</PageModalSubtitle>
+              </div>
+            </PageModalHeader>
+            
+            <PageModalContent>
+              <PageFormSection>
+                <PageSectionTitle>Informações Básicas</PageSectionTitle>
+                <Field>
+                  <Label htmlFor="new-page-title">
+                    Título da Página <span style={{ color: "#ef4444" }}>*</span>
+                  </Label>
+                  <Input
+                    id="new-page-title"
+                    type="text"
+                    placeholder="Ex.: Página de Suporte, Central de Ajuda..."
+                    value={pageTitle}
+                    onChange={(event) => {
+                      const value = (event.currentTarget as unknown as { value?: string }).value ?? "";
+                      setPageTitle(value);
+                    }}
+                    style={{ fontSize: "1rem", padding: "12px 16px" }}
+                  />
+                  <Muted style={{ marginTop: "4px", fontSize: "0.875rem" }}>
+                    O título será usado para gerar o link da página (slug)
+                  </Muted>
+                </Field>
+                <Field>
+                  <Label htmlFor="new-page-desc">Descrição (Opcional)</Label>
+                  <Input
+                    id="new-page-desc"
+                    type="text"
+                    placeholder="Breve descrição do que esta página oferece..."
+                    value={pageDescription}
+                    onChange={(event) => {
+                      const value = (event.currentTarget as unknown as { value?: string }).value ?? "";
+                      setPageDescription(value);
+                    }}
+                    style={{ fontSize: "1rem", padding: "12px 16px" }}
+                  />
+                </Field>
+              </PageFormSection>
+
+              <PageFormSection>
+                <PageSectionTitle>Conteúdo da Página</PageSectionTitle>
+                <PageBuilderContainer>
+                  <PageBuilder blocks={pageBlocks} onChange={setPageBlocks} />
+                </PageBuilderContainer>
+                {pageBlocks.length === 0 && (
+                  <EmptyBuilderState>
+                    <div style={{ fontSize: "3rem", marginBottom: "16px" }}>📝</div>
+                    <div style={{ fontSize: "1.1rem", fontWeight: 600, marginBottom: "8px", color: "#0f172a" }}>
+                      Comece adicionando blocos
+                    </div>
+                    <div style={{ color: "#64748b", fontSize: "0.9rem" }}>
+                      Arraste blocos da paleta lateral ou clique neles para adicionar
+                    </div>
+                  </EmptyBuilderState>
+                )}
+              </PageFormSection>
+
+              <PageFormSection>
+                <PageSectionTitle>Configurações</PageSectionTitle>
+                <Field>
+                  <label style={{ 
+                    display: "flex", 
+                    alignItems: "center", 
+                    gap: 12, 
+                    cursor: "pointer",
+                    padding: "12px 16px",
+                    borderRadius: "8px",
+                    border: "1px solid rgba(148, 163, 184, 0.2)",
+                    background: pageIsPublished ? "rgba(34, 197, 94, 0.05)" : "#fff",
+                    transition: "all 0.2s ease"
+                  }}>
+                    <input
+                      type="checkbox"
+                      checked={pageIsPublished}
+                      onChange={(event) => {
+                        const checked = Boolean((event.currentTarget as unknown as { checked?: boolean }).checked);
+                        setPageIsPublished(checked);
+                      }}
+                      style={{ width: "18px", height: "18px", cursor: "pointer" }}
+                    />
+                    <div>
+                      <div style={{ fontWeight: 600, color: "#0f172a", marginBottom: "2px" }}>
+                        Publicar página imediatamente
+                      </div>
+                      <div style={{ fontSize: "0.875rem", color: "#64748b" }}>
+                        A página ficará acessível publicamente após salvar
+                      </div>
+                    </div>
+                  </label>
+                </Field>
+              </PageFormSection>
+            </PageModalContent>
+
+            <PageModalActions>
+              <CancelButton type="button" onClick={() => {
+                setCreatePageOpen(false);
+                setPageTitle("");
+                setPageDescription("");
+                setPageBlocks([]);
+                setPageIsPublished(false);
+              }}>
+                Cancelar
+              </CancelButton>
+              <ConfirmButton type="button" onClick={savePage} disabled={savingPage || !pageTitle.trim() || pageBlocks.length === 0} aria-label="Salvar nova página">
+                {savingPage ? (
+                  <>
+                    <LoadingSpinner size="small" color="#fff" style={{ marginRight: "8px" }} />
+                    Salvando...
+                  </>
+                ) : (
+                  <>
+                    <svg viewBox="0 0 24 24" fill="currentColor" width="18" height="18" style={{ marginRight: "8px" }}>
+                      <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/>
+                    </svg>
+                    Salvar Página
+                  </>
+                )}
+              </ConfirmButton>
+            </PageModalActions>
+          </PageModalDialog>
+        </>
+      )}
+
+      {managePageOpen && managePageId && (() => {
+        const activePage = pagesList.find(p => p.id === managePageId);
+        if (!activePage) return null;
+        return (
+          <>
+            <ModalBackdrop $open={managePageOpen} onClick={() => {
+              setManagePageOpen(false);
+              setManagePageId(null);
+            }} aria-hidden={!managePageOpen} />
+            <ModalDialog
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="manage-page-title"
+              $open={managePageOpen}
+              onKeyDown={(e) => { if (e.key === "Escape") {
+                setManagePageOpen(false);
+                setManagePageId(null);
+              }}}
+            >
+              <ModalHeader>
+                <ModalIcon aria-hidden>🔧</ModalIcon>
+                <div>
+                  <ModalTitle id="manage-page-title">{activePage.title}</ModalTitle>
+                  <Muted>Detalhes da página e ações rápidas.</Muted>
+                </div>
+              </ModalHeader>
+              {pagesFeedback && (
+                <Feedback role={pagesFeedback.type === "error" ? "alert" : "status"} $variant={pagesFeedback.type}>
+                  {pagesFeedback.text}
+                </Feedback>
+              )}
+              <InfoGrid>
+                <div>
+                  <InfoLabel>ID</InfoLabel>
+                  <InfoValue>{activePage.id}</InfoValue>
+                </div>
+                <div>
+                  <InfoLabel>Slug</InfoLabel>
+                  <InfoValue>{activePage.slug}</InfoValue>
+                </div>
+                <div>
+                  <InfoLabel>Status</InfoLabel>
+                  <InfoValue>
+                    <StatusBadge $tone={activePage.isPublished ? "success" : "warning"}>
+                      {activePage.isPublished ? "Publicada" : "Rascunho"}
+                    </StatusBadge>
+                  </InfoValue>
+                </div>
+                <div>
+                  <InfoLabel>Criado por</InfoLabel>
+                  <InfoValue>{activePage.createdByName || activePage.createdByEmail || "—"}</InfoValue>
+                </div>
+                <div>
+                  <InfoLabel>Criado em</InfoLabel>
+                  <InfoValue>{formatDateTime(activePage.createdAt)}</InfoValue>
+                </div>
+                <div>
+                  <InfoLabel>Atualizado em</InfoLabel>
+                  <InfoValue>{formatDateTime(activePage.updatedAt || activePage.createdAt)}</InfoValue>
+                </div>
+                <div>
+                  <InfoLabel>Link público</InfoLabel>
+                  <InfoValue>
+                    {activePage.isPublished ? (
+                      <FormLink href={`/pages/${activePage.slug}`} target="_blank" rel="noreferrer">
+                        {`${baseUrl}/pages/${activePage.slug}`}
+                      </FormLink>
+                    ) : (
+                      <span>-</span>
+                    )}
+                  </InfoValue>
+                </div>
+              </InfoGrid>
+              <ModalActions>
+                <ActionButton
+                  type="button"
+                  onClick={() => togglePageVisibility(activePage.id, activePage.isPublished)}
+                >
+                  {activePage.isPublished ? "Despublicar página" : "Publicar página"}
+                </ActionButton>
+                <ActionButton
+                  type="button"
+                  onClick={() => {
+                    setManagePageOpen(false);
+                    openEditPage(activePage.id);
+                  }}
+                >
+                  Editar conteúdo
+                </ActionButton>
+                <DangerButton
+                  type="button"
+                  onClick={() => deletePage(activePage.id)}
+                >
+                  Deletar página
+                </DangerButton>
+                <CancelButton type="button" onClick={() => {
+                  setManagePageOpen(false);
+                  setManagePageId(null);
+                }}>
+                  Fechar
+                </CancelButton>
+              </ModalActions>
+            </ModalDialog>
+          </>
+        );
+      })()}
+
+      {editPageOpen && editPageId && (
+        <>
+          <ModalBackdrop $open={editPageOpen} onClick={() => {
+            if (editPageSaving) return;
+            setEditPageOpen(false);
+            setEditPageId(null);
+            setEditPageTitle("");
+            setEditPageDescription("");
+            setEditPageBlocks([]);
+            setEditPageIsPublished(false);
+            setEditPageError("");
+          }} aria-hidden={!editPageOpen} />
+          <ModalDialog
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="edit-page-title"
+            $open={editPageOpen}
+            onKeyDown={(e) => { 
+              if (e.key === "Escape" && !editPageSaving) {
+                setEditPageOpen(false);
+                setEditPageId(null);
+                setEditPageTitle("");
+                setEditPageDescription("");
+                setEditPageBlocks([]);
+                setEditPageIsPublished(false);
+                setEditPageError("");
+              }
+            }}
+          >
+            <ModalHeader>
+              <ModalIcon aria-hidden>
+                <svg viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/>
+                </svg>
+              </ModalIcon>
+              <div>
+                <ModalTitle id="edit-page-title">Editar página</ModalTitle>
+                <Muted>Atualize o título, descrição e conteúdo HTML da página.</Muted>
+              </div>
+            </ModalHeader>
+            {editPageLoading && (
+              <div style={{ padding: "20px", textAlign: "center" }}>
+                <Muted>Carregando página...</Muted>
+              </div>
+            )}
+            {editPageError && (
+              <Feedback role="alert" $variant="error">{editPageError}</Feedback>
+            )}
+            {!editPageLoading && (
+              <div>
+                <Field>
+                  <Label htmlFor="edit-page-title">Título</Label>
+                  <Input
+                    id="edit-page-title"
+                    type="text"
+                    placeholder="Ex.: Página de Suporte"
+                    value={editPageTitle}
+                    onChange={(event) => {
+                      const value = (event.currentTarget as unknown as { value?: string }).value ?? "";
+                      setEditPageTitle(value);
+                    }}
+                  />
+                </Field>
+                <Field>
+                  <Label htmlFor="edit-page-desc">Descrição</Label>
+                  <Input
+                    id="edit-page-desc"
+                    type="text"
+                    placeholder="Breve descrição da página"
+                    value={editPageDescription}
+                    onChange={(event) => {
+                      const value = (event.currentTarget as unknown as { value?: string }).value ?? "";
+                      setEditPageDescription(value);
+                    }}
+                  />
+                </Field>
+                <Field>
+                  <Label>Conteúdo da Página (Editor Visual)</Label>
+                  <div style={{ border: "1px solid var(--border)", borderRadius: "8px", padding: "16px", background: "#f8fafc" }}>
+                    <PageBuilder blocks={editPageBlocks} onChange={setEditPageBlocks} />
+                  </div>
+                </Field>
+                <Field>
+                  <label style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer" }}>
+                    <input
+                      type="checkbox"
+                      checked={editPageIsPublished}
+                      onChange={(event) => {
+                        const checked = Boolean((event.currentTarget as unknown as { checked?: boolean }).checked);
+                        setEditPageIsPublished(checked);
+                      }}
+                    />
+                    <span>Publicar página</span>
+                  </label>
+                </Field>
+              </div>
+            )}
+            <ModalActions>
+              <CancelButton type="button" onClick={() => {
+                if (editPageSaving) return;
+                setEditPageOpen(false);
+                setEditPageId(null);
+                setEditPageTitle("");
+                setEditPageDescription("");
+                setEditPageBlocks([]);
+                setEditPageIsPublished(false);
+                setEditPageError("");
+              }} disabled={editPageSaving}>
+                Cancelar
+              </CancelButton>
+              <ConfirmButton type="button" onClick={saveEditPage} disabled={editPageSaving || editPageLoading} aria-label="Salvar alterações">
+                {editPageSaving ? "Salvando..." : "Salvar"}
+              </ConfirmButton>
+            </ModalActions>
+          </ModalDialog>
+        </>
+      )}
     </StandardLayout>
   );
 }
 
-const SECTIONS: SectionKey[] = ["general", "appearance", "notifications", "security", "integrations", "update", "env", "forms", "webhooks", "backup"];
+const SECTIONS: SectionKey[] = ["general", "appearance", "notifications", "security", "integrations", "update", "env", "forms", "webhooks", "backup", "pages"];
 
 const Content = styled.main`
   display: grid;
@@ -3487,6 +4788,206 @@ const EnvGroupTitle = styled.h3`
   color: #0f172a;
 `;
 
+const EnvToolbar = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 24px;
+  padding: 16px;
+  background: #f8fafc;
+  border-radius: 12px;
+  border: 1px solid rgba(148, 163, 184, 0.2);
+`;
+
+const EnvCategoriesGrid = styled.div`
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 20px;
+  width: 100%;
+  margin-bottom: 24px;
+
+  @media (max-width: 1400px) {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  @media (max-width: 768px) {
+    grid-template-columns: 1fr;
+  }
+`;
+
+const EnvCategoryCard = styled.div<{ $collapsed: boolean }>`
+  border-radius: 12px;
+  border: 1px solid rgba(148, 163, 184, 0.3);
+  background: #ffffff;
+  overflow: hidden;
+  transition: all 0.2s ease;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: fit-content;
+
+  &:hover {
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    border-color: rgba(148, 163, 184, 0.5);
+  }
+`;
+
+const EnvCategoryHeader = styled.div`
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 20px;
+  background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+  cursor: pointer;
+  user-select: none;
+  transition: background 0.2s ease;
+
+  &:hover {
+    background: linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 100%);
+  }
+`;
+
+const EnvCategoryTitle = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 1rem;
+  font-weight: 600;
+  color: #0f172a;
+`;
+
+const EnvCategoryIcon = styled.span`
+  font-size: 0.75rem;
+  color: #64748b;
+  transition: transform 0.2s ease;
+`;
+
+const EnvCategoryCount = styled.span`
+  font-size: 0.875rem;
+  font-weight: 400;
+  color: #64748b;
+`;
+
+const EnvCategoryToggle = styled.span`
+  font-size: 0.875rem;
+  color: #64748b;
+  font-weight: 500;
+`;
+
+const EnvCategoryContent = styled.div`
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  flex: 1;
+  overflow-y: auto;
+`;
+
+const EnvFieldWrapper = styled.div<{ $hasError: boolean; $required: boolean }>`
+  padding: 16px;
+  border-radius: 8px;
+  background: ${({ $hasError }) => ($hasError ? "#fef2f2" : "#fafafa")};
+  border: 1px solid ${({ $hasError, $required }) => 
+    $hasError ? "#ef4444" : $required ? "rgba(59, 130, 246, 0.3)" : "rgba(148, 163, 184, 0.2)"};
+  transition: all 0.2s ease;
+
+  &:hover {
+    border-color: ${({ $hasError }) => ($hasError ? "#ef4444" : "rgba(148, 163, 184, 0.4)")};
+    background: ${({ $hasError }) => ($hasError ? "#fee2e2" : "#f8fafc")};
+  }
+`;
+
+const EnvFieldHeader = styled.div`
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 6px;
+`;
+
+const EnvFieldLabel = styled.label`
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: #0f172a;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+`;
+
+const EnvRequiredBadge = styled.span`
+  color: #ef4444;
+  font-weight: 700;
+`;
+
+const EnvSensitiveBadge = styled.span`
+  font-size: 0.875rem;
+`;
+
+const EnvTogglePassword = styled.button`
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 1.1rem;
+  padding: 4px 8px;
+  border-radius: 4px;
+  transition: background 0.2s ease;
+
+  &:hover {
+    background: rgba(148, 163, 184, 0.1);
+  }
+`;
+
+const EnvFieldDescription = styled.p`
+  font-size: 0.8rem;
+  color: #64748b;
+  margin: 0 0 10px 0;
+  line-height: 1.4;
+`;
+
+const EnvFieldError = styled.div`
+  font-size: 0.8rem;
+  color: #ef4444;
+  margin-top: 6px;
+  font-weight: 500;
+`;
+
+const EnvFieldWarning = styled.div`
+  font-size: 0.8rem;
+  color: #f59e0b;
+  margin-top: 6px;
+  font-weight: 500;
+`;
+
+const EnvFieldExamples = styled.div`
+  font-size: 0.75rem;
+  color: #64748b;
+  margin-top: 8px;
+  font-style: italic;
+`;
+
+const EnvInput = styled.input<{ $hasError?: boolean; $isEmpty?: boolean }>`
+  width: 100%;
+  padding: 10px 14px;
+  border-radius: 8px;
+  border: 1px solid ${({ $hasError, $isEmpty }) => 
+    $hasError ? "#ef4444" : $isEmpty ? "rgba(148, 163, 184, 0.3)" : "rgba(148, 163, 184, 0.4)"};
+  background: #ffffff;
+  font-size: 0.9rem;
+  color: #0f172a;
+  transition: all 0.2s ease;
+  font-family: inherit;
+
+  &:focus {
+    outline: none;
+    border-color: ${({ $hasError }) => ($hasError ? "#ef4444" : "#3b82f6")};
+    box-shadow: 0 0 0 3px ${({ $hasError }) => ($hasError ? "rgba(239, 68, 68, 0.1)" : "rgba(59, 130, 246, 0.1)")};
+  }
+
+  &::placeholder {
+    color: #94a3b8;
+  }
+`;
+
 const EnvHintBox = styled.div`
   border-radius: 14px;
   padding: 14px 16px;
@@ -3741,6 +5242,118 @@ const ModalDialog = styled.div<{ $open: boolean }>`
   padding: 18px;
   transition: opacity .18s ease, transform .18s ease;
   z-index: 26;
+`;
+
+const PageModalDialog = styled.div<{ $open: boolean }>`
+  position: fixed;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%) scale(${(p) => (p.$open ? 1 : 0.98)});
+  opacity: ${(p) => (p.$open ? 1 : 0)};
+  pointer-events: ${(p) => (p.$open ? "auto" : "none")};
+  background: #fff;
+  border: 1px solid rgba(148, 163, 184, 0.2);
+  border-radius: 16px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15), 0 0 0 1px rgba(0, 0, 0, 0.05);
+  width: min(95vw, 1400px);
+  max-width: 95vw;
+  max-height: min(95vh, 900px);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  transition: opacity .2s ease, transform .2s ease;
+  z-index: 26;
+`;
+
+const PageModalHeader = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 24px 32px;
+  border-bottom: 1px solid rgba(148, 163, 184, 0.1);
+  background: linear-gradient(135deg, #f8fafc 0%, #ffffff 100%);
+`;
+
+const PageModalIcon = styled.div`
+  width: 48px;
+  height: 48px;
+  border-radius: 12px;
+  background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  flex-shrink: 0;
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+`;
+
+const PageModalTitle = styled.h2`
+  margin: 0;
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #0f172a;
+  line-height: 1.2;
+`;
+
+const PageModalSubtitle = styled.p`
+  margin: 4px 0 0;
+  font-size: 0.9rem;
+  color: #64748b;
+  line-height: 1.4;
+`;
+
+const PageModalContent = styled.div`
+  flex: 1;
+  overflow-y: auto;
+  padding: 32px;
+  display: flex;
+  flex-direction: column;
+  gap: 32px;
+`;
+
+const PageFormSection = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+`;
+
+const PageSectionTitle = styled.h3`
+  margin: 0;
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: #0f172a;
+  padding-bottom: 12px;
+  border-bottom: 2px solid rgba(59, 130, 246, 0.1);
+`;
+
+const PageBuilderContainer = styled.div`
+  border: 1px solid rgba(148, 163, 184, 0.2);
+  border-radius: 12px;
+  background: #f8fafc;
+  padding: 20px;
+  min-height: 500px;
+`;
+
+const EmptyBuilderState = styled.div`
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 60px 20px;
+  text-align: center;
+  background: #fff;
+  border: 2px dashed rgba(148, 163, 184, 0.3);
+  border-radius: 12px;
+  margin-top: 20px;
+`;
+
+const PageModalActions = styled.div`
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  padding: 24px 32px;
+  border-top: 1px solid rgba(148, 163, 184, 0.1);
+  background: #f8fafc;
 `;
 
 const ModalHeader = styled.div`

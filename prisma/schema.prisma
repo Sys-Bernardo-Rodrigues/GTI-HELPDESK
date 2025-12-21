@@ -49,6 +49,7 @@ model User {
   chatFeedbacks          ChatFeedback[]
   shifts                 Shift[]
   createdShifts          Shift[]             @relation("ShiftCreator")
+  publicPages            PublicPage[]         @relation("PublicPageCreator")
 }
 
 model Category {
@@ -409,4 +410,21 @@ model Shift {
   @@index([date])
   @@index([endDate])
   @@index([userId])
+}
+
+model PublicPage {
+  id          Int      @id @default(autoincrement())
+  title       String
+  slug        String   @unique
+  content     String   @db.Text // Conteúdo HTML/Markdown da página (legado)
+  blocks      String?  @db.Text // Estrutura JSON dos blocos do editor visual
+  description String?  @db.Text
+  isPublished Boolean  @default(false)
+  userId      Int
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  user        User     @relation("PublicPageCreator", fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([slug])
+  @@index([isPublished])
 }
